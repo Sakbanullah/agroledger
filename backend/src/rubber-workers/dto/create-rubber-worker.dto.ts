@@ -14,10 +14,10 @@ export class CreateRubberWorkerDto {
   workerId: number;
 
   @IsInt()
-  @Min(0)
+  @Min(1)
   pieces: number;
 
   @IsNumber()
-  @Min(0)
+  @Min(1)
   weightKg: number;
 }

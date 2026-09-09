@@ -1,6 +1,18 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateRubberWorkerDto } from './create-rubber-worker.dto';
+import {
+  IsInt,
+  IsNumber,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
-export class UpdateRubberWorkerDto extends PartialType(
-  CreateRubberWorkerDto,
-) {}
+export class UpdateRubberWorkerDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  pieces?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  weightKg?: number;
+}

@@ -190,7 +190,6 @@ export class RubberWorkersService {
       },
     });
   }
-
   async create(createRubberWorkerDto: CreateRubberWorkerDto) {
     const sale = await this.prisma.sale.findUnique({
       where: {
@@ -208,10 +207,6 @@ export class RubberWorkersService {
       );
     }
 
-    if (Number(createRubberWorkerDto.weightKg) > Number(sale.totalWeightKg)) {
-      throw new BadRequestException('Berat worker melebihi total berat sale');
-    }
-
     const worker = await this.prisma.person.findUnique({
       where: {
         id: createRubberWorkerDto.workerId,
@@ -224,6 +219,19 @@ export class RubberWorkersService {
 
     if (worker.type !== 'WORKER') {
       throw new BadRequestException('Person yang dipilih bukan worker');
+    }
+
+    const existingWorker = await this.prisma.rubberSaleWorker.findUnique({
+      where: {
+        saleId_workerId: {
+          saleId: createRubberWorkerDto.saleId,
+          workerId: createRubberWorkerDto.workerId,
+        },
+      },
+    });
+
+    if (existingWorker) {
+      throw new BadRequestException('Worker sudah terdaftar pada sale ini');
     }
 
     const existingWorkers = await this.prisma.rubberSaleWorker.findMany({
@@ -246,19 +254,6 @@ export class RubberWorkersService {
       );
     }
 
-    const existingWorker = await this.prisma.rubberSaleWorker.findUnique({
-      where: {
-        saleId_workerId: {
-          saleId: createRubberWorkerDto.saleId,
-          workerId: createRubberWorkerDto.workerId,
-        },
-      },
-    });
-
-    if (existingWorker) {
-      throw new BadRequestException('Worker sudah terdaftar pada sale ini');
-    }
-
     return this.prisma.rubberSaleWorker.create({
       data: {
         saleId: createRubberWorkerDto.saleId,
@@ -272,7 +267,6 @@ export class RubberWorkersService {
       },
     });
   }
-
   async update(id: number, updateRubberWorkerDto: UpdateRubberWorkerDto) {
     const rubberWorker = await this.prisma.rubberSaleWorker.findUnique({
       where: {

@@ -92,64 +92,64 @@ export class SalesService {
       },
     });
   }
-
   async confirmSale(id: number, confirmSaleDto: ConfirmSaleDto) {
-    const sale = await this.prisma.sale.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        commodity: true,
-      },
-    });
-
-    if (!sale) {
-      throw new NotFoundException('Sale tidak ditemukan');
-    }
-
-    if (sale.status !== 'PENDING') {
-      throw new BadRequestException('Sale sudah dikonfirmasi');
-    }
-
-    if (sale.pricePerKg === null) {
-      throw new BadRequestException('Harga penjualan belum tersedia');
-    }
-
-    if (Number(sale.totalWeightKg) <= 0) {
-      throw new BadRequestException('Berat penjualan harus lebih dari 0');
-    }
-
-    if (sale.commodity.name === 'Karet') {
-      const rubberWorkers = await this.prisma.rubberSaleWorker.findMany({
+    return this.prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUnique({
         where: {
-          saleId: id,
+          id,
+        },
+        include: {
+          commodity: true,
         },
       });
 
-      if (rubberWorkers.length === 0) {
-        throw new BadRequestException(
-          'Sale karet harus memiliki minimal satu worker',
-        );
+      if (!sale) {
+        throw new NotFoundException('Sale tidak ditemukan');
       }
 
-      const totalWorkerWeight = rubberWorkers.reduce(
-        (total, worker) => total + Number(worker.weightKg),
-        0,
-      );
-
-      if (totalWorkerWeight !== Number(sale.totalWeightKg)) {
-        throw new BadRequestException(
-          `Total berat worker (${totalWorkerWeight} kg) tidak sama dengan total berat sale (${Number(sale.totalWeightKg)} kg)`,
-        );
+      if (sale.status !== 'PENDING') {
+        throw new BadRequestException('Sale sudah dikonfirmasi');
       }
-    }
 
-    const totalAmount = Number(sale.totalWeightKg) * Number(sale.pricePerKg);
+      if (sale.pricePerKg === null) {
+        throw new BadRequestException('Harga penjualan belum tersedia');
+      }
 
-    return this.prisma.$transaction(async (tx) => {
-      const updatedSale = await tx.sale.update({
+      if (Number(sale.totalWeightKg) <= 0) {
+        throw new BadRequestException('Berat penjualan harus lebih dari 0');
+      }
+
+      if (sale.commodity.name === 'Karet') {
+        const rubberWorkers = await tx.rubberSaleWorker.findMany({
+          where: {
+            saleId: id,
+          },
+        });
+
+        if (rubberWorkers.length === 0) {
+          throw new BadRequestException(
+            'Sale karet harus memiliki minimal satu worker',
+          );
+        }
+
+        const totalWorkerWeight = rubberWorkers.reduce(
+          (total, worker) => total + Number(worker.weightKg),
+          0,
+        );
+
+        if (totalWorkerWeight !== Number(sale.totalWeightKg)) {
+          throw new BadRequestException(
+            `Total berat worker (${totalWorkerWeight} kg) tidak sama dengan total berat sale (${Number(sale.totalWeightKg)} kg)`,
+          );
+        }
+      }
+
+      const totalAmount = Number(sale.totalWeightKg) * Number(sale.pricePerKg);
+
+      const updateResult = await tx.sale.updateMany({
         where: {
           id,
+          status: 'PENDING',
         },
         data: {
           status: 'COMPLETED',
@@ -157,11 +157,13 @@ export class SalesService {
             buyerName: confirmSaleDto.buyerName,
           }),
         },
-        include: {
-          farm: true,
-          commodity: true,
-        },
       });
+
+      if (updateResult.count !== 1) {
+        throw new BadRequestException(
+          'Sale sudah dikonfirmasi oleh proses lain',
+        );
+      }
 
       await tx.moneyTransaction.create({
         data: {
@@ -175,7 +177,15 @@ export class SalesService {
         },
       });
 
-      return updatedSale;
+      return tx.sale.findUnique({
+        where: {
+          id: sale.id,
+        },
+        include: {
+          farm: true,
+          commodity: true,
+        },
+      });
     });
   }
 }
