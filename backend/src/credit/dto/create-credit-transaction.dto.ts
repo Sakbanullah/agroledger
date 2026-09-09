@@ -22,7 +22,7 @@ export class CreateCreditTransactionDto {
   type: CreditTransactionType;
 
   @IsNumber()
-  @Min(0)
+  @Min(0.01)
   amount: number;
 
   @IsDateString()

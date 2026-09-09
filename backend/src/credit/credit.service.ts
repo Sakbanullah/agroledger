@@ -71,37 +71,95 @@ export class CreditService {
   async createTransaction(
     createCreditTransactionDto: CreateCreditTransactionDto,
   ) {
-    const creditAccount = await this.prisma.creditAccount.findUnique({
-      where: {
-        id: createCreditTransactionDto.creditAccountId,
-      },
-    });
+    return this.prisma.$transaction(
+      async (tx) => {
+        let creditAccount;
 
-    if (!creditAccount) {
-      throw new NotFoundException('Credit account tidak ditemukan');
-    }
+        if (createCreditTransactionDto.type === 'PAYMENT') {
+          const lockedAccounts = await tx.$queryRaw<
+            Array<{
+              id: number;
+              personId: number;
+              status: string;
+            }>
+          >`
+          SELECT id, personId, status
+          FROM CreditAccount
+          WHERE id = ${createCreditTransactionDto.creditAccountId}
+          FOR UPDATE
+        `;
 
-    if (creditAccount.status !== 'ACTIVE') {
-      throw new BadRequestException('Credit account tidak aktif');
-    }
+          creditAccount = lockedAccounts[0];
 
-    return this.prisma.creditTransaction.create({
-      data: {
-        creditAccountId: createCreditTransactionDto.creditAccountId,
-        type: createCreditTransactionDto.type,
-        amount: createCreditTransactionDto.amount,
-        transactionDate: new Date(createCreditTransactionDto.transactionDate),
-        description: createCreditTransactionDto.description,
-        reference: createCreditTransactionDto.reference,
-      },
-      include: {
-        creditAccount: {
-          include: {
-            person: true,
+          if (!creditAccount) {
+            throw new NotFoundException('Credit account tidak ditemukan');
+          }
+        } else {
+          creditAccount = await tx.creditAccount.findUnique({
+            where: {
+              id: createCreditTransactionDto.creditAccountId,
+            },
+          });
+
+          if (!creditAccount) {
+            throw new NotFoundException('Credit account tidak ditemukan');
+          }
+        }
+
+        if (creditAccount.status !== 'ACTIVE') {
+          throw new BadRequestException('Credit account tidak aktif');
+        }
+
+        if (createCreditTransactionDto.type === 'PAYMENT') {
+          const transactions = await tx.creditTransaction.findMany({
+            where: {
+              creditAccountId: createCreditTransactionDto.creditAccountId,
+            },
+          });
+
+          let outstandingBalance = 0;
+
+          for (const transaction of transactions) {
+            if (transaction.type === 'DEBT') {
+              outstandingBalance += Number(transaction.amount);
+            }
+
+            if (transaction.type === 'PAYMENT') {
+              outstandingBalance -= Number(transaction.amount);
+            }
+          }
+
+          if (createCreditTransactionDto.amount > outstandingBalance) {
+            throw new BadRequestException(
+              'Jumlah pembayaran melebihi outstanding kasbon',
+            );
+          }
+        }
+
+        return tx.creditTransaction.create({
+          data: {
+            creditAccountId: createCreditTransactionDto.creditAccountId,
+            type: createCreditTransactionDto.type,
+            amount: createCreditTransactionDto.amount,
+            transactionDate: new Date(
+              createCreditTransactionDto.transactionDate,
+            ),
+            description: createCreditTransactionDto.description,
+            reference: createCreditTransactionDto.reference,
           },
-        },
+          include: {
+            creditAccount: {
+              include: {
+                person: true,
+              },
+            },
+          },
+        });
       },
-    });
+      {
+        isolationLevel: 'ReadCommitted',
+      },
+    );
   }
 
   async getOutstandingBalance(creditAccountId: number) {
@@ -110,10 +168,6 @@ export class CreditService {
         id: creditAccountId,
       },
     });
-
-    if (!creditAccount) {
-      throw new NotFoundException('Credit account tidak ditemukan');
-    }
 
     const transactions = await this.prisma.creditTransaction.findMany({
       where: {
