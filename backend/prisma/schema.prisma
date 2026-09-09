@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id                Int                @id @default(autoincrement())
+  name              String
+  email             String             @unique
+  passwordHash      String
+  role              String             @default("USER")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  moneyTransactions MoneyTransaction[]
+}
+
+model Person {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  type      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  farmOwners    FarmOwner[]
+  rubberWorkers RubberSaleWorker[]
+  creditAccount CreditAccount?
+  settlements   Settlement[]
+}
+
+model Farm {
+  id        Int      @id @default(autoincrement())
+  name      String
+  location  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owners   FarmOwner[]
+  harvests Harvest[]
+  sales    Sale[]
+}
+
+model FarmOwner {
+  id                  Int      @id @default(autoincrement())
+  farmId              Int
+  personId            Int
+  ownershipPercentage Decimal? @db.Decimal(5, 2)
+  createdAt           DateTime @default(now())
+
+  farm   Farm   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  person Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, personId])
+}
+
+model Commodity {
+  id        Int      @id @default(autoincrement())
+  name      String
+  unit      String   @default("KG")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  harvests Harvest[]
+  sales    Sale[]
+}
+
+model Harvest {
+  id          Int      @id @default(autoincrement())
+  farmId      Int
+  commodityId Int
+  harvestDate DateTime
+  weightKg    Decimal  @db.Decimal(12, 2)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  farm      Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  commodity Commodity @relation(fields: [commodityId], references: [id], onDelete: Restrict)
+}
+
+model Sale {
+  id            Int      @id @default(autoincrement())
+  farmId        Int
+  commodityId   Int
+  saleDate      DateTime
+  pricePerKg    Decimal? @db.Decimal(12, 2)
+  totalWeightKg Decimal  @db.Decimal(12, 2)
+  buyerName     String?
+  status        String   @default("PENDING")
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  farm          Farm               @relation(fields: [farmId], references: [id], onDelete: Restrict)
+  commodity     Commodity          @relation(fields: [commodityId], references: [id], onDelete: Restrict)
+  rubberWorkers RubberSaleWorker[]
+  settlements   Settlement[]
+  scanDocuments ScanDocument[]
+}
+
+model RubberSaleWorker {
+  id        Int      @id @default(autoincrement())
+  saleId    Int
+  workerId  Int
+  pieces    Int
+  weightKg  Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  worker Person @relation(fields: [workerId], references: [id], onDelete: Restrict)
+
+  @@unique([saleId, workerId])
+}
+
+model CreditAccount {
+  id        Int      @id @default(autoincrement())
+  personId  Int      @unique
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  person       Person              @relation(fields: [personId], references: [id], onDelete: Restrict)
+  transactions CreditTransaction[]
+}
+
+model CreditTransaction {
+  id              Int      @id @default(autoincrement())
+  creditAccountId Int
+  type            String
+  amount          Decimal  @db.Decimal(12, 2)
+  transactionDate DateTime
+  description     String?
+  reference       String?
+  createdAt       DateTime @default(now())
+
+  creditAccount CreditAccount @relation(fields: [creditAccountId], references: [id], onDelete: Restrict)
+}
+
+model Settlement {
+  id       Int @id @default(autoincrement())
+  saleId   Int
+  workerId Int
+
+  grossShare      Decimal @db.Decimal(12, 2)
+  kasbonAmount    Decimal @db.Decimal(12, 2)
+  deductionAmount Decimal @db.Decimal(12, 2)
+  netAmount       Decimal @db.Decimal(12, 2)
+
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  worker Person @relation(fields: [workerId], references: [id], onDelete: Restrict)
+
+  @@unique([saleId, workerId])
+}
+
+model ScanDocument {
+  id        Int      @id @default(autoincrement())
+  saleId    Int
+  imagePath String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sale    Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  results ScanResult[]
+}
+
+model ScanResult {
+  id             Int @id @default(autoincrement())
+  scanDocumentId Int
+
+  workerName String
+  pieces     Int
+  weightKg   Decimal  @db.Decimal(12, 2)
+  confidence Decimal? @db.Decimal(5, 4)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scanDocument ScanDocument @relation(fields: [scanDocumentId], references: [id], onDelete: Cascade)
+}
+
+model MoneyTransaction {
+  id              Int      @id @default(autoincrement())
+  type            String
+  category        String
+  amount          Decimal  @db.Decimal(12, 2)
+  transactionDate DateTime
+  description     String?
+  referenceType   String?
+  referenceId     Int?
+  createdBy       Int?
+  createdAt       DateTime @default(now())
+
+  user User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([transactionDate])
+  @@index([type])
+  @@index([category])
+}
