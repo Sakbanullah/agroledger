@@ -330,14 +330,14 @@ export class SettlementsService {
               `Credit account untuk ${rubberWorker.worker.name} tidak ditemukan`,
             );
           }
-
           await tx.creditTransaction.create({
             data: {
               creditAccountId: creditAccount.id,
               type: 'PAYMENT',
               amount: deductionAmount,
-              description: `Potongan kasbon dari settlement karet`,
               transactionDate: new Date(),
+              description: `Potongan kasbon settlement Sale #${saleId}`,
+              reference: `SETTLEMENT-${settlement.id}`,
             },
           });
         }
@@ -348,8 +348,10 @@ export class SettlementsService {
               type: 'OUT',
               amount: netAmount,
               category: 'RUBBER_WORKER_SETTLEMENT',
-              description: `Pembayaran hasil karet ${rubberWorker.worker.name}`,
+              description: `Pembayaran settlement ${rubberWorker.worker.name}`,
               transactionDate: new Date(),
+              referenceType: 'SETTLEMENT',
+              referenceId: settlement.id,
             },
           });
         }
