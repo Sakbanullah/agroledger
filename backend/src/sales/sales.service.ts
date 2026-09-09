@@ -119,6 +119,31 @@ export class SalesService {
       throw new BadRequestException('Berat penjualan harus lebih dari 0');
     }
 
+    if (sale.commodity.name === 'Karet') {
+      const rubberWorkers = await this.prisma.rubberSaleWorker.findMany({
+        where: {
+          saleId: id,
+        },
+      });
+
+      if (rubberWorkers.length === 0) {
+        throw new BadRequestException(
+          'Sale karet harus memiliki minimal satu worker',
+        );
+      }
+
+      const totalWorkerWeight = rubberWorkers.reduce(
+        (total, worker) => total + Number(worker.weightKg),
+        0,
+      );
+
+      if (totalWorkerWeight !== Number(sale.totalWeightKg)) {
+        throw new BadRequestException(
+          `Total berat worker (${totalWorkerWeight} kg) tidak sama dengan total berat sale (${Number(sale.totalWeightKg)} kg)`,
+        );
+      }
+    }
+
     const totalAmount = Number(sale.totalWeightKg) * Number(sale.pricePerKg);
 
     return this.prisma.$transaction(async (tx) => {
