@@ -8,8 +8,8 @@ import PageHeader from "@/components/dashboard/PageHeader";
 import CashPosition from "@/components/dashboard/CashPosition";
 import CashFlowChart from "@/components/dashboard/CashFlowChart";
 import HarvestSummary from "@/components/dashboard/HarvestSummary";
-import SettlementCard from "@/components/dashboard/SettlementCard";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
+import SettlementCard from "@/components/dashboard/SettlementCard";
 
 import {
   getCashFlow,
@@ -18,66 +18,85 @@ import {
 } from "@/lib/api";
 
 type DashboardData = {
-  cashPosition: {
-    totalIncome: number;
-    totalExpense: number;
-    currentCash: number;
+  cashPosition?: {
+    currentCash?: number;
+    totalIncome?: number;
+    totalExpense?: number;
   };
-
-  recentTransactions: Array<{
+  recentTransactions?: {
     id: number;
     type: string;
     category: string;
-    amount: string | number;
+    amount: number | string;
+    description?: string | null;
     transactionDate: string;
-    description: string | null;
-  }>;
+  }[];
 };
-
-type CashFlowPeriod = "daily" | "weekly" | "monthly";
 
 type CashFlowItem = {
   date: string;
-  moneyIn: number | string;
-  moneyOut: number | string;
+  income: number;
+  expense: number;
 };
 
-type CashFlowResponse = {
-  data?: CashFlowItem[];
-};
-
-type CashFlowSummaryResponse = {
-  totalIn?: number | string;
-  totalOut?: number | string;
-  netCashFlow?: number | string;
+type CashFlowSummary = {
+  income: number;
+  expense: number;
+  net: number;
 };
 
 export default function Home() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-
-  const [cashFlow, setCashFlow] = useState<CashFlowResponse | null>(null);
-
-  const [cashFlowSummary, setCashFlowSummary] =
-    useState<CashFlowSummaryResponse | null>(null);
-
-  const [cashFlowPeriod, setCashFlowPeriod] = useState<CashFlowPeriod>("daily");
+  const [cashFlow, setCashFlow] = useState<CashFlowItem[]>([]);
+  const [cashFlowSummary, setCashFlowSummary] = useState<CashFlowSummary>({
+    income: 0,
+    expense: 0,
+    net: 0,
+  });
 
   const [loading, setLoading] = useState(true);
-
-  /*
-   * ============================
-   * DASHBOARD
-   * ============================
-   */
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDashboard() {
       try {
-        const data = await getDashboardSummary();
+        setLoading(true);
+        setError(null);
 
-        setDashboard(data);
-      } catch (error) {
-        console.error("Gagal mengambil dashboard:", error);
+        const [dashboardData, cashFlowData, cashFlowSummaryData] =
+          await Promise.all([
+            getDashboardSummary(),
+            getCashFlow("2026-09-01", "2026-09-30", "daily"),
+            getCashFlowSummary("2026-09-01", "2026-09-30"),
+          ]);
+
+        setDashboard(dashboardData);
+
+        const cashFlowItems = Array.isArray(cashFlowData)
+          ? cashFlowData
+          : Array.isArray(cashFlowData?.data)
+            ? cashFlowData.data
+            : [];
+
+        setCashFlow(
+          cashFlowItems.map((item: any) => ({
+            date: item.date,
+            income: Number(item.moneyIn ?? item.income ?? 0),
+            expense: Number(item.moneyOut ?? item.expense ?? 0),
+          })),
+        );
+        setCashFlowSummary({
+          income: Number(cashFlowSummaryData?.income ?? 0),
+          expense: Number(cashFlowSummaryData?.expense ?? 0),
+          net: Number(
+            cashFlowSummaryData?.net ??
+              (cashFlowSummaryData?.income ?? 0) -
+                (cashFlowSummaryData?.expense ?? 0),
+          ),
+        });
+      } catch (err) {
+        console.error(err);
+        setError("Gagal memuat data dashboard.");
       } finally {
         setLoading(false);
       }
@@ -86,169 +105,68 @@ export default function Home() {
     loadDashboard();
   }, []);
 
-  /*
-   * ============================
-   * CASH FLOW
-   * ============================
-   */
-
-  useEffect(() => {
-    async function loadCashFlow() {
-      try {
-        const [cashFlowData, summaryData] = await Promise.all([
-          getCashFlow("2026-09-01", "2026-09-30", cashFlowPeriod),
-
-          getCashFlowSummary("2026-09-01", "2026-09-30"),
-        ]);
-
-        setCashFlow(cashFlowData);
-        setCashFlowSummary(summaryData);
-      } catch (error) {
-        console.error("Gagal mengambil cash flow:", error);
-      }
-    }
-
-    loadCashFlow();
-  }, [cashFlowPeriod]);
-
-  /*
-   * ============================
-   * TRANSFORM CASH FLOW DATA
-   * ============================
-   *
-   * API lama:
-   * moneyIn / moneyOut
-   *
-   * Component baru:
-   * income / expense
-   */
-
-  const cashFlowChartData =
-    cashFlow?.data?.map((item) => ({
-      date: item.date,
-      income: Number(item.moneyIn),
-      expense: Number(item.moneyOut),
-    })) ?? [];
-
-  const cashFlowChartSummary = {
-    income: Number(cashFlowSummary?.totalIn ?? 0),
-
-    expense: Number(cashFlowSummary?.totalOut ?? 0),
-
-    net: Number(cashFlowSummary?.netCashFlow ?? 0),
-  };
-
-  /*
-   * ============================
-   * LOADING
-   * ============================
-   */
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[#F7F7F2] text-[#17221B]">
-        <div className="flex min-h-screen">
-          <Sidebar />
-
-          <div className="min-w-0 flex-1">
-            <MobileHeader />
-
-            <div className="mx-auto max-w-[1380px] px-5 py-6 sm:px-7 lg:px-10 lg:py-8">
-              <div className="flex min-h-[60vh] items-center justify-center">
-                <div className="text-center">
-                  <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-[#DDE3DD] border-t-[#315B42]" />
-
-                  <p className="mt-3 text-xs text-[#858D87]">
-                    Loading dashboard...
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  /*
-   * ============================
-   * DASHBOARD
-   * ============================
-   */
+  const cashPosition = dashboard?.cashPosition;
 
   return (
-    <main className="min-h-screen bg-[#F7F7F2] text-[#17221B]">
-      <div className="flex min-h-screen">
-        {/* SIDEBAR */}
-        <Sidebar />
+    <div className="min-h-screen bg-[#F7F8F6] text-[#17221B]">
+      <Sidebar />
 
-        <div className="min-w-0 flex-1">
-          {/* MOBILE HEADER */}
-          <MobileHeader />
+      <MobileHeader />
 
-          <div className="mx-auto max-w-[1380px] px-5 py-6 sm:px-7 lg:px-10 lg:py-8">
-            {/* PAGE HEADER */}
-            <PageHeader />
+      <main className="min-h-screen lg:pl-[236px]">
+        <div className="mx-auto w-full max-w-[1440px] px-5 py-6 sm:px-7 lg:px-9">
+          <PageHeader />
 
-            <div className="mt-7 space-y-7">
-              {/* ============================
-                  CASH POSITION
-              ============================ */}
-
+          {loading ? (
+            <div className="mt-6 rounded-[10px] border border-[#E5E7E4] bg-white p-10 text-center">
+              <p className="text-[12px] text-[#8A918B]">Memuat dashboard...</p>
+            </div>
+          ) : error ? (
+            <div className="mt-6 rounded-[10px] border border-[#E5E7E4] bg-white p-10 text-center">
+              <p className="text-[12px] font-medium text-[#A33A32]">{error}</p>
+            </div>
+          ) : (
+            <div className="mt-6 space-y-6">
+              {/* Financial Overview */}
               <CashPosition
-                cashBalance={dashboard?.cashPosition?.currentCash ?? 0}
-                totalIncome={dashboard?.cashPosition?.totalIncome ?? 0}
-                totalExpense={dashboard?.cashPosition?.totalExpense ?? 0}
+                cashBalance={Number(cashPosition?.currentCash ?? 0)}
+                totalIncome={Number(cashPosition?.totalIncome ?? 0)}
+                totalExpense={Number(cashPosition?.totalExpense ?? 0)}
               />
 
-              {/* ============================
-                  CASH FLOW + HARVEST
-              ============================ */}
-
-              <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
-                <CashFlowChart
-                  data={cashFlowChartData}
-                  summary={cashFlowChartSummary}
-                />
+              {/* Main Overview */}
+              <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.65fr_1fr]">
+                <CashFlowChart data={cashFlow} summary={cashFlowSummary} />
 
                 <HarvestSummary
-                  totalValue={246_800_000}
-                  completion={87}
-                  pendingSettlements={3}
+                  totalValue={0}
+                  completion={0}
+                  pendingSettlements={0}
                 />
-              </div>
-
-              {/* ============================
-                  FINANCIAL ACTIVITY
-              ============================ */}
-
-              <div>
-                <div className="mb-4">
-                  <h2 className="text-[16px] font-semibold text-[#17221B]">
-                    Financial activity
-                  </h2>
-
-                  <p className="mt-0.5 text-[11px] text-[#858D87]">
-                    Recent cash movements and settlements
+              </section>
+              {/* Activity */}
+              <section>
+                <div className="mb-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A918B]">
+                    Activity
                   </p>
+
+                  <h2 className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-[#17221B]">
+                    Aktivitas Terbaru
+                  </h2>
                 </div>
 
-                <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
-                  {/* RECENT TRANSACTIONS */}
-
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.65fr_1fr]">
                   <RecentTransactions
                     transactions={dashboard?.recentTransactions ?? []}
                   />
-
-                  {/* RECENT SETTLEMENT */}
-
                   <SettlementCard />
                 </div>
-              </div>
+              </section>
             </div>
-          </div>
+          )}
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

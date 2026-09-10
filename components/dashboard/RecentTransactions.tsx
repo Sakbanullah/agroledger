@@ -1,3 +1,5 @@
+import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
+
 type Transaction = {
   id: number;
   type: string;
@@ -11,129 +13,132 @@ type RecentTransactionsProps = {
   transactions?: Transaction[];
 };
 
+function formatAmount(value: number | string) {
+  const amount = Number(value);
+
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getCategoryLabel(category: string) {
+  const labels: Record<string, string> = {
+    HARVEST_SALE: "Penjualan Panen",
+    SETTLEMENT: "Settlement",
+    OPERATIONAL_EXPENSE: "Operasional",
+    OPENING_BALANCE: "Saldo Awal",
+  };
+
+  return labels[category] ?? category.replaceAll("_", " ");
+}
+
+function isIncome(transaction: Transaction) {
+  return transaction.type === "IN";
+}
+
 export default function RecentTransactions({
   transactions = [],
 }: RecentTransactionsProps) {
-  const formatRupiah = (value: number) => {
-    return `Rp${value.toLocaleString("id-ID")}`;
-  };
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  const getTitle = (category: string) => {
-    switch (category) {
-      case "HARVEST_SALE":
-        return "Harvest sale";
-
-      case "SETTLEMENT":
-        return "Settlement";
-
-      case "OPERATIONAL_EXPENSE":
-        return "Operational expense";
-
-      case "OPENING_BALANCE":
-        return "Opening balance";
-
-      default:
-        return category.replaceAll("_", " ");
-    }
-  };
-
-  if (transactions.length === 0) {
-    return (
-      <section className="rounded-[10px] border border-[#E3E6E1] bg-white p-5">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8A918B]">
-            Financial Activity
-          </p>
-
-          <h2 className="mt-1 text-[16px] font-semibold text-[#17221B]">
-            Recent Transactions
-          </h2>
-        </div>
-
-        <div className="mt-5 flex min-h-[160px] items-center justify-center rounded-[8px] border border-dashed border-[#DDE1DC]">
-          <p className="text-xs text-[#8A918B]">
-            Belum ada transaksi
-          </p>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section className="rounded-[10px] border border-[#E3E6E1] bg-white p-5">
-      <div className="flex items-start justify-between gap-4">
+    <section className="rounded-[10px] border border-[#E5E7E4] bg-white">
+      <div className="flex items-center justify-between border-b border-[#ECEEEB] px-5 py-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8A918B]">
-            Financial Activity
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A918B]">
+            Activity
           </p>
 
-          <h2 className="mt-1 text-[16px] font-semibold text-[#17221B]">
+          <h2 className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-[#17221B]">
             Recent Transactions
           </h2>
         </div>
 
-        <button className="text-[11px] font-semibold text-[#59625B] hover:text-[#17221B]">
-          View all →
-        </button>
+        <span className="text-[10px] font-medium text-[#8A918B]">
+          {transactions.length} transaksi
+        </span>
       </div>
 
-      <div className="mt-5 divide-y divide-[#ECEEEB]">
-        {transactions.map((transaction) => {
-          const amount = Number(transaction.amount);
+      {transactions.length === 0 ? (
+        <div className="flex min-h-[220px] items-center justify-center px-5">
+          <div className="text-center">
+            <p className="text-[12px] font-medium text-[#59625B]">
+              Belum ada transaksi
+            </p>
 
-          const isIncome =
-            transaction.type === "IN" ||
-            transaction.category === "HARVEST_SALE";
+            <p className="mt-1 text-[11px] text-[#9AA19B]">
+              Transaksi terbaru akan muncul di sini.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="divide-y divide-[#ECEEEB]">
+          {transactions.slice(0, 6).map((transaction) => {
+            const income = isIncome(transaction);
 
-          return (
-            <div
-              key={transaction.id}
-              className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-[12px] font-semibold text-[#17221B]">
-                  {getTitle(transaction.category)}
-                </p>
-
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="text-[10px] text-[#8A918B]">
-                    {formatDate(transaction.transactionDate)}
-                  </span>
-
-                  {transaction.description && (
-                    <>
-                      <span className="text-[#C7CBC7]">•</span>
-
-                      <span className="truncate text-[10px] text-[#8A918B]">
-                        {transaction.description}
-                      </span>
-                    </>
+            return (
+              <div
+                key={transaction.id}
+                className="flex items-center gap-3 px-5 py-3.5 transition hover:bg-[#FAFAF8]"
+              >
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] ${
+                    income ? "bg-[#F1F4F1]" : "bg-[#F5F2F1]"
+                  }`}
+                >
+                  {income ? (
+                    <ArrowDownLeft size={14} className="text-[#17221B]" />
+                  ) : (
+                    <ArrowUpRight size={14} className="text-[#59625B]" />
                   )}
                 </div>
-              </div>
 
-              <p
-                className={`shrink-0 text-[12px] font-semibold ${
-                  isIncome
-                    ? "text-[#315B42]"
-                    : "text-[#17221B]"
-                }`}
-              >
-                {isIncome ? "+" : "-"}
-                {formatRupiah(Math.abs(amount))}
-              </p>
-            </div>
-          );
-        })}
-      </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[12px] font-medium text-[#17221B]">
+                    {transaction.description ||
+                      getCategoryLabel(transaction.category)}
+                  </p>
+
+                  <div className="mt-0.5 flex items-center gap-2">
+                    <span className="truncate text-[10px] text-[#9AA19B]">
+                      {getCategoryLabel(transaction.category)}
+                    </span>
+
+                    <span className="text-[9px] text-[#C2C6C2]">•</span>
+
+                    <span className="shrink-0 text-[10px] text-[#9AA19B]">
+                      {formatDate(transaction.transactionDate)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="shrink-0 text-right">
+                  <p
+                    className={`text-[12px] font-semibold ${
+                      income ? "text-[#17221B]" : "text-[#59625B]"
+                    }`}
+                  >
+                    {income ? "+" : "-"}
+                    {formatAmount(transaction.amount)}
+                  </p>
+
+                  <p className="mt-0.5 text-[9px] uppercase tracking-[0.06em] text-[#9AA19B]">
+                    {income ? "IN" : "OUT"}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }

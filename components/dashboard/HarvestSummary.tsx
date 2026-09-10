@@ -4,78 +4,102 @@ type HarvestSummaryProps = {
   pendingSettlements?: number;
 };
 
+function formatAmount(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 export default function HarvestSummary({
   totalValue = 0,
   completion = 0,
   pendingSettlements = 0,
 }: HarvestSummaryProps) {
-  const formatRupiah = (value: number) => {
-    if (value >= 1_000_000_000) {
-      return `Rp${(value / 1_000_000_000).toFixed(1)}B`;
-    }
-
-    if (value >= 1_000_000) {
-      return `Rp${(value / 1_000_000).toFixed(1)}M`;
-    }
-
-    if (value >= 1_000) {
-      return `Rp${(value / 1_000).toFixed(0)}K`;
-    }
-
-    return `Rp${value.toLocaleString("id-ID")}`;
-  };
-
   return (
-    <section className="rounded-[10px] border border-[#E3E6E1] bg-white p-5">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8A918B]">
-          This Season
+    <section className="rounded-[10px] border border-[#E5E7E4] bg-white">
+      <div className="border-b border-[#ECEEEB] px-5 py-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A918B]">
+          Harvest
         </p>
 
-        <h2 className="mt-1 text-[16px] font-semibold text-[#17221B]">
-          Harvest Summary
-        </h2>
-      </div>
+        <div className="mt-1 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-[#17221B]">
+              Ringkasan Panen
+            </h2>
 
-      <div className="mt-6">
-        <p className="text-xs text-[#6B746D]">
-          Total nilai panen
-        </p>
+            <p className="mt-1 text-[11px] text-[#8A918B]">
+              Aktivitas panen dan settlement
+            </p>
+          </div>
 
-        <p className="mt-1 text-[25px] font-semibold tracking-tight text-[#17221B]">
-          {formatRupiah(totalValue)}
-        </p>
-      </div>
-
-      <div className="mt-6">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-[#6B746D]">
-            Settlement completion
-          </p>
-
-          <p className="text-xs font-semibold text-[#315B42]">
-            {completion}%
-          </p>
-        </div>
-
-        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#E8EBE7]">
-          <div
-            className="h-full rounded-full bg-[#315B42] transition-all"
-            style={{
-              width: `${Math.min(Math.max(completion, 0), 100)}%`,
-            }}
-          />
+          <span className="rounded-[5px] bg-[#F2F4F1] px-2 py-1 text-[10px] font-semibold text-[#59625B]">
+            Periode ini
+          </span>
         </div>
       </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-[#ECEEEB] pt-4">
-        <span className="text-xs text-[#6B746D]">
-          Pending settlement
-        </span>
+      <div className="p-5">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#9AA19B]">
+              Total Nilai Panen
+            </p>
 
-        <span className="rounded-full bg-[#F3EEDF] px-2.5 py-1 text-[10px] font-semibold text-[#8A7040]">
-          {pendingSettlements}
-        </span>
+            <p className="mt-1.5 text-[21px] font-semibold tracking-[-0.03em] text-[#17221B]">
+              {formatAmount(totalValue)}
+            </p>
+
+            <p className="mt-1 text-[10px] text-[#8A918B]">
+              Nilai hasil panen tercatat
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#9AA19B]">
+                Settlement
+              </p>
+
+              <span className="text-[11px] font-semibold text-[#17221B]">
+                {completion}%
+              </span>
+            </div>
+
+            <div className="mt-3 h-[6px] overflow-hidden rounded-full bg-[#ECEEEB]">
+              <div
+                className="h-full rounded-full bg-[#17221B] transition-all"
+                style={{
+                  width: `${Math.min(Math.max(completion, 0), 100)}%`,
+                }}
+              />
+            </div>
+
+            <p className="mt-2 text-[10px] text-[#8A918B]">
+              Progress settlement panen
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between border-t border-[#ECEEEB] pt-4">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#9AA19B]">
+              Pending Settlement
+            </p>
+
+            <p className="mt-1 text-[15px] font-semibold text-[#17221B]">
+              {pendingSettlements}
+            </p>
+          </div>
+
+          <div className="rounded-[6px] border border-[#E5E7E4] px-2.5 py-1.5 text-[10px] font-medium text-[#59625B]">
+            {pendingSettlements === 0
+              ? "Semua selesai"
+              : "Perlu ditindaklanjuti"}
+          </div>
+        </div>
       </div>
     </section>
   );

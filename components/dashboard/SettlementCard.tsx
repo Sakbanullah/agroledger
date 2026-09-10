@@ -11,112 +11,133 @@ type SettlementCardProps = {
   };
 };
 
-export default function SettlementCard({
-  settlement,
-}: SettlementCardProps) {
-  const formatRupiah = (value: number) => {
-    return `Rp${value.toLocaleString("id-ID")}`;
-  };
+function formatAmount(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
-  const formatWeight = (value: number) => {
-    return `${value.toLocaleString("id-ID")} kg`;
-  };
+function formatWeight(value: number) {
+  return new Intl.NumberFormat("id-ID", {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
-  const data = settlement ?? {
-    id: "0248",
-    farmName: "Slamet Farm",
-    commodity: "Palm Oil",
-    weightKg: 1842,
-    pricePerKg: 18000,
-    gross: 33156000,
-    managementFee: 1657800,
-    net: 31498200,
-  };
-
-  return (
-    <section className="rounded-[10px] border border-[#E3E6E1] bg-white p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8A918B]">
-            Latest Settlement
+export default function SettlementCard({ settlement }: SettlementCardProps) {
+  if (!settlement) {
+    return (
+      <section className="rounded-[10px] border border-[#E5E7E4] bg-white">
+        <div className="border-b border-[#ECEEEB] px-5 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A918B]">
+            Settlement
           </p>
 
-          <h2 className="mt-1 text-[16px] font-semibold text-[#17221B]">
-            Settlement #{data.id}
+          <h2 className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-[#17221B]">
+            Latest Settlement
           </h2>
         </div>
 
-        <span className="rounded-full bg-[#EAF1EB] px-2.5 py-1 text-[10px] font-semibold text-[#315B42]">
-          Completed
-        </span>
-      </div>
+        <div className="flex min-h-[220px] items-center justify-center p-5">
+          <div className="text-center">
+            <p className="text-[12px] font-medium text-[#59625B]">
+              Belum ada settlement
+            </p>
 
-      <div className="mt-5">
-        <p className="text-[13px] font-semibold text-[#17221B]">
-          {data.farmName}
-        </p>
-
-        <p className="mt-1 text-[11px] text-[#7A827C]">
-          {data.commodity}
-        </p>
-      </div>
-
-      <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-wide text-[#8A918B]">
-            Weight
-          </p>
-
-          <p className="mt-1 text-[13px] font-semibold text-[#17221B]">
-            {formatWeight(data.weightKg)}
-          </p>
+            <p className="mt-1 text-[11px] text-[#9AA19B]">
+              Settlement terbaru akan muncul di sini.
+            </p>
+          </div>
         </div>
+      </section>
+    );
+  }
 
-        <div>
-          <p className="text-[10px] uppercase tracking-wide text-[#8A918B]">
-            Price / kg
-          </p>
+  return (
+    <section className="rounded-[10px] border border-[#E5E7E4] bg-white">
+      <div className="border-b border-[#ECEEEB] px-5 py-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A918B]">
+              Settlement
+            </p>
 
-          <p className="mt-1 text-[13px] font-semibold text-[#17221B]">
-            {formatRupiah(data.pricePerKg)}
-          </p>
-        </div>
+            <h2 className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-[#17221B]">
+              Latest Settlement
+            </h2>
+          </div>
 
-        <div>
-          <p className="text-[10px] uppercase tracking-wide text-[#8A918B]">
-            Gross
-          </p>
-
-          <p className="mt-1 text-[13px] font-semibold text-[#17221B]">
-            {formatRupiah(data.gross)}
-          </p>
-        </div>
-
-        <div>
-          <p className="text-[10px] uppercase tracking-wide text-[#8A918B]">
-            Management fee
-          </p>
-
-          <p className="mt-1 text-[13px] font-semibold text-[#17221B]">
-            {formatRupiah(data.managementFee)}
-          </p>
+          <span className="rounded-[5px] bg-[#F2F4F1] px-2 py-1 text-[10px] font-semibold text-[#59625B]">
+            #{settlement.id}
+          </span>
         </div>
       </div>
 
-      <div className="mt-5 flex items-end justify-between border-t border-[#ECEEEB] pt-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-wide text-[#8A918B]">
-            Net settlement
-          </p>
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[15px] font-semibold text-[#17221B]">
+              {settlement.farmName}
+            </p>
 
-          <p className="mt-1 text-[20px] font-semibold tracking-tight text-[#315B42]">
-            {formatRupiah(data.net)}
-          </p>
+            <p className="mt-1 text-[11px] text-[#8A918B]">
+              {settlement.commodity}
+            </p>
+          </div>
+
+          <div className="text-right">
+            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#9AA19B]">
+              Berat
+            </p>
+
+            <p className="mt-1 text-[13px] font-semibold text-[#17221B]">
+              {formatWeight(settlement.weightKg)} kg
+            </p>
+          </div>
         </div>
 
-        <button className="text-[11px] font-semibold text-[#59625B] hover:text-[#17221B]">
-          View details →
-        </button>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="rounded-[8px] bg-[#F7F8F6] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#9AA19B]">
+              Harga / Kg
+            </p>
+
+            <p className="mt-1 text-[13px] font-semibold text-[#17221B]">
+              {formatAmount(settlement.pricePerKg)}
+            </p>
+          </div>
+
+          <div className="rounded-[8px] bg-[#F7F8F6] p-3">
+            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#9AA19B]">
+              Gross
+            </p>
+
+            <p className="mt-1 text-[13px] font-semibold text-[#17221B]">
+              {formatAmount(settlement.gross)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 space-y-2 border-t border-[#ECEEEB] pt-4">
+          <div className="flex items-center justify-between text-[11px]">
+            <span className="text-[#8A918B]">Management Fee</span>
+
+            <span className="font-medium text-[#59625B]">
+              {formatAmount(settlement.managementFee)}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-[#17221B]">
+              Net Settlement
+            </span>
+
+            <span className="text-[16px] font-semibold tracking-[-0.02em] text-[#17221B]">
+              {formatAmount(settlement.net)}
+            </span>
+          </div>
+        </div>
       </div>
     </section>
   );
