@@ -1,18 +1,18 @@
-import RubberNoteScan from '@/components/settlement/RubberNoteScan';
+import SettlementCheck from "@/components/settlement/SettlementCheck";
 
-interface ScanPageProps {
+interface CheckPageProps {
   params: Promise<{
     saleId: string;
   }>;
 }
 
-export default async function ScanPage({
+export default async function CheckPage({
   params,
-}: ScanPageProps) {
+}: CheckPageProps) {
   const { saleId } = await params;
 
   return (
-    <RubberNoteScan
+    <SettlementCheck
       saleId={Number(saleId)}
     />
   );

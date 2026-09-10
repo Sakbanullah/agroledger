@@ -36,14 +36,28 @@ export class AiService {
     imageBuffer: Buffer,
     mimeType: string,
   ) {
+    console.log('[AI] Scan request received');
+
+    console.log(
+      '[AI] Image size:',
+      imageBuffer.length,
+    );
+
+    console.log(
+      '[AI] MIME type:',
+      mimeType,
+    );
+
     const base64Image =
       imageBuffer.toString('base64');
 
-    const response =
-      await this.ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+    console.log(
+      '[AI] Sending request to Gemini...',
+    );
 
-        contents: [
+    const response =
+      await this.generateGeminiContent(
+        [
           {
             role: 'user',
 
@@ -91,12 +105,20 @@ Important rules:
             ],
           },
         ],
-
-        config: {
+        {
           responseMimeType: 'application/json',
           responseSchema: rubberNoteSchema,
         },
-      });
+      );
+
+    console.log(
+      '[AI] Gemini response received',
+    );
+
+    console.log(
+      '[AI] Response:',
+      response.text,
+    );
 
     const parsedResult =
       this.parseRubberNoteResult(
@@ -113,6 +135,81 @@ Important rules:
     );
   }
 
+  private async generateGeminiContent(
+    contents: any,
+    config: any,
+  ) {
+    const maxAttempts = 3;
+
+    const delays = [
+      2000,
+      4000,
+    ];
+
+    for (
+      let attempt = 1;
+      attempt <= maxAttempts;
+      attempt++
+    ) {
+      try {
+        console.log(
+          `[AI] Gemini attempt ${attempt}/${maxAttempts}`,
+        );
+
+        const response =
+          await this.ai.models.generateContent({
+            model: 'gemini-3.6-flash',
+            contents,
+            config,
+          });
+
+        return response;
+      } catch (error) {
+        const status =
+          typeof error === 'object' &&
+          error !== null &&
+          'status' in error
+            ? Number(
+                (
+                  error as {
+                    status?: unknown;
+                  }
+                ).status,
+              )
+            : undefined;
+
+        console.error(
+          `[AI] Gemini attempt ${attempt} failed with status ${status}`,
+        );
+
+        if (
+          status !== 503 ||
+          attempt === maxAttempts
+        ) {
+          throw error;
+        }
+
+        console.log(
+          `[AI] Gemini unavailable. Retrying in ${
+            delays[attempt - 1]
+          }ms...`,
+        );
+
+        await new Promise(
+          (resolve) =>
+            setTimeout(
+              resolve,
+              delays[attempt - 1],
+            ),
+        );
+      }
+    }
+
+    throw new BadRequestException(
+      'Gemini gagal memproses request',
+    );
+  }
+
   private parseRubberNoteResult(
     responseText: string | undefined,
   ) {
@@ -125,7 +222,9 @@ Important rules:
     let parsed: unknown;
 
     try {
-      parsed = JSON.parse(responseText);
+      parsed = JSON.parse(
+        responseText,
+      );
     } catch {
       throw new BadRequestException(
         'Hasil extraction Gemini bukan JSON yang valid',
@@ -136,7 +235,9 @@ Important rules:
       typeof parsed !== 'object' ||
       parsed === null ||
       !('workers' in parsed) ||
-      !Array.isArray(parsed.workers)
+      !Array.isArray(
+        parsed.workers,
+      )
     ) {
       throw new BadRequestException(
         'Format hasil extraction Gemini tidak valid',
@@ -159,7 +260,9 @@ Important rules:
       typeof result !== 'object' ||
       result === null ||
       !('workers' in result) ||
-      !Array.isArray(result.workers)
+      !Array.isArray(
+        result.workers,
+      )
     ) {
       throw new BadRequestException(
         'Hasil extraction Gemini tidak memiliki format workers yang valid',
@@ -186,7 +289,8 @@ Important rules:
 
         if (
           workerData.name !== null &&
-          typeof workerData.name !== 'string'
+          typeof workerData.name !==
+            'string'
         ) {
           throw new BadRequestException(
             `Nama worker ke-${index + 1} tidak valid`,
@@ -280,7 +384,8 @@ Important rules:
       );
 
     return {
-      workers: workersWithMatches,
+      workers:
+        workersWithMatches,
     };
   }
 }

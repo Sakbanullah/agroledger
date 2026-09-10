@@ -67,6 +67,13 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
   const [finalReview, setFinalReview] = useState<FinalReview | null>(null);
 
+  const [showNewWorkerModal, setShowNewWorkerModal] = useState(false);
+
+  const [newWorkerIndex, setNewWorkerIndex] = useState<number | null>(null);
+
+  const [newWorkerName, setNewWorkerName] = useState("");
+
+  const [isCreatingWorker, setIsCreatingWorker] = useState(false);
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -133,8 +140,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
         pieces: worker.pieces,
         weightKg: worker.weightKg,
         matches: worker.matches,
-        selectedWorkerId:
-          worker.matches.length > 0 ? worker.matches[0].id : null,
+        selectedWorkerId: null,
         confirmed: false,
       }));
 
@@ -216,6 +222,86 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
         };
       }),
     );
+  };
+  const handleCreateNewWorker = async () => {
+    if (newWorkerIndex === null) {
+      return;
+    }
+
+    const name = newWorkerName.trim();
+
+    if (!name) {
+      setError("Nama worker wajib diisi.");
+      return;
+    }
+
+    setIsCreatingWorker(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        "http://localhost:3001/rubber-workers/candidate/confirm",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Gagal menambahkan worker baru.");
+      }
+
+      setWorkers((current) =>
+        current.map((worker, index) => {
+          if (index !== newWorkerIndex) {
+            return worker;
+          }
+
+          return {
+            ...worker,
+            name: data.name,
+            selectedWorkerId: data.id,
+            matches: [
+              {
+                id: data.id,
+                name: data.name,
+                phone: data.phone ?? null,
+                type: data.type,
+                score: 1,
+              },
+            ],
+            confirmed: false,
+          };
+        }),
+      );
+
+      setShowNewWorkerModal(false);
+      setNewWorkerIndex(null);
+      setNewWorkerName("");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Gagal menambahkan worker baru.",
+      );
+    } finally {
+      setIsCreatingWorker(false);
+    }
+  };
+
+  const openNewWorkerModal = (index: number) => {
+    console.log("OPEN NEW WORKER MODAL", index);
+    const worker = workers[index];
+
+    setNewWorkerIndex(index);
+    setNewWorkerName(worker.name ?? "");
+    setShowNewWorkerModal(true);
+    setError(null);
   };
 
   const handleConfirmWorker = (index: number) => {
@@ -418,7 +504,60 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
           {error && <div className={styles.error}>{error}</div>}
 
           {saveSuccess && (
-            <div className={styles.successMessage}>{saveSuccess}</div>
+            <div
+              role="status"
+              style={{
+                marginTop: "20px",
+                padding: "18px 20px",
+                border: "1px solid #bbf7d0",
+                borderRadius: "14px",
+                background: "#f0fdf4",
+                display: "flex",
+                alignItems: "center",
+                gap: "14px",
+              }}
+            >
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "50%",
+                  background: "#dcfce7",
+                  color: "#15803d",
+                  fontSize: "20px",
+                  fontWeight: 700,
+                }}
+              >
+                ✓
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    color: "#166534",
+                    marginBottom: "3px",
+                  }}
+                >
+                  Data berhasil disimpan
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "13px",
+                    lineHeight: 1.5,
+                    color: "#4b5563",
+                  }}
+                >
+                  {saveSuccess.replace("Berhasil menyimpan ", "").replace(".", "")}
+                </div>
+              </div>
+            </div>
           )}
 
           <div className={styles.actionRow}>
@@ -613,9 +752,18 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         </div>
 
                         <div className={styles.noMatchText}>
-                          Periksa nama hasil scan. Jika benar-benar worker baru,
-                          nanti kita tambahkan flow konfirmasi worker baru.
+                          Tidak ditemukan worker yang cocok dengan hasil scan.
+                          Periksa kembali nama worker sebelum menambahkan worker
+                          baru.
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => openNewWorkerModal(index)}
+                          className={styles.primaryButton}
+                        >
+                          + Tambah Worker Baru
+                        </button>
                       </div>
                     )}
                   </div>
@@ -746,6 +894,75 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
           </section>
         )}
       </div>
+      
+      {showNewWorkerModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <div>
+                <div className={styles.modalEyebrow}>Worker Baru</div>
+
+                <h2 className={styles.modalTitle}>Tambah Worker</h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewWorkerModal(false);
+                  setNewWorkerIndex(null);
+                  setNewWorkerName("");
+                }}
+                className={styles.modalClose}
+                disabled={isCreatingWorker}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <label className={styles.fieldLabel}>Nama Worker</label>
+
+              <input
+                type="text"
+                value={newWorkerName}
+                onChange={(event) => setNewWorkerName(event.target.value)}
+                className={styles.input}
+                placeholder="Masukkan nama worker"
+                disabled={isCreatingWorker}
+              />
+
+              <p className={styles.modalHint}>
+                Worker baru hanya akan dibuat setelah kamu mengonfirmasi nama
+                ini.
+              </p>
+            </div>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewWorkerModal(false);
+                  setNewWorkerIndex(null);
+                  setNewWorkerName("");
+                }}
+                className={styles.secondaryButton}
+                disabled={isCreatingWorker}
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCreateNewWorker}
+                className={styles.successButton}
+                disabled={isCreatingWorker || !newWorkerName.trim()}
+              >
+                {isCreatingWorker ? "Menambahkan..." : "Tambah Worker"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
