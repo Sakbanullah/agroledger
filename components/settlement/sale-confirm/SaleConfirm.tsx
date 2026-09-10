@@ -199,9 +199,8 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
           onBuyerChange={setBuyerName}
           onPriceChange={setPricePerKg}
         />
-
         <SaleWorkerTable
-          workers={sale.rubberWorkers}
+          workers={sale.rubberWorkers ?? []}
           totalWeight={totalWeight}
         />
         {confirmError && <div className={styles.error}>{confirmError}</div>}

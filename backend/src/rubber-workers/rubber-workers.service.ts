@@ -15,27 +15,29 @@ export class RubberWorkersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.rubberSaleWorker.findMany({
+    return this.prisma.person.findMany({
+      where: {
+        type: 'WORKER',
+      },
       orderBy: {
         createdAt: 'desc',
-      },
-      include: {
-        worker: true,
-        sale: true,
       },
     });
   }
 
   async findOne(id: number) {
-    return this.prisma.rubberSaleWorker.findUnique({
+    const worker = await this.prisma.person.findFirst({
       where: {
         id,
-      },
-      include: {
-        worker: true,
-        sale: true,
+        type: 'WORKER',
       },
     });
+
+    if (!worker) {
+      throw new NotFoundException('Worker tidak ditemukan');
+    }
+
+    return worker;
   }
 
   async match(name: string) {
@@ -387,7 +389,7 @@ export class RubberWorkersService {
       };
     });
   }
-  
+
   async update(id: number, updateRubberWorkerDto: UpdateRubberWorkerDto) {
     const rubberWorker = await this.prisma.rubberSaleWorker.findUnique({
       where: {

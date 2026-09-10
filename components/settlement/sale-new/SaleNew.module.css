@@ -1,0 +1,289 @@
+.page {
+  min-height: 100vh;
+  background: #f7f8f5;
+  padding: 32px 24px 80px;
+}
+
+.container {
+  width: min(900px, 100%);
+  margin: 0 auto;
+}
+
+.backButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: #727a70;
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 30px;
+}
+
+.backButton:hover {
+  color: #263a28;
+}
+
+.header {
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  color: #7e887b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  margin: 0;
+  color: #202720;
+  font-size: 32px;
+  letter-spacing: -0.035em;
+}
+
+.header p {
+  margin: 8px 0 0;
+  color: #7d847b;
+  font-size: 14px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.section {
+  background: white;
+  border: 1px solid #e5e9e2;
+  border-radius: 16px;
+  padding: 26px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.sectionNumber {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #edf1eb;
+  color: #50614f;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  color: #2a3029;
+  font-size: 16px;
+}
+
+.sectionHeader p {
+  margin: 4px 0 0;
+  color: #929890;
+  font-size: 12px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.field,
+.fieldFull {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4c554b;
+}
+
+.fieldFull label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4c554b;
+}
+
+.fieldFull label span {
+  color: #a0a59e;
+  font-weight: 400;
+}
+
+.field input,
+.field select,
+.fieldFull textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #dfe3dd;
+  border-radius: 9px;
+  background: #fff;
+  padding: 11px 12px;
+  color: #30372f;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.field input:focus,
+.field select:focus,
+.fieldFull textarea:focus {
+  border-color: #758674;
+}
+
+.fieldFull textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.infoBox {
+  display: flex;
+  gap: 12px;
+  background: #eef4ed;
+  border: 1px solid #dce7da;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.infoIcon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #d8e5d5;
+  color: #476348;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.infoBox strong {
+  display: block;
+  color: #40533f;
+  font-size: 12px;
+}
+
+.infoBox p {
+  margin: 5px 0 0;
+  color: #6f7d6c;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff2ef;
+  border: 1px solid #f0d8d2;
+  border-radius: 10px;
+  padding: 13px 15px;
+  color: #854b40;
+  font-size: 12px;
+}
+
+.error strong {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.cancelButton,
+.submitButton {
+  border-radius: 9px;
+  padding: 11px 17px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancelButton {
+  border: 1px solid #dfe3dd;
+  background: white;
+  color: #687067;
+}
+
+.cancelButton:hover {
+  background: #f8f9f7;
+}
+
+.submitButton {
+  border: none;
+  background: #263a28;
+  color: white;
+}
+
+.submitButton:hover {
+  background: #1d2d1f;
+}
+
+.submitButton:disabled,
+.cancelButton:disabled,
+.field input:disabled,
+.field select:disabled,
+.fieldFull textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.loading {
+  min-height: 400px;
+  display: grid;
+  place-items: center;
+  color: #7c847a;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 16px 60px;
+  }
+
+  .section {
+    padding: 20px;
+  }
+
+  .fields {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldFull {
+    grid-column: auto;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancelButton,
+  .submitButton {
+    width: 100%;
+  }
+}

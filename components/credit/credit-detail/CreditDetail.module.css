@@ -1,0 +1,279 @@
+.page {
+  min-height: 100vh;
+  padding: 32px;
+  background: #f7f8fa;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.backButton {
+  display: block;
+  margin-bottom: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #747a83;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.backButton:hover {
+  color: #17191c;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #8a9099;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #17191c;
+}
+
+.header p {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: #747a83;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton {
+  border-radius: 9px;
+  padding: 11px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: 0;
+  background: #17191c;
+  color: #ffffff;
+}
+
+.secondaryButton {
+  border: 1px solid #dfe2e6;
+  background: #ffffff;
+  color: #33373d;
+}
+
+.primaryButton:hover {
+  opacity: 0.9;
+}
+
+.secondaryButton:hover {
+  background: #f8f9fa;
+}
+
+.balanceCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 26px;
+  border: 1px solid #e7e9ec;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.balanceCard span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #7b818a;
+}
+
+.balanceCard strong {
+  display: block;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #17191c;
+}
+
+.debtStatus,
+.paidStatus {
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.debtStatus {
+  background: #f4ece8;
+  color: #7c4c3d;
+}
+
+.paidStatus {
+  background: #edf3ee;
+  color: #52705a;
+}
+
+.card {
+  overflow: hidden;
+  border: 1px solid #e7e9ec;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #eceef1;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  color: #17191c;
+}
+
+.transactionCount {
+  font-size: 12px;
+  color: #858b94;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tableWrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableWrapper th {
+  padding: 13px 24px;
+  background: #fafbfc;
+  border-bottom: 1px solid #eceef1;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8a9099;
+  white-space: nowrap;
+}
+
+.tableWrapper td {
+  padding: 17px 24px;
+  border-bottom: 1px solid #f0f1f3;
+  font-size: 13px;
+  color: #3e434a;
+}
+
+.tableWrapper tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.debtBadge,
+.paymentBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.debtBadge {
+  background: #f4ece8;
+  color: #7c4c3d;
+}
+
+.paymentBadge {
+  background: #edf3ee;
+  color: #52705a;
+}
+
+.debtAmount {
+  font-weight: 650;
+  color: #7c4c3d !important;
+}
+
+.paymentAmount {
+  font-weight: 650;
+  color: #52705a !important;
+}
+
+.emptyState,
+.state {
+  text-align: center;
+  color: #969ca5;
+}
+
+.emptyState {
+  padding: 56px 24px !important;
+}
+
+.state {
+  padding: 80px 20px;
+  border: 1px solid #e7e9ec;
+  border-radius: 14px;
+  background: #ffffff;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 20px 16px;
+  }
+
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    flex: 1;
+  }
+
+  .balanceCard {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .tableWrapper th,
+  .tableWrapper td {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

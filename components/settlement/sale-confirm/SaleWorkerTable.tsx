@@ -12,22 +12,20 @@ interface Worker {
   };
 }
 
-interface Props {
-  workers: Worker[];
+interface SaleWorkerTableProps {
+  workers?: Worker[];
   totalWeight: number;
 }
 
 export default function SaleWorkerTable({
-  workers,
+  workers = [],
   totalWeight,
-}: Props) {
+}: SaleWorkerTableProps) {
   return (
     <section className={styles.card}>
       <div className={styles.sectionHeader}>
         <div>
-          <span className={styles.eyebrow}>
-            WORKERS
-          </span>
+          <span className={styles.eyebrow}>WORKERS</span>
 
           <h2>Daftar Pekerja</h2>
         </div>
@@ -53,28 +51,31 @@ export default function SaleWorkerTable({
           </thead>
 
           <tbody>
-            {workers.map((worker, index) => (
-              <tr key={worker.id}>
-                <td>{index + 1}</td>
+            {workers.length > 0 ? (
+              workers.map((worker, index) => (
+                <tr key={worker.id}>
+                  <td>{index + 1}</td>
 
-                <td>
-                  <strong>
-                    {worker.worker.name}
-                  </strong>
-                </td>
+                  <td>
+                    <strong>
+                      {worker.worker?.name ?? "Worker tidak diketahui"}
+                    </strong>
+                  </td>
 
-                <td>
-                  {worker.pieces}
-                </td>
+                  <td>{worker.pieces}</td>
 
-                <td>
-                  {Number(
-                    worker.weightKg,
-                  ).toLocaleString("id-ID")}{" "}
-                  kg
+                  <td>
+                    {Number(worker.weightKg).toLocaleString("id-ID")} kg
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4}>
+                  Belum ada data worker.
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

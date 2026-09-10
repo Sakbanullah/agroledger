@@ -416,17 +416,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
         throw new Error(data.message || "Gagal menyimpan worker ke penjualan.");
       }
 
-      setShowFinalReview(false);
-
-      setWorkers([]);
-      setFinalReview(null);
-      setHasScanned(false);
-
-      setSaveSuccess(
-        `Berhasil menyimpan ${data.workers.length} worker dengan total berat ${Number(
-          data.totalWeightKg,
-        ).toLocaleString("id-ID")} kg.`,
-      );
+      window.location.href = `/settlement/sale/${saleId}/confirm`;
     } catch (err) {
       setError(
         err instanceof Error
@@ -554,7 +544,9 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                     color: "#4b5563",
                   }}
                 >
-                  {saveSuccess.replace("Berhasil menyimpan ", "").replace(".", "")}
+                  {saveSuccess
+                    .replace("Berhasil menyimpan ", "")
+                    .replace(".", "")}
                 </div>
               </div>
             </div>
@@ -894,7 +886,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
           </section>
         )}
       </div>
-      
+
       {showNewWorkerModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>

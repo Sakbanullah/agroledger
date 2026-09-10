@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+
 import { CreditService } from './credit.service';
 import { CreateCreditAccountDto } from './dto/create-credit-account.dto';
 import { CreateCreditTransactionDto } from './dto/create-credit-transaction.dto';
+import { CreateDebtDto } from './dto/create-debt.dto';
 
 @Controller('credit')
 export class CreditController {
@@ -18,16 +20,27 @@ export class CreditController {
   }
 
   @Post('accounts')
-  createAccount(@Body() createCreditAccountDto: CreateCreditAccountDto) {
+  createAccount(
+    @Body() createCreditAccountDto: CreateCreditAccountDto,
+  ) {
     return this.creditService.createAccount(createCreditAccountDto);
   }
+
   @Post('transactions')
   createTransaction(
     @Body()
     createCreditTransactionDto: CreateCreditTransactionDto,
   ) {
-    return this.creditService.createTransaction(createCreditTransactionDto);
+    return this.creditService.createTransaction(
+      createCreditTransactionDto,
+    );
   }
+
+  @Post('debt')
+  createDebt(@Body() createDebtDto: CreateDebtDto) {
+    return this.creditService.createDebt(createDebtDto);
+  }
+
   @Get('accounts/:id/outstanding')
   getOutstandingBalance(@Param('id') id: string) {
     return this.creditService.getOutstandingBalance(Number(id));

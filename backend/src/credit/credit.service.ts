@@ -6,6 +6,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCreditAccountDto } from './dto/create-credit-account.dto';
 import { CreateCreditTransactionDto } from './dto/create-credit-transaction.dto';
+import { CreateDebtDto } from './dto/create-debt.dto';
+
 @Injectable()
 export class CreditService {
   constructor(private readonly prisma: PrismaService) {}
@@ -17,6 +19,11 @@ export class CreditService {
       },
       include: {
         person: true,
+        transactions: {
+          orderBy: {
+            transactionDate: 'desc',
+          },
+        },
       },
     });
   }
@@ -65,6 +72,80 @@ export class CreditService {
       include: {
         person: true,
       },
+    });
+  }
+
+  async createDebt(createDebtDto: CreateDebtDto) {
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Pastikan person/worker ada
+      const person = await tx.person.findUnique({
+        where: {
+          id: createDebtDto.personId,
+        },
+      });
+
+      if (!person) {
+        throw new NotFoundException('Person tidak ditemukan');
+      }
+
+      // 2. Cari credit account worker
+      let creditAccount = await tx.creditAccount.findUnique({
+        where: {
+          personId: createDebtDto.personId,
+        },
+      });
+
+      // 3. Kalau belum punya akun kasbon, buat otomatis
+      if (!creditAccount) {
+        creditAccount = await tx.creditAccount.create({
+          data: {
+            personId: createDebtDto.personId,
+          },
+        });
+      }
+
+      // 4. Pastikan account aktif
+      if (creditAccount.status !== 'ACTIVE') {
+        throw new BadRequestException('Credit account tidak aktif');
+      }
+
+      // 5. Buat transaksi DEBT
+      const transaction = await tx.creditTransaction.create({
+        data: {
+          creditAccountId: creditAccount.id,
+          type: 'DEBT',
+          amount: createDebtDto.amount,
+          transactionDate: new Date(createDebtDto.transactionDate),
+          description: createDebtDto.description,
+          reference: createDebtDto.reference,
+        },
+      });
+
+      // 6. Ambil outstanding terbaru
+      const transactions = await tx.creditTransaction.findMany({
+        where: {
+          creditAccountId: creditAccount.id,
+        },
+      });
+
+      let outstandingBalance = 0;
+
+      for (const item of transactions) {
+        if (item.type === 'DEBT') {
+          outstandingBalance += Number(item.amount);
+        }
+
+        if (item.type === 'PAYMENT') {
+          outstandingBalance -= Number(item.amount);
+        }
+      }
+
+      return {
+        person,
+        creditAccount,
+        transaction,
+        outstandingBalance,
+      };
     });
   }
 
