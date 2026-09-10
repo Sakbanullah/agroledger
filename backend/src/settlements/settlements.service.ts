@@ -5,17 +5,14 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
-
 import { ConfirmSettlementDto } from './dto/confirm-settlement.dto';
 
 @Injectable()
 export class SettlementsService {
   constructor(private readonly prisma: PrismaService) {}
-
   // =========================================================
   // FIND ALL
   // =========================================================
-
   async findAll() {
     return this.prisma.settlement.findMany({
       orderBy: {
@@ -27,11 +24,9 @@ export class SettlementsService {
       },
     });
   }
-
   // =========================================================
   // FIND ONE
   // =========================================================
-
   async findOne(id: number) {
     return this.prisma.settlement.findUnique({
       where: {
@@ -48,7 +43,6 @@ export class SettlementsService {
       },
     });
   }
-
   // =========================================================
   // FIND BY SALE
   // =========================================================
@@ -67,11 +61,9 @@ export class SettlementsService {
       },
     });
   }
-
   // =========================================================
   // CALCULATE SETTLEMENT
   // =========================================================
-
   async calculateSettlement(rubberWorkerId: number) {
     const rubberWorker = await this.prisma.rubberSaleWorker.findUnique({
       where: {
@@ -92,15 +84,10 @@ export class SettlementsService {
     }
 
     const pieces = rubberWorker.pieces;
-
     const weightKg = Number(rubberWorker.weightKg);
-
     const pricePerKg = Number(rubberWorker.sale.pricePerKg);
-
     const grossValue = weightKg * pricePerKg;
-
     const workerShare = grossValue / 2;
-
     const creditAccount = await this.prisma.creditAccount.findUnique({
       where: {
         personId: rubberWorker.workerId,
@@ -128,44 +115,28 @@ export class SettlementsService {
     }
 
     outstandingKasbon = Math.max(0, outstandingKasbon);
-
     const deductionAmount = Math.min(workerShare, outstandingKasbon);
-
     const netAmount = workerShare - deductionAmount;
-
     const remainingKasbon = outstandingKasbon - deductionAmount;
 
     return {
       rubberWorkerId,
-
       worker: rubberWorker.worker.name,
-
       saleId: rubberWorker.saleId,
-
       pieces,
-
       weightKg,
-
       pricePerKg,
-
       grossValue,
-
       workerShare,
-
       outstandingKasbon,
-
       deductionAmount,
-
       netAmount,
-
       remainingKasbon,
     };
   }
-
   // =========================================================
   // CONFIRM SINGLE SETTLEMENT
   // =========================================================
-
   async confirmSettlement(confirmSettlementDto: ConfirmSettlementDto) {
     return this.prisma.$transaction(
       async (tx) => {
@@ -186,11 +157,9 @@ export class SettlementsService {
         if (rubberWorker.sale.pricePerKg === null) {
           throw new BadRequestException('Harga karet belum tersedia');
         }
-
         // -----------------------------------------------------
         // CEK DUPLICATE SETTLEMENT
         // -----------------------------------------------------
-
         const existingSettlement = await tx.settlement.findUnique({
           where: {
             saleId_workerId: {
@@ -199,17 +168,14 @@ export class SettlementsService {
             },
           },
         });
-
         if (existingSettlement) {
           throw new BadRequestException(
             'Settlement untuk worker ini sudah dibuat',
           );
         }
-
         // -----------------------------------------------------
         // LOCK CREDIT ACCOUNT
         // -----------------------------------------------------
-
         const lockedAccounts = await tx.$queryRaw<
           Array<{
             id: number;
@@ -222,25 +188,17 @@ export class SettlementsService {
             WHERE personId = ${rubberWorker.workerId}
             FOR UPDATE
           `;
-
         const creditAccount = lockedAccounts[0];
-
         if (creditAccount && creditAccount.status !== 'ACTIVE') {
           throw new BadRequestException('Credit account tidak aktif');
         }
-
         // -----------------------------------------------------
         // CALCULATION
         // -----------------------------------------------------
-
         const pieces = rubberWorker.pieces;
-
         const weightKg = Number(rubberWorker.weightKg);
-
         const pricePerKg = Number(rubberWorker.sale.pricePerKg);
-
         const grossValue = weightKg * pricePerKg;
-
         const workerShare = grossValue / 2;
 
         // -----------------------------------------------------
@@ -266,45 +224,32 @@ export class SettlementsService {
             }
           }
         }
-
         outstandingKasbon = Math.max(0, outstandingKasbon);
-
         // -----------------------------------------------------
         // FINAL SETTLEMENT CALCULATION
         // -----------------------------------------------------
-
         const deductionAmount = Math.min(workerShare, outstandingKasbon);
 
         const netAmount = workerShare - deductionAmount;
 
         const remainingKasbon = outstandingKasbon - deductionAmount;
-
         // -----------------------------------------------------
         // CREATE SETTLEMENT
         // -----------------------------------------------------
-
         const settlement = await tx.settlement.create({
           data: {
             saleId: rubberWorker.saleId,
-
             workerId: rubberWorker.workerId,
-
             grossShare: workerShare,
-
             kasbonAmount: outstandingKasbon,
-
             deductionAmount,
-
             netAmount,
-
             status: 'CONFIRMED',
           },
         });
-
         // -----------------------------------------------------
         // CREATE KASBON PAYMENT
         // -----------------------------------------------------
-
         if (deductionAmount > 0) {
           if (!creditAccount) {
             throw new BadRequestException(
@@ -315,39 +260,26 @@ export class SettlementsService {
           await tx.creditTransaction.create({
             data: {
               creditAccountId: creditAccount.id,
-
               type: 'PAYMENT',
-
               amount: deductionAmount,
-
               transactionDate: new Date(),
-
               description: `Potongan kasbon settlement Sale #${rubberWorker.saleId}`,
-
               reference: `SETTLEMENT-${settlement.id}`,
             },
           });
         }
-
         // -----------------------------------------------------
         // CREATE MONEY OUT
         // -----------------------------------------------------
-
         if (netAmount > 0) {
           await tx.moneyTransaction.create({
             data: {
               type: 'OUT',
-
               amount: netAmount,
-
               category: 'RUBBER_WORKER_SETTLEMENT',
-
               description: `Pembayaran settlement ${rubberWorker.worker.name}`,
-
               transactionDate: new Date(),
-
               referenceType: 'SETTLEMENT',
-
               referenceId: settlement.id,
             },
           });
@@ -391,11 +323,9 @@ export class SettlementsService {
         if (sale.pricePerKg === null) {
           throw new BadRequestException('Harga karet belum ditentukan');
         }
-
         // -----------------------------------------------------
         // GET WORKERS
         // -----------------------------------------------------
-
         const workers = await tx.rubberSaleWorker.findMany({
           where: {
             saleId,
@@ -409,11 +339,9 @@ export class SettlementsService {
         if (workers.length === 0) {
           throw new NotFoundException('Tidak ada worker pada sale tersebut');
         }
-
         // -----------------------------------------------------
         // PREVENT DUPLICATE
         // -----------------------------------------------------
-
         const existingSettlements = await tx.settlement.findMany({
           where: {
             saleId,
@@ -425,7 +353,6 @@ export class SettlementsService {
             'Settlement untuk sale ini sudah pernah dibuat',
           );
         }
-
         // -----------------------------------------------------
         // LOCK CREDIT ACCOUNTS
         // -----------------------------------------------------
@@ -460,50 +387,35 @@ export class SettlementsService {
         for (const account of lockedAccounts) {
           creditAccountMap.set(account.personId, account);
         }
-
         // -----------------------------------------------------
         // PROCESS WORKERS
         // -----------------------------------------------------
-
         const results = [];
-
         for (const rubberWorker of workers) {
           if (rubberWorker.sale.pricePerKg === null) {
             throw new BadRequestException('Harga karet belum ditentukan');
           }
-
           // ---------------------------------------------------
           // BASIC DATA
           // ---------------------------------------------------
-
           const pieces = rubberWorker.pieces;
-
           const weightKg = Number(rubberWorker.weightKg);
-
           const pricePerKg = Number(rubberWorker.sale.pricePerKg);
-
           // ---------------------------------------------------
           // GROSS
           // ---------------------------------------------------
-
           const grossValue = weightKg * pricePerKg;
-
           // ---------------------------------------------------
           // WORKER SHARE 50%
           // ---------------------------------------------------
-
           const workerShare = grossValue / 2;
-
           // ---------------------------------------------------
           // CREDIT ACCOUNT
           // ---------------------------------------------------
-
           const creditAccount = creditAccountMap.get(rubberWorker.workerId);
-
           // ---------------------------------------------------
           // OUTSTANDING KASBON
           // ---------------------------------------------------
-
           let outstandingKasbon = 0;
 
           if (creditAccount) {
@@ -531,25 +443,18 @@ export class SettlementsService {
 
             outstandingKasbon = Math.max(0, outstandingKasbon);
           }
-
           // ---------------------------------------------------
           // DEDUCTION
           // ---------------------------------------------------
-
           const deductionAmount = Math.min(workerShare, outstandingKasbon);
-
           // ---------------------------------------------------
           // NET PAYMENT
           // ---------------------------------------------------
-
           const netAmount = workerShare - deductionAmount;
-
           // ---------------------------------------------------
           // REMAINING KASBON
           // ---------------------------------------------------
-
           const remainingKasbon = outstandingKasbon - deductionAmount;
-
           // ---------------------------------------------------
           // CREATE SETTLEMENT
           // ---------------------------------------------------
@@ -557,17 +462,11 @@ export class SettlementsService {
           const settlement = await tx.settlement.create({
             data: {
               saleId,
-
               workerId: rubberWorker.workerId,
-
               grossShare: workerShare,
-
               kasbonAmount: outstandingKasbon,
-
               deductionAmount,
-
               netAmount,
-
               status: 'CONFIRMED',
             },
           });
@@ -586,15 +485,10 @@ export class SettlementsService {
             await tx.creditTransaction.create({
               data: {
                 creditAccountId: creditAccount.id,
-
                 type: 'PAYMENT',
-
                 amount: deductionAmount,
-
                 transactionDate: new Date(),
-
                 description: `Potongan kasbon settlement Sale #${saleId}`,
-
                 reference: `SETTLEMENT-${settlement.id}`,
               },
             });
@@ -608,17 +502,11 @@ export class SettlementsService {
             await tx.moneyTransaction.create({
               data: {
                 type: 'OUT',
-
                 category: 'RUBBER_WORKER_SETTLEMENT',
-
                 amount: netAmount,
-
                 transactionDate: new Date(),
-
                 description: `Pembayaran settlement ${rubberWorker.worker.name}`,
-
                 referenceType: 'SETTLEMENT',
-
                 referenceId: settlement.id,
               },
             });
@@ -630,25 +518,15 @@ export class SettlementsService {
 
           results.push({
             settlement,
-
             worker: rubberWorker.worker.name,
-
             pieces,
-
             weightKg,
-
             pricePerKg,
-
             grossValue,
-
             workerShare,
-
             outstandingKasbon,
-
             deductionAmount,
-
             netAmount,
-
             remainingKasbon,
           });
         }

@@ -248,18 +248,6 @@ export default function SettlementCheck({
                     )}
                   </strong>
                 </div>
-
-                <div className="calc-row">
-                  <span>
-                    Potongan Kasbon
-                  </span>
-
-                  <strong>
-                    {formatRupiah(
-                      check.calculation.deduction,
-                    )}
-                  </strong>
-                </div>
               </div>
 
               {/* HASIL AKHIR */}
