@@ -53,19 +53,32 @@ export class SalesService {
         farmId: createSaleDto.farmId,
         commodityId: createSaleDto.commodityId,
         saleDate: new Date(createSaleDto.saleDate),
-        pricePerKg: createSaleDto.pricePerKg,
-        totalWeightKg: createSaleDto.totalWeightKg,
-        buyerName: createSaleDto.buyerName,
+
+        ...(createSaleDto.pricePerKg !== undefined && {
+          pricePerKg: createSaleDto.pricePerKg,
+        }),
+
+        ...(createSaleDto.totalWeightKg !== undefined && {
+          totalWeightKg: createSaleDto.totalWeightKg,
+        }),
+
+        ...(createSaleDto.buyerName !== undefined && {
+          buyerName: createSaleDto.buyerName,
+        }),
+
         status: createSaleDto.status ?? 'PENDING',
-        notes: createSaleDto.notes,
+
+        ...(createSaleDto.notes !== undefined && {
+          notes: createSaleDto.notes,
+        }),
       },
+
       include: {
         farm: true,
         commodity: true,
       },
     });
   }
-
   async updatePrice(id: number, updateSalePriceDto: UpdateSalePriceDto) {
     const sale = await this.prisma.sale.findUnique({
       where: { id },

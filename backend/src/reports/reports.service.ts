@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -20,16 +19,20 @@ export class ReportsService {
   }
 
   async getFinanceSummary(startDate: Date, endDate: Date) {
-    const { start, end } = this.getDateRange(startDate, endDate);
+    const { start, end } = this.getDateRange(
+      startDate,
+      endDate,
+    );
 
-    const transactions = await this.prisma.moneyTransaction.findMany({
-      where: {
-        transactionDate: {
-          gte: start,
-          lte: end,
+    const transactions =
+      await this.prisma.moneyTransaction.findMany({
+        where: {
+          transactionDate: {
+            gte: start,
+            lte: end,
+          },
         },
-      },
-    });
+      });
 
     let totalIncome = 0;
     let totalExpense = 0;
@@ -53,25 +56,31 @@ export class ReportsService {
       },
       totalIncome,
       totalExpense,
-      netCashFlow: totalIncome - totalExpense,
+      netCashFlow:
+        totalIncome - totalExpense,
     };
   }
 
-  async getSalesSummary(startDate: Date, endDate: Date) {
-    const { start, end } = this.getDateRange(startDate, endDate);
+  async getSalesSummary(
+    startDate: Date,
+    endDate: Date,
+  ) {
+    const { start, end } =
+      this.getDateRange(startDate, endDate);
 
-    const sales = await this.prisma.sale.findMany({
-      where: {
-        saleDate: {
-          gte: start,
-          lte: end,
+    const sales =
+      await this.prisma.sale.findMany({
+        where: {
+          saleDate: {
+            gte: start,
+            lte: end,
+          },
+          status: 'COMPLETED',
         },
-        status: 'COMPLETED',
-      },
-      include: {
-        commodity: true,
-      },
-    });
+        include: {
+          commodity: true,
+        },
+      });
 
     let totalWeightKg = 0;
     let totalRevenue = 0;
@@ -89,28 +98,42 @@ export class ReportsService {
     >();
 
     for (const sale of sales) {
-      const weight = Number(sale.totalWeightKg);
-      const price = Number(sale.pricePerKg ?? 0);
-      const revenue = weight * price;
+      const weight =
+        Number(sale.totalWeightKg);
+
+      const price =
+        Number(sale.pricePerKg ?? 0);
+
+      const revenue =
+        weight * price;
 
       totalWeightKg += weight;
       totalRevenue += revenue;
 
-      const existing = commoditySummary.get(sale.commodityId);
+      const existing =
+        commoditySummary.get(
+          sale.commodityId,
+        );
 
       if (existing) {
         existing.totalSales += 1;
         existing.totalWeightKg += weight;
         existing.totalRevenue += revenue;
       } else {
-        commoditySummary.set(sale.commodityId, {
-          commodityId: sale.commodityId,
-          commodityName: sale.commodity.name,
-          unit: sale.commodity.unit,
-          totalSales: 1,
-          totalWeightKg: weight,
-          totalRevenue: revenue,
-        });
+        commoditySummary.set(
+          sale.commodityId,
+          {
+            commodityId:
+              sale.commodityId,
+            commodityName:
+              sale.commodity.name,
+            unit:
+              sale.commodity.unit,
+            totalSales: 1,
+            totalWeightKg: weight,
+            totalRevenue: revenue,
+          },
+        );
       }
     }
 
@@ -122,82 +145,172 @@ export class ReportsService {
       totalSales: sales.length,
       totalWeightKg,
       totalRevenue,
-      summaryByCommodity: Array.from(commoditySummary.values()),
+      summaryByCommodity:
+        Array.from(
+          commoditySummary.values(),
+        ),
       sales,
     };
   }
 
-  async getSettlementSummary(startDate: Date, endDate: Date) {
-    const { start, end } = this.getDateRange(startDate, endDate);
-
-    const settlements = await this.prisma.settlement.findMany({
-      where: {
-        createdAt: {
-          gte: start,
-          lte: end,
+  async getSettlementSummary(
+    startDate: Date,
+    endDate: Date,
+  ) {
+    const settlements =
+      await this.prisma.settlement.findMany({
+        where: {
+          status: 'CONFIRMED',
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
         },
-        status: 'CONFIRMED',
-      },
-    });
+      });
 
-    let totalGrossShare = 0;
+    let totalSettlements = 0;
+    let totalWorkerShare = 0;
     let totalDeduction = 0;
-    let totalNetAmount = 0;
+    let totalNetPayment = 0;
 
     for (const settlement of settlements) {
-      totalGrossShare += Number(settlement.grossShare);
+      totalSettlements += 1;
 
-      totalDeduction += Number(settlement.deductionAmount);
+      totalWorkerShare += Number(
+        settlement.grossShare,
+      );
 
-      totalNetAmount += Number(settlement.netAmount);
+      totalDeduction += Number(
+        settlement.deductionAmount,
+      );
+
+      totalNetPayment += Number(
+        settlement.netAmount,
+      );
     }
 
     return {
-      period: {
-        startDate: start,
-        endDate: end,
-      },
-      totalSettlements: settlements.length,
-      totalGrossShare,
+      totalSettlements,
+      totalWorkerShare,
       totalDeduction,
-      totalNetAmount,
-      settlements,
+      totalNetPayment,
     };
   }
 
   async getDashboardSummary() {
-    const transactions = await this.prisma.moneyTransaction.findMany({
-      orderBy: {
-        transactionDate: 'desc',
-      },
-      take: 10,
-    });
+    const [
+      recentTransactions,
+      incomeResult,
+      expenseResult,
+      sales,
+      settlements,
+    ] = await Promise.all([
+      this.prisma.moneyTransaction.findMany({
+        orderBy: {
+          transactionDate: 'desc',
+        },
+        take: 10,
+      }),
 
-    const allTransactions = await this.prisma.moneyTransaction.findMany();
+      this.prisma.moneyTransaction.aggregate({
+        _sum: {
+          amount: true,
+        },
+        where: {
+          type: 'IN',
+        },
+      }),
 
-    let totalIncome = 0;
-    let totalExpense = 0;
+      this.prisma.moneyTransaction.aggregate({
+        _sum: {
+          amount: true,
+        },
+        where: {
+          type: 'OUT',
+        },
+      }),
 
-    for (const transaction of allTransactions) {
-      const amount = Number(transaction.amount);
+      this.prisma.sale.findMany({
+        where: {
+          status: 'COMPLETED',
+        },
+      }),
 
-      if (transaction.type === 'IN') {
-        totalIncome += amount;
-      }
+      this.prisma.settlement.findMany({
+        where: {
+          status: 'CONFIRMED',
+        },
+      }),
+    ]);
 
-      if (transaction.type === 'OUT') {
-        totalExpense += amount;
-      }
+    const totalIncome = Number(
+      incomeResult._sum.amount ?? 0,
+    );
+
+    const totalExpense = Number(
+      expenseResult._sum.amount ?? 0,
+    );
+
+    let totalSales = 0;
+    let totalWeightKg = 0;
+    let totalRevenue = 0;
+
+    for (const sale of sales) {
+      const weight =
+        Number(sale.totalWeightKg);
+
+      const price =
+        Number(sale.pricePerKg ?? 0);
+
+      totalSales += 1;
+      totalWeightKg += weight;
+      totalRevenue +=
+        weight * price;
+    }
+
+    let totalSettlements = 0;
+    let totalWorkerShare = 0;
+    let totalDeduction = 0;
+    let totalNetPayment = 0;
+
+    for (const settlement of settlements) {
+      totalSettlements += 1;
+
+      totalWorkerShare += Number(
+        settlement.grossShare,
+      );
+
+      totalDeduction += Number(
+        settlement.deductionAmount,
+      );
+
+      totalNetPayment += Number(
+        settlement.netAmount,
+      );
     }
 
     return {
       cashPosition: {
         totalIncome,
         totalExpense,
-        currentCash: totalIncome - totalExpense,
+        currentCash:
+          totalIncome - totalExpense,
       },
 
-      recentTransactions: transactions,
+      sales: {
+        totalSales,
+        totalWeightKg,
+        totalRevenue,
+      },
+
+      settlements: {
+        totalSettlements,
+        totalWorkerShare,
+        totalDeduction,
+        totalNetPayment,
+      },
+
+      recentTransactions,
     };
   }
 }

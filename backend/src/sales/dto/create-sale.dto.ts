@@ -24,9 +24,10 @@ export class CreateSaleDto {
   @Min(0)
   pricePerKg?: number;
 
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  totalWeightKg: number;
+  totalWeightKg?: number;
 
   @IsOptional()
   @IsString()

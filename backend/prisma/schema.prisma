@@ -88,7 +88,7 @@ model Sale {
   commodityId   Int
   saleDate      DateTime
   pricePerKg    Decimal? @db.Decimal(12, 2)
-  totalWeightKg Decimal  @db.Decimal(12, 2)
+  totalWeightKg Decimal?  @db.Decimal(12, 2)
   buyerName     String?
   status        String   @default("PENDING")
   notes         String?

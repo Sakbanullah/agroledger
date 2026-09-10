@@ -47,4 +47,6 @@ export class ReportsController {
   getDashboardSummary() {
     return this.reportsService.getDashboardSummary();
   }
+
+  
 }

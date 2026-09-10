@@ -3,12 +3,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
 import { PrismaService } from '../prisma/prisma.service';
+
 import { ConfirmSettlementDto } from './dto/confirm-settlement.dto';
 
 @Injectable()
 export class SettlementsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // =========================================================
+  // FIND ALL
+  // =========================================================
 
   async findAll() {
     return this.prisma.settlement.findMany({
@@ -21,6 +27,10 @@ export class SettlementsService {
       },
     });
   }
+
+  // =========================================================
+  // FIND ONE
+  // =========================================================
 
   async findOne(id: number) {
     return this.prisma.settlement.findUnique({
@@ -39,6 +49,10 @@ export class SettlementsService {
     });
   }
 
+  // =========================================================
+  // FIND BY SALE
+  // =========================================================
+
   async findBySale(saleId: number) {
     return this.prisma.settlement.findMany({
       where: {
@@ -53,6 +67,10 @@ export class SettlementsService {
       },
     });
   }
+
+  // =========================================================
+  // CALCULATE SETTLEMENT
+  // =========================================================
 
   async calculateSettlement(rubberWorkerId: number) {
     const rubberWorker = await this.prisma.rubberSaleWorker.findUnique({
@@ -73,9 +91,11 @@ export class SettlementsService {
       throw new BadRequestException('Harga karet belum tersedia');
     }
 
-    const pricePerKg = Number(rubberWorker.sale.pricePerKg);
+    const pieces = rubberWorker.pieces;
 
     const weightKg = Number(rubberWorker.weightKg);
+
+    const pricePerKg = Number(rubberWorker.sale.pricePerKg);
 
     const grossValue = weightKg * pricePerKg;
 
@@ -109,73 +129,76 @@ export class SettlementsService {
 
     outstandingKasbon = Math.max(0, outstandingKasbon);
 
-    const deductionAmount = Math.min(
-      workerShare,
-      outstandingKasbon,
-    );
+    const deductionAmount = Math.min(workerShare, outstandingKasbon);
 
     const netAmount = workerShare - deductionAmount;
 
-    const remainingKasbon =
-      outstandingKasbon - deductionAmount;
+    const remainingKasbon = outstandingKasbon - deductionAmount;
 
     return {
       rubberWorkerId,
+
       worker: rubberWorker.worker.name,
+
       saleId: rubberWorker.saleId,
+
+      pieces,
+
       weightKg,
+
       pricePerKg,
+
       grossValue,
+
       workerShare,
+
       outstandingKasbon,
+
       deductionAmount,
+
       netAmount,
+
       remainingKasbon,
     };
   }
 
-  async confirmSettlement(
-    confirmSettlementDto: ConfirmSettlementDto,
-  ) {
+  // =========================================================
+  // CONFIRM SINGLE SETTLEMENT
+  // =========================================================
+
+  async confirmSettlement(confirmSettlementDto: ConfirmSettlementDto) {
     return this.prisma.$transaction(
       async (tx) => {
-        const rubberWorker =
-          await tx.rubberSaleWorker.findUnique({
-            where: {
-              id: confirmSettlementDto.rubberWorkerId,
-            },
-            include: {
-              worker: true,
-              sale: true,
-            },
-          });
+        const rubberWorker = await tx.rubberSaleWorker.findUnique({
+          where: {
+            id: confirmSettlementDto.rubberWorkerId,
+          },
+          include: {
+            worker: true,
+            sale: true,
+          },
+        });
 
         if (!rubberWorker) {
-          throw new NotFoundException(
-            'Rubber worker tidak ditemukan',
-          );
+          throw new NotFoundException('Rubber worker tidak ditemukan');
         }
 
         if (rubberWorker.sale.pricePerKg === null) {
-          throw new BadRequestException(
-            'Harga karet belum tersedia',
-          );
+          throw new BadRequestException('Harga karet belum tersedia');
         }
 
-        /*
-         * Check settlement di dalam transaction.
-         * Database unique constraint tetap menjadi protection
-         * terakhir terhadap duplicate settlement.
-         */
-        const existingSettlement =
-          await tx.settlement.findUnique({
-            where: {
-              saleId_workerId: {
-                saleId: rubberWorker.saleId,
-                workerId: rubberWorker.workerId,
-              },
+        // -----------------------------------------------------
+        // CEK DUPLICATE SETTLEMENT
+        // -----------------------------------------------------
+
+        const existingSettlement = await tx.settlement.findUnique({
+          where: {
+            saleId_workerId: {
+              saleId: rubberWorker.saleId,
+              workerId: rubberWorker.workerId,
             },
-          });
+          },
+        });
 
         if (existingSettlement) {
           throw new BadRequestException(
@@ -183,15 +206,10 @@ export class SettlementsService {
           );
         }
 
-        /*
-         * Lock credit account sebelum membaca transaksi kasbon.
-         *
-         * Semua PAYMENT manual dari CreditService juga melakukan
-         * lock terhadap row CreditAccount yang sama.
-         *
-         * Dengan begitu settlement dan payment manual tidak bisa
-         * membaca outstanding yang sama secara bersamaan.
-         */
+        // -----------------------------------------------------
+        // LOCK CREDIT ACCOUNT
+        // -----------------------------------------------------
+
         const lockedAccounts = await tx.$queryRaw<
           Array<{
             id: number;
@@ -199,99 +217,94 @@ export class SettlementsService {
             status: string;
           }>
         >`
-          SELECT id, personId, status
-          FROM CreditAccount
-          WHERE personId = ${rubberWorker.workerId}
-          FOR UPDATE
-        `;
+            SELECT id, personId, status
+            FROM CreditAccount
+            WHERE personId = ${rubberWorker.workerId}
+            FOR UPDATE
+          `;
 
         const creditAccount = lockedAccounts[0];
 
-        if (
-          creditAccount &&
-          creditAccount.status !== 'ACTIVE'
-        ) {
-          throw new BadRequestException(
-            'Credit account tidak aktif',
-          );
+        if (creditAccount && creditAccount.status !== 'ACTIVE') {
+          throw new BadRequestException('Credit account tidak aktif');
         }
 
-        /*
-         * Hitung ulang settlement DI DALAM transaction
-         * setelah CreditAccount berhasil di-lock.
-         */
-        const pricePerKg = Number(
-          rubberWorker.sale.pricePerKg,
-        );
+        // -----------------------------------------------------
+        // CALCULATION
+        // -----------------------------------------------------
 
-        const weightKg = Number(
-          rubberWorker.weightKg,
-        );
+        const pieces = rubberWorker.pieces;
+
+        const weightKg = Number(rubberWorker.weightKg);
+
+        const pricePerKg = Number(rubberWorker.sale.pricePerKg);
 
         const grossValue = weightKg * pricePerKg;
 
         const workerShare = grossValue / 2;
 
+        // -----------------------------------------------------
+        // CALCULATE OUTSTANDING KASBON
+        // -----------------------------------------------------
+
         let outstandingKasbon = 0;
 
         if (creditAccount) {
-          const creditTransactions =
-            await tx.creditTransaction.findMany({
-              where: {
-                creditAccountId: creditAccount.id,
-              },
-            });
+          const creditTransactions = await tx.creditTransaction.findMany({
+            where: {
+              creditAccountId: creditAccount.id,
+            },
+          });
 
           for (const transaction of creditTransactions) {
             if (transaction.type === 'DEBT') {
-              outstandingKasbon += Number(
-                transaction.amount,
-              );
+              outstandingKasbon += Number(transaction.amount);
             }
 
             if (transaction.type === 'PAYMENT') {
-              outstandingKasbon -= Number(
-                transaction.amount,
-              );
+              outstandingKasbon -= Number(transaction.amount);
             }
           }
         }
 
-        outstandingKasbon = Math.max(
-          0,
-          outstandingKasbon,
-        );
+        outstandingKasbon = Math.max(0, outstandingKasbon);
 
-        const deductionAmount = Math.min(
-          workerShare,
-          outstandingKasbon,
-        );
+        // -----------------------------------------------------
+        // FINAL SETTLEMENT CALCULATION
+        // -----------------------------------------------------
 
-        const netAmount =
-          workerShare - deductionAmount;
+        const deductionAmount = Math.min(workerShare, outstandingKasbon);
 
-        const remainingKasbon =
-          outstandingKasbon - deductionAmount;
+        const netAmount = workerShare - deductionAmount;
 
-        /*
-         * Semua perubahan finansial berada di transaction yang sama.
-         */
-        const settlement =
-          await tx.settlement.create({
-            data: {
-              saleId: rubberWorker.saleId,
-              workerId: rubberWorker.workerId,
-              grossShare: workerShare,
-              kasbonAmount: outstandingKasbon,
-              deductionAmount,
-              netAmount,
-              status: 'CONFIRMED',
-            },
-          });
+        const remainingKasbon = outstandingKasbon - deductionAmount;
 
-        /*
-         * Catat pembayaran kasbon sebagai PAYMENT.
-         */
+        // -----------------------------------------------------
+        // CREATE SETTLEMENT
+        // -----------------------------------------------------
+
+        const settlement = await tx.settlement.create({
+          data: {
+            saleId: rubberWorker.saleId,
+
+            workerId: rubberWorker.workerId,
+
+            grossShare: workerShare,
+
+            kasbonAmount: outstandingKasbon,
+
+            deductionAmount,
+
+            netAmount,
+
+            status: 'CONFIRMED',
+          },
+        });
+
+        // -----------------------------------------------------
+        // CREATE KASBON PAYMENT
+        // -----------------------------------------------------
+
         if (deductionAmount > 0) {
           if (!creditAccount) {
             throw new BadRequestException(
@@ -302,30 +315,39 @@ export class SettlementsService {
           await tx.creditTransaction.create({
             data: {
               creditAccountId: creditAccount.id,
+
               type: 'PAYMENT',
+
               amount: deductionAmount,
+
               transactionDate: new Date(),
+
               description: `Potongan kasbon settlement Sale #${rubberWorker.saleId}`,
+
               reference: `SETTLEMENT-${settlement.id}`,
             },
           });
         }
 
-        /*
-         * Catat uang yang benar-benar dibayarkan kepada worker.
-         *
-         * Net amount bisa 0 jika seluruh worker share
-         * habis digunakan untuk membayar kasbon.
-         */
+        // -----------------------------------------------------
+        // CREATE MONEY OUT
+        // -----------------------------------------------------
+
         if (netAmount > 0) {
           await tx.moneyTransaction.create({
             data: {
               type: 'OUT',
+
               amount: netAmount,
+
               category: 'RUBBER_WORKER_SETTLEMENT',
+
               description: `Pembayaran settlement ${rubberWorker.worker.name}`,
+
               transactionDate: new Date(),
+
               referenceType: 'SETTLEMENT',
+
               referenceId: settlement.id,
             },
           });
@@ -339,9 +361,17 @@ export class SettlementsService {
     );
   }
 
+  // =========================================================
+  // CONFIRM ALL SETTLEMENTS BY SALE
+  // =========================================================
+
   async confirmSaleSettlements(saleId: number) {
     return this.prisma.$transaction(
       async (tx) => {
+        // -----------------------------------------------------
+        // GET SALE
+        // -----------------------------------------------------
+
         const sale = await tx.sale.findUnique({
           where: {
             id: saleId,
@@ -349,9 +379,7 @@ export class SettlementsService {
         });
 
         if (!sale) {
-          throw new NotFoundException(
-            'Sale tidak ditemukan',
-          );
+          throw new NotFoundException('Sale tidak ditemukan');
         }
 
         if (sale.status !== 'COMPLETED') {
@@ -360,29 +388,37 @@ export class SettlementsService {
           );
         }
 
-        const workers =
-          await tx.rubberSaleWorker.findMany({
-            where: {
-              saleId,
-            },
-            include: {
-              worker: true,
-              sale: true,
-            },
-          });
-
-        if (workers.length === 0) {
-          throw new NotFoundException(
-            'Tidak ada worker pada sale tersebut',
-          );
+        if (sale.pricePerKg === null) {
+          throw new BadRequestException('Harga karet belum ditentukan');
         }
 
-        const existingSettlements =
-          await tx.settlement.findMany({
-            where: {
-              saleId,
-            },
-          });
+        // -----------------------------------------------------
+        // GET WORKERS
+        // -----------------------------------------------------
+
+        const workers = await tx.rubberSaleWorker.findMany({
+          where: {
+            saleId,
+          },
+          include: {
+            worker: true,
+            sale: true,
+          },
+        });
+
+        if (workers.length === 0) {
+          throw new NotFoundException('Tidak ada worker pada sale tersebut');
+        }
+
+        // -----------------------------------------------------
+        // PREVENT DUPLICATE
+        // -----------------------------------------------------
+
+        const existingSettlements = await tx.settlement.findMany({
+          where: {
+            saleId,
+          },
+        });
 
         if (existingSettlements.length > 0) {
           throw new BadRequestException(
@@ -390,161 +426,413 @@ export class SettlementsService {
           );
         }
 
+        // -----------------------------------------------------
+        // LOCK CREDIT ACCOUNTS
+        // -----------------------------------------------------
+        const lockedAccounts = await tx.$queryRaw<
+          Array<{
+            id: number;
+            personId: number;
+            status: string;
+          }>
+        >`
+    SELECT
+      ca.id,
+      ca.personId,
+      ca.status
+    FROM CreditAccount ca
+    INNER JOIN RubberSaleWorker rsw
+      ON rsw.workerId = ca.personId
+    WHERE rsw.saleId = ${saleId}
+    ORDER BY ca.personId ASC
+    FOR UPDATE
+  `;
+
+        const creditAccountMap = new Map<
+          number,
+          {
+            id: number;
+            personId: number;
+            status: string;
+          }
+        >();
+
+        for (const account of lockedAccounts) {
+          creditAccountMap.set(account.personId, account);
+        }
+
+        // -----------------------------------------------------
+        // PROCESS WORKERS
+        // -----------------------------------------------------
+
         const results = [];
 
         for (const rubberWorker of workers) {
           if (rubberWorker.sale.pricePerKg === null) {
-            throw new BadRequestException(
-              'Harga karet belum ditentukan',
-            );
+            throw new BadRequestException('Harga karet belum ditentukan');
           }
 
-          const pricePerKg = Number(
-            rubberWorker.sale.pricePerKg,
-          );
+          // ---------------------------------------------------
+          // BASIC DATA
+          // ---------------------------------------------------
 
-          const weightKg = Number(
-            rubberWorker.weightKg,
-          );
+          const pieces = rubberWorker.pieces;
 
-          const grossShare =
-            weightKg * pricePerKg;
+          const weightKg = Number(rubberWorker.weightKg);
 
-          const workerShare =
-            grossShare / 2;
+          const pricePerKg = Number(rubberWorker.sale.pricePerKg);
 
-          const creditTransactions =
-            await tx.creditTransaction.findMany({
-              where: {
-                creditAccount: {
-                  personId:
-                    rubberWorker.workerId,
-                },
-              },
-            });
+          // ---------------------------------------------------
+          // GROSS
+          // ---------------------------------------------------
+
+          const grossValue = weightKg * pricePerKg;
+
+          // ---------------------------------------------------
+          // WORKER SHARE 50%
+          // ---------------------------------------------------
+
+          const workerShare = grossValue / 2;
+
+          // ---------------------------------------------------
+          // CREDIT ACCOUNT
+          // ---------------------------------------------------
+
+          const creditAccount = creditAccountMap.get(rubberWorker.workerId);
+
+          // ---------------------------------------------------
+          // OUTSTANDING KASBON
+          // ---------------------------------------------------
 
           let outstandingKasbon = 0;
 
-          for (const transaction of creditTransactions) {
-            if (transaction.type === 'DEBT') {
-              outstandingKasbon += Number(
-                transaction.amount,
+          if (creditAccount) {
+            if (creditAccount.status !== 'ACTIVE') {
+              throw new BadRequestException(
+                `Credit account worker ${rubberWorker.worker.name} tidak aktif`,
               );
             }
 
-            if (transaction.type === 'PAYMENT') {
-              outstandingKasbon -= Number(
-                transaction.amount,
-              );
-            }
-          }
-
-          outstandingKasbon = Math.max(
-            outstandingKasbon,
-            0,
-          );
-
-          const deductionAmount = Math.min(
-            workerShare,
-            outstandingKasbon,
-          );
-
-          const netAmount =
-            workerShare - deductionAmount;
-
-          const remainingKasbon =
-            outstandingKasbon -
-            deductionAmount;
-
-          const settlement =
-            await tx.settlement.create({
-              data: {
-                saleId,
-                workerId:
-                  rubberWorker.workerId,
-                grossShare,
-                kasbonAmount:
-                  outstandingKasbon,
-                deductionAmount,
-                netAmount,
-                status: 'CONFIRMED',
+            const creditTransactions = await tx.creditTransaction.findMany({
+              where: {
+                creditAccountId: creditAccount.id,
               },
             });
 
-          if (deductionAmount > 0) {
-            const creditAccount =
-              await tx.creditAccount.findFirst({
-                where: {
-                  personId:
-                    rubberWorker.workerId,
-                },
-              });
+            for (const transaction of creditTransactions) {
+              if (transaction.type === 'DEBT') {
+                outstandingKasbon += Number(transaction.amount);
+              }
 
+              if (transaction.type === 'PAYMENT') {
+                outstandingKasbon -= Number(transaction.amount);
+              }
+            }
+
+            outstandingKasbon = Math.max(0, outstandingKasbon);
+          }
+
+          // ---------------------------------------------------
+          // DEDUCTION
+          // ---------------------------------------------------
+
+          const deductionAmount = Math.min(workerShare, outstandingKasbon);
+
+          // ---------------------------------------------------
+          // NET PAYMENT
+          // ---------------------------------------------------
+
+          const netAmount = workerShare - deductionAmount;
+
+          // ---------------------------------------------------
+          // REMAINING KASBON
+          // ---------------------------------------------------
+
+          const remainingKasbon = outstandingKasbon - deductionAmount;
+
+          // ---------------------------------------------------
+          // CREATE SETTLEMENT
+          // ---------------------------------------------------
+
+          const settlement = await tx.settlement.create({
+            data: {
+              saleId,
+
+              workerId: rubberWorker.workerId,
+
+              grossShare: workerShare,
+
+              kasbonAmount: outstandingKasbon,
+
+              deductionAmount,
+
+              netAmount,
+
+              status: 'CONFIRMED',
+            },
+          });
+
+          // ---------------------------------------------------
+          // CREATE KASBON PAYMENT
+          // ---------------------------------------------------
+
+          if (deductionAmount > 0) {
             if (!creditAccount) {
               throw new BadRequestException(
-                `Credit account untuk ${rubberWorker.worker.name} tidak ditemukan`,
+                `Credit account worker ${rubberWorker.worker.name} tidak ditemukan`,
               );
             }
 
             await tx.creditTransaction.create({
               data: {
-                creditAccountId:
-                  creditAccount.id,
+                creditAccountId: creditAccount.id,
+
                 type: 'PAYMENT',
+
                 amount: deductionAmount,
-                transactionDate:
-                  new Date(),
+
+                transactionDate: new Date(),
+
                 description: `Potongan kasbon settlement Sale #${saleId}`,
+
                 reference: `SETTLEMENT-${settlement.id}`,
               },
             });
           }
 
+          // ---------------------------------------------------
+          // MONEY OUT
+          // ---------------------------------------------------
+
           if (netAmount > 0) {
             await tx.moneyTransaction.create({
               data: {
                 type: 'OUT',
+
+                category: 'RUBBER_WORKER_SETTLEMENT',
+
                 amount: netAmount,
-                category:
-                  'RUBBER_WORKER_SETTLEMENT',
+
+                transactionDate: new Date(),
+
                 description: `Pembayaran settlement ${rubberWorker.worker.name}`,
-                transactionDate:
-                  new Date(),
-                referenceType:
-                  'SETTLEMENT',
-                referenceId:
-                  settlement.id,
+
+                referenceType: 'SETTLEMENT',
+
+                referenceId: settlement.id,
               },
             });
           }
 
+          // ---------------------------------------------------
+          // RESULT
+          // ---------------------------------------------------
+
           results.push({
-            settlementId:
-              settlement.id,
-            workerId:
-              rubberWorker.workerId,
-            workerName:
-              rubberWorker.worker.name,
+            settlement,
+
+            worker: rubberWorker.worker.name,
+
+            pieces,
+
             weightKg,
-            grossShare,
+
+            pricePerKg,
+
+            grossValue,
+
             workerShare,
-            kasbonAmount:
-              outstandingKasbon,
+
+            outstandingKasbon,
+
             deductionAmount,
+
             netAmount,
+
             remainingKasbon,
           });
         }
 
-        return {
-          saleId,
-          status: 'CONFIRMED',
-          workers: results,
-        };
+        return results;
       },
       {
         isolationLevel: 'ReadCommitted',
       },
     );
+  }
+
+  // =========================================================
+  // GET CHECKS BY SETTLEMENT IDS
+  // =========================================================
+
+  async getChecks(ids: number[]) {
+    if (ids.length === 0) {
+      throw new BadRequestException('Minimal satu settlement harus dipilih');
+    }
+
+    const settlements = await this.prisma.settlement.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      include: {
+        sale: {
+          include: {
+            rubberWorkers: true,
+          },
+        },
+        worker: true,
+      },
+      orderBy: {
+        id: 'asc',
+      },
+    });
+
+    return settlements.map((settlement) => {
+      const rubberWorker = settlement.sale.rubberWorkers.find(
+        (worker) => worker.workerId === settlement.workerId,
+      );
+
+      if (!rubberWorker) {
+        throw new NotFoundException(
+          `Data worker untuk settlement #${settlement.id} tidak ditemukan`,
+        );
+      }
+
+      const pieces = rubberWorker.pieces;
+
+      const weightKg = Number(rubberWorker.weightKg);
+
+      const pricePerKg = Number(settlement.sale.pricePerKg);
+
+      const grossValue = weightKg * pricePerKg;
+
+      return {
+        settlementId: settlement.id,
+
+        sale: {
+          saleId: settlement.saleId,
+
+          saleDate: settlement.sale.saleDate,
+        },
+
+        worker: {
+          workerId: settlement.workerId,
+
+          name: settlement.worker.name,
+        },
+
+        calculation: {
+          pieces,
+
+          weightKg,
+
+          pricePerKg,
+
+          grossValue,
+
+          workerShare: Number(settlement.grossShare),
+
+          kasbon: Number(settlement.kasbonAmount),
+
+          deduction: Number(settlement.deductionAmount),
+
+          netAmount: Number(settlement.netAmount),
+        },
+
+        status: settlement.status,
+
+        generatedAt: new Date(),
+      };
+    });
+  }
+
+  // =========================================================
+  // GET ALL CHECKS BY SALE
+  // =========================================================
+
+  async getChecksBySale(saleId: number) {
+    const settlements = await this.prisma.settlement.findMany({
+      where: {
+        saleId: saleId,
+        status: 'CONFIRMED',
+      },
+      include: {
+        sale: {
+          include: {
+            rubberWorkers: true,
+          },
+        },
+        worker: true,
+      },
+      orderBy: {
+        id: 'asc',
+      },
+    });
+
+    return settlements.map((settlement) => {
+      const rubberWorker = settlement.sale.rubberWorkers.find(
+        (worker) => worker.workerId === settlement.workerId,
+      );
+
+      const pieces = rubberWorker?.pieces ?? 0;
+      const weightKg = rubberWorker ? Number(rubberWorker.weightKg) : 0;
+
+      const pricePerKg = Number(settlement.sale.pricePerKg ?? 0);
+
+      const grossValue = weightKg * pricePerKg;
+
+      const workerShare = Number(settlement.grossShare);
+
+      const kasbon = Number(settlement.kasbonAmount);
+
+      const deduction = Number(settlement.deductionAmount);
+
+      const netAmount = Number(settlement.netAmount);
+
+      /*
+       * Saldo worker setelah penjualan.
+       *
+       * Positif:
+       *   worker masih menerima uang
+       *
+       * Nol:
+       *   worker tidak menerima uang dan tidak punya sisa hutang
+       *
+       * Negatif:
+       *   worker tekor dan sisa hutang dibawa
+       *   ke penjualan berikutnya
+       */
+      const balanceAfterSale = workerShare - kasbon;
+
+      return {
+        settlementId: settlement.id,
+
+        sale: {
+          saleId: settlement.sale.id,
+          saleDate: settlement.sale.saleDate,
+        },
+
+        worker: {
+          workerId: settlement.worker.id,
+          name: settlement.worker.name,
+        },
+
+        calculation: {
+          pieces,
+          weightKg,
+          pricePerKg,
+          grossValue,
+          workerShare,
+          kasbon,
+          deduction,
+          netAmount,
+          balanceAfterSale,
+        },
+
+        status: settlement.status,
+      };
+    });
   }
 }
