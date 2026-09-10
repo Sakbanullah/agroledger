@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateRubberWorkerDto } from './dto/create-rubber-worker.dto';
 import { UpdateRubberWorkerDto } from './dto/update-rubber-worker.dto';
 import { CreateWorkerCandidateDto } from './dto/create-worker-candidate.dto';
+import { SaveScannedWorkersDto } from './dto/save-scanned-workers.dto';
 
 @Injectable()
 export class RubberWorkersService {
@@ -267,6 +268,126 @@ export class RubberWorkersService {
       },
     });
   }
+  async saveScannedWorkers(saveScannedWorkersDto: SaveScannedWorkersDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const { saleId, workers } = saveScannedWorkersDto;
+
+      const sale = await tx.sale.findUnique({
+        where: {
+          id: saleId,
+        },
+        include: {
+          commodity: true,
+        },
+      });
+
+      if (!sale) {
+        throw new NotFoundException('Sale tidak ditemukan');
+      }
+
+      if (sale.status !== 'PENDING') {
+        throw new BadRequestException(
+          'Worker tidak dapat disimpan karena sale sudah selesai',
+        );
+      }
+
+      if (sale.commodity.name !== 'Karet') {
+        throw new BadRequestException(
+          'Worker karet hanya dapat ditambahkan pada sale Karet',
+        );
+      }
+
+      const workerIds = workers.map((worker) => worker.workerId);
+
+      const uniqueWorkerIds = new Set(workerIds);
+
+      if (uniqueWorkerIds.size !== workerIds.length) {
+        throw new BadRequestException(
+          'Worker yang sama tidak boleh muncul lebih dari satu kali',
+        );
+      }
+
+      const existingWorkers = await tx.rubberSaleWorker.findMany({
+        where: {
+          saleId,
+          workerId: {
+            in: workerIds,
+          },
+        },
+      });
+
+      if (existingWorkers.length > 0) {
+        throw new BadRequestException(
+          'Salah satu worker sudah terdaftar pada sale ini',
+        );
+      }
+
+      const databaseWorkers = await tx.person.findMany({
+        where: {
+          id: {
+            in: workerIds,
+          },
+          type: 'WORKER',
+        },
+      });
+
+      if (databaseWorkers.length !== workerIds.length) {
+        throw new BadRequestException(
+          'Salah satu worker tidak ditemukan atau bukan worker',
+        );
+      }
+
+      const totalWeight = workers.reduce(
+        (total, worker) => total + Number(worker.weightKg),
+        0,
+      );
+
+      if (totalWeight <= 0) {
+        throw new BadRequestException('Total berat worker harus lebih dari 0');
+      }
+
+      const createdWorkers = await Promise.all(
+        workers.map((worker) =>
+          tx.rubberSaleWorker.create({
+            data: {
+              saleId,
+              workerId: worker.workerId,
+              pieces: worker.pieces,
+              weightKg: worker.weightKg,
+            },
+            include: {
+              worker: true,
+            },
+          }),
+        ),
+      );
+
+      const updatedSale = await tx.sale.update({
+        where: {
+          id: saleId,
+        },
+        data: {
+          totalWeightKg: totalWeight,
+        },
+        include: {
+          farm: true,
+          commodity: true,
+          rubberWorkers: {
+            include: {
+              worker: true,
+            },
+          },
+        },
+      });
+
+      return {
+        sale: updatedSale,
+        workers: createdWorkers,
+        totalWeightKg: totalWeight,
+      };
+    });
+  }
+  
   async update(id: number, updateRubberWorkerDto: UpdateRubberWorkerDto) {
     const rubberWorker = await this.prisma.rubberSaleWorker.findUnique({
       where: {

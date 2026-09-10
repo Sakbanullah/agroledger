@@ -13,7 +13,7 @@ import { RubberWorkersService } from './rubber-workers.service';
 import { CreateRubberWorkerDto } from './dto/create-rubber-worker.dto';
 import { UpdateRubberWorkerDto } from './dto/update-rubber-worker.dto';
 import { CreateWorkerCandidateDto } from './dto/create-worker-candidate.dto';
-
+import { SaveScannedWorkersDto } from './dto/save-scanned-workers.dto';
 @Controller('rubber-workers')
 export class RubberWorkersController {
   constructor(private readonly rubberWorkersService: RubberWorkersService) {}
@@ -32,19 +32,28 @@ export class RubberWorkersController {
   fuzzyMatch(@Query('name') name: string) {
     return this.rubberWorkersService.fuzzyMatch(name);
   }
-
   @Post('candidate/confirm')
-  confirmCandidate(@Body() createWorkerCandidateDto: CreateWorkerCandidateDto) {
+  confirmCandidate(
+    @Body()
+    createWorkerCandidateDto: CreateWorkerCandidateDto,
+  ) {
     return this.rubberWorkersService.createFromCandidate(
       createWorkerCandidateDto,
     );
+  }
+
+  @Post('save-scanned')
+  saveScannedWorkers(
+    @Body()
+    saveScannedWorkersDto: SaveScannedWorkersDto,
+  ) {
+    return this.rubberWorkersService.saveScannedWorkers(saveScannedWorkersDto);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.rubberWorkersService.findOne(Number(id));
   }
-
   @Post()
   create(@Body() createRubberWorkerDto: CreateRubberWorkerDto) {
     return this.rubberWorkersService.create(createRubberWorkerDto);
