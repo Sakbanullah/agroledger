@@ -1,191 +1,265 @@
 .page {
   min-height: 100vh;
-  background: #f6f7f9;
-  padding: 40px 24px;
-  color: #111827;
+  background: var(--background);
+  padding: 32px 28px 72px;
+  color: var(--text-primary);
 }
 
 .container {
   width: 100%;
-  max-width: 1280px;
+  max-width: 1180px;
   margin: 0 auto;
 }
 
 /* =========================
    HEADER
-========================= */
+   ========================= */
 
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 28px;
+
+  margin-bottom: 24px;
 }
 
 .eyebrow {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: #6b7280;
+  display: inline-flex;
+  align-items: center;
+
+  color: var(--text-muted);
+
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.13em;
 }
 
 .header h1 {
-  margin: 6px 0 0;
-  font-size: 30px;
-  line-height: 1.2;
-  font-weight: 750;
-  color: #111827;
+  margin: 8px 0 7px;
+
+  color: var(--text-primary);
+
+  font-size: 34px;
+  line-height: 1.08;
+  font-weight: 650;
+  letter-spacing: -0.035em;
 }
 
 .header p {
-  margin: 8px 0 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #6b7280;
+  margin: 0;
+
+  color: var(--text-secondary);
+
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: #ecfdf3;
-  border: 1px solid #bbf7d0;
-  color: #15803d;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+
+  min-height: 27px;
+  padding: 0 10px;
+
+  border: 1px solid #d8e7d3;
+  border-radius: var(--radius-pill);
+
+  background: var(--success-soft);
+  color: var(--agro-primary-dark);
+
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* =========================
-   SUMMARY
-========================= */
+   SALE SUMMARY
+   ========================= */
 
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
+
+  gap: 10px;
+
+  margin-bottom: 14px;
 }
 
 .summaryCard {
   min-width: 0;
-  padding: 18px 20px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.025);
+
+  padding: 17px 18px;
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow-card);
 }
 
 .summaryCard span {
   display: block;
+
   margin-bottom: 7px;
-  font-size: 12px;
+
+  color: var(--text-muted);
+
+  font-size: 10px;
   font-weight: 600;
-  color: #6b7280;
+  line-height: 1.4;
 }
 
 .summaryCard strong {
   display: block;
+
   overflow: hidden;
+
+  color: var(--text-primary);
+
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 650;
+
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 17px;
-  font-weight: 750;
-  color: #111827;
 }
 
 /* =========================
-   TABLE CARD
-========================= */
+   WORKER TABLE
+   ========================= */
 
 .tableCard {
   overflow: hidden;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 18px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.035);
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow-card);
 }
 
 .sectionHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+
   gap: 20px;
-  padding: 22px 24px;
-  border-bottom: 1px solid #edf0f2;
+
+  padding: 20px 22px;
+
+  border-bottom: 1px solid var(--border);
 }
 
 .sectionEyebrow {
   display: inline-block;
-  font-size: 10px;
-  font-weight: 800;
+
+  color: var(--text-muted);
+
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 700;
   letter-spacing: 0.13em;
-  color: #9ca3af;
 }
 
 .sectionHeader h2,
 .settlementSummary h2,
 .actionCard h2 {
-  margin: 5px 0 0;
-  font-size: 18px;
-  font-weight: 750;
-  color: #111827;
+  margin: 6px 0 0;
+
+  color: var(--text-primary);
+
+  font-size: 16px;
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -0.015em;
 }
 
 .sectionHeader p,
 .settlementSummary p,
 .actionCard p {
-  margin: 5px 0 0;
-  font-size: 13px;
-  color: #6b7280;
+  margin: 4px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .loadingBadge {
-  padding: 7px 10px;
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 27px;
+  padding: 0 10px;
+
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: #f3f4f6;
-  color: #6b7280;
-  font-size: 11px;
-  font-weight: 700;
+
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+
+  font-size: 9px;
+  font-weight: 600;
+
   white-space: nowrap;
 }
 
 /* =========================
    TABLE
-========================= */
+   ========================= */
 
 .tableWrapper {
   width: 100%;
   overflow-x: auto;
+
+  -webkit-overflow-scrolling: touch;
 }
 
 .tableWrapper table {
   width: 100%;
+  min-width: 900px;
+
   border-collapse: collapse;
-  min-width: 950px;
 }
 
 .tableWrapper th {
-  padding: 13px 20px;
-  background: #fafbfc;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 11px;
-  font-weight: 750;
-  color: #6b7280;
+  height: 40px;
+
+  padding: 0 18px;
+
+  border-bottom: 1px solid var(--border);
+
+  background: var(--surface-muted);
+
+  color: var(--text-muted);
+
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+
   text-align: left;
+  text-transform: uppercase;
+
   white-space: nowrap;
 }
 
 .tableWrapper td {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f1f3;
-  font-size: 13px;
-  color: #4b5563;
+  min-height: 55px;
+
+  padding: 14px 18px;
+
+  border-bottom: 1px solid var(--border);
+
+  color: var(--text-secondary);
+
+  font-size: 11px;
+
   white-space: nowrap;
 }
 
@@ -194,7 +268,7 @@
 }
 
 .tableWrapper tbody tr:hover {
-  background: #fafafa;
+  background: var(--surface-muted);
 }
 
 .tableWrapper tbody tr:last-child td {
@@ -202,227 +276,300 @@
 }
 
 .tableWrapper td strong {
-  color: #111827;
-  font-weight: 700;
+  color: var(--text-primary);
+  font-weight: 650;
 }
 
 .tableWrapper tfoot td {
-  padding: 16px 20px;
-  background: #fafbfc;
-  border-top: 2px solid #e5e7eb;
+  padding: 15px 18px;
+
+  border-top: 1px solid var(--border);
   border-bottom: none;
-  color: #111827;
+
+  background: var(--surface-muted);
+
+  color: var(--text-primary);
 }
 
 /* =========================
    WORKER
-========================= */
+   ========================= */
 
 .workerName {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
 .debtBadge {
   display: inline-flex;
   align-items: center;
-  padding: 3px 7px;
+  justify-content: center;
+
+  min-height: 19px;
+  padding: 0 6px;
+
   border-radius: 6px;
-  background: #fff7ed;
-  color: #c2410c;
-  font-size: 9px;
-  font-weight: 800;
-  text-transform: uppercase;
+
+  background: var(--warning-soft);
+  color: #8c681f;
+
+  font-size: 7px;
+  font-weight: 700;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .kasbonAmount {
-  color: #b45309;
-  font-weight: 700;
+  color: #9a7022;
+  font-weight: 650;
 }
 
 .zeroAmount {
-  color: #9ca3af !important;
+  color: var(--text-muted) !important;
 }
 
 .netAmount {
-  color: #15803d !important;
+  color: var(--agro-primary-dark) !important;
 }
 
 /* =========================
    EMPTY
-========================= */
+   ========================= */
 
 .empty {
-  padding: 64px 24px;
+  padding: 60px 24px;
+
   text-align: center;
 }
 
 .emptyIcon {
-  width: 48px;
-  height: 48px;
-  margin: 0 auto 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 14px;
-  background: #f3f4f6;
-  color: #6b7280;
-  font-size: 18px;
-  font-weight: 800;
+
+  width: 44px;
+  height: 44px;
+
+  margin: 0 auto 13px;
+
+  border-radius: 12px;
+
+  background: var(--surface-soft);
+  color: var(--text-muted);
+
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .empty h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 750;
-  color: #111827;
+
+  color: var(--text-primary);
+
+  font-size: 15px;
+  font-weight: 650;
 }
 
 .empty p {
-  margin: 7px 0 0;
-  font-size: 13px;
-  color: #6b7280;
+  margin: 6px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 11px;
 }
 
 /* =========================
    SETTLEMENT SUMMARY
-========================= */
+   ========================= */
 
 .settlementSummary {
-  margin-top: 20px;
-  padding: 22px 24px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 18px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.035);
+  margin-top: 14px;
+  padding: 21px 22px;
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+
+  background: var(--surface);
+
+  box-shadow: var(--shadow-card);
 }
 
 .summaryStats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 20px;
+
+  gap: 9px;
+
+  margin-top: 17px;
 }
 
 .summaryStats > div {
-  padding: 15px 16px;
-  background: #fafbfc;
-  border: 1px solid #edf0f2;
-  border-radius: 12px;
+  min-width: 0;
+
+  padding: 13px;
+
+  border: 1px solid var(--border);
+  border-radius: 11px;
+
+  background: var(--surface-muted);
 }
 
 .summaryStats span {
   display: block;
-  margin-bottom: 7px;
-  font-size: 11px;
+
+  margin-bottom: 6px;
+
+  color: var(--text-muted);
+
+  font-size: 9px;
   font-weight: 600;
-  color: #6b7280;
+  line-height: 1.4;
 }
 
 .summaryStats strong {
   display: block;
-  font-size: 16px;
-  font-weight: 750;
-  color: #111827;
+
+  overflow: hidden;
+
+  color: var(--text-primary);
+
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 650;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .highlightAmount {
-  color: #15803d !important;
+  color: var(--agro-primary-dark) !important;
 }
 
 .debtAmount {
-  color: #c2410c !important;
+  color: #a2671f !important;
 }
 
 /* =========================
    ACTION
-========================= */
+   ========================= */
 
 .actionCard {
-  margin-top: 20px;
-  padding: 22px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   gap: 24px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 18px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.035);
+
+  margin-top: 14px;
+  padding: 20px 22px;
+
+  border: 1px solid #dce8d8;
+  border-radius: var(--radius-card);
+
+  background: var(--success-soft);
+
+  box-shadow: var(--shadow-card);
 }
 
 .confirmButton {
-  flex-shrink: 0;
-  min-width: 210px;
-  height: 46px;
-  padding: 0 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  border-radius: 12px;
-  background: #111827;
+
+  flex-shrink: 0;
+
+  min-width: 205px;
+  min-height: 43px;
+
+  padding: 0 18px;
+
+  border: 1px solid var(--text-primary);
+  border-radius: var(--radius-button);
+
+  background: var(--text-primary);
   color: #ffffff;
+
   font-family: inherit;
-  font-size: 14px;
-  font-weight: 750;
+
+  font-size: 11px;
+  font-weight: 650;
+
   cursor: pointer;
+
   transition:
-    background 0.15s ease,
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.confirmButton:hover {
-  background: #1f2937;
+.confirmButton:hover:not(:disabled) {
+  border-color: var(--agro-primary-dark);
+  background: var(--agro-primary-dark);
+
+  box-shadow: 0 6px 18px rgba(23, 34, 27, 0.08);
+
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.16);
 }
 
-.confirmButton:active {
+.confirmButton:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: none;
 }
 
 .confirmButton:focus-visible {
-  outline: 3px solid rgba(17, 24, 39, 0.18);
+  outline: 3px solid rgba(95, 159, 74, 0.18);
   outline-offset: 2px;
 }
 
-/* =========================
-   LOADING
-========================= */
-
-.loading {
-  min-height: 70vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 600;
-  color: #6b7280;
+.confirmButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* =========================
    ERROR
-========================= */
+   ========================= */
 
 .error {
-  margin-bottom: 20px;
-  padding: 14px 16px;
-  border: 1px solid #fecaca;
-  border-radius: 12px;
-  background: #fef2f2;
-  color: #b91c1c;
-  font-size: 13px;
+  margin-bottom: 14px;
+
+  padding: 12px 14px;
+
+  border: 1px solid #efd9d4;
+  border-radius: 11px;
+
+  background: var(--danger-soft);
+  color: #80483e;
+
+  font-size: 11px;
   line-height: 1.5;
 }
 
 /* =========================
-   RESPONSIVE
-========================= */
+   SUCCESS
+   ========================= */
+
+.successMessage {
+  display: flex;
+  align-items: center;
+
+  margin-top: 14px;
+  padding: 12px 14px;
+
+  border: 1px solid #d7e8d1;
+  border-radius: 11px;
+
+  background: var(--success-soft);
+  color: #4d7048;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* =========================
+   TABLET
+   ========================= */
 
 @media (max-width: 1000px) {
   .summaryStats {
@@ -431,23 +578,55 @@
 }
 
 @media (max-width: 900px) {
+  .page {
+    padding: 28px 22px 60px;
+  }
+
   .summaryGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .actionCard {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .confirmButton {
+    width: 100%;
+  }
 }
 
-@media (max-width: 700px) {
+/* =========================
+   MOBILE
+   ========================= */
+
+@media (max-width: 640px) {
   .page {
-    padding: 24px 16px;
+    padding: 21px 15px 50px;
+  }
+
+  .container {
+    max-width: none;
   }
 
   .header {
+    align-items: flex-start;
     flex-direction: column;
-    gap: 14px;
+
+    gap: 12px;
+
+    margin-bottom: 19px;
   }
 
   .header h1 {
-    font-size: 25px;
+    margin-top: 7px;
+
+    font-size: 28px;
+    letter-spacing: -0.04em;
+  }
+
+  .header p {
+    font-size: 12px;
   }
 
   .status {
@@ -456,51 +635,154 @@
 
   .summaryGrid {
     grid-template-columns: 1fr;
+
+    gap: 8px;
+
+    margin-bottom: 10px;
   }
 
   .summaryCard {
-    padding: 16px 18px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+
+    padding: 14px 15px;
   }
 
-  .sectionHeader {
-    padding: 20px;
-  }
+  .summaryCard span {
+    grid-column: 1;
+    grid-row: 1;
 
-  .actionCard {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 20px;
-    gap: 18px;
-  }
-
-  .confirmButton {
-    width: 100%;
-    min-width: 0;
-  }
-}
-
-@media (max-width: 520px) {
-  .summaryStats {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 420px) {
-  .page {
-    padding: 18px 12px;
-  }
-
-  .header h1 {
-    font-size: 23px;
+    margin-bottom: 4px;
   }
 
   .summaryCard strong {
-    font-size: 16px;
+    grid-column: 2;
+    grid-row: 1 / 3;
+
+    align-self: center;
+
+    margin-left: 12px;
+
+    font-size: 14px;
+    text-align: right;
   }
 
   .tableCard,
   .settlementSummary,
   .actionCard {
-    border-radius: 14px;
+    border-radius: 16px;
+  }
+
+  .sectionHeader {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 9px;
+
+    padding: 17px 16px;
+  }
+
+  .loadingBadge {
+    width: 100%;
+
+    justify-content: center;
+  }
+
+  .tableWrapper {
+    overflow-x: auto;
+  }
+
+  .tableWrapper table {
+    min-width: 820px;
+  }
+
+  .tableWrapper th {
+    padding: 0 13px;
+  }
+
+  .tableWrapper td {
+    padding: 13px;
+  }
+
+  .settlementSummary {
+    padding: 17px 16px;
+  }
+
+  .summaryStats {
+    grid-template-columns: 1fr;
+
+    gap: 7px;
+
+    margin-top: 14px;
+  }
+
+  .summaryStats > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 14px;
+
+    padding: 11px 12px;
+  }
+
+  .summaryStats span {
+    margin-bottom: 0;
+  }
+
+  .summaryStats strong {
+    text-align: right;
+    font-size: 13px;
+  }
+
+  .actionCard {
+    gap: 15px;
+
+    margin-top: 10px;
+    padding: 16px;
+  }
+
+  .actionCard h2 {
+    font-size: 14px;
+  }
+
+  .actionCard p {
+    font-size: 10px;
+  }
+
+  .confirmButton {
+    min-height: 44px;
+  }
+
+  .empty {
+    padding: 45px 18px;
+  }
+}
+
+/* =========================
+   SMALL MOBILE
+   ========================= */
+
+@media (max-width: 380px) {
+  .page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .header h1 {
+    font-size: 26px;
+  }
+
+  .summaryCard strong {
+    font-size: 13px;
+  }
+
+  .settlementSummary {
+    padding: 15px 13px;
+  }
+
+  .actionCard {
+    padding: 14px 13px;
   }
 }
