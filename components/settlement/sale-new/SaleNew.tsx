@@ -2,11 +2,19 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Camera,
+  FilePenLine,
+  Loader2,
+  Sprout,
+} from "lucide-react";
 
 interface Farm {
   id: number;
   name: string;
-  location: string;
+  location: string | null;
 }
 
 interface Commodity {
@@ -14,6 +22,8 @@ interface Commodity {
   name: string;
   unit: string;
 }
+
+type InputMethod = "manual" | "scan";
 
 export default function SaleNew() {
   const router = useRouter();
@@ -25,6 +35,8 @@ export default function SaleNew() {
   const [commodityId, setCommodityId] = useState("");
   const [saleDate, setSaleDate] = useState("");
   const [notes, setNotes] = useState("");
+
+  const [inputMethod, setInputMethod] = useState<InputMethod>("manual");
 
   const [loadingData, setLoadingData] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -75,6 +87,8 @@ export default function SaleNew() {
 
         setSaleDate(localDate);
       } catch (err) {
+        console.error(err);
+
         setError(err instanceof Error ? err.message : "Gagal mengambil data.");
       } finally {
         setLoadingData(false);
@@ -132,8 +146,14 @@ export default function SaleNew() {
         );
       }
 
-      router.push(`/settlement/sale/${data.id}/scan`);
+      if (inputMethod === "scan") {
+        router.push(`/settlement/sale/${data.id}/scan`);
+      } else {
+        router.push(`/settlement/sale/${data.id}/manual`);
+      }
     } catch (err) {
+      console.error(err);
+
       setError(
         err instanceof Error ? err.message : "Gagal membuat draft penjualan.",
       );
@@ -142,18 +162,13 @@ export default function SaleNew() {
     }
   };
 
-  // =========================================================
-  // LOADING
-  // =========================================================
-
   if (loadingData) {
     return (
       <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
         <div className="flex min-h-[60vh] w-full items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#dfe6dc] border-t-[#5f9f4a]" />
-
-            <p className="text-xs text-[#929a93]">Memuat data...</p>
+          <div className="flex items-center gap-3 text-sm text-text-secondary">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Memuat data...
           </div>
         </div>
       </main>
@@ -163,75 +178,63 @@ export default function SaleNew() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
       <div className="w-full">
-        {/* =================================================
-            BACK
-        ================================================== */}
-
         <button
           type="button"
           onClick={() => router.push("/settlement")}
           disabled={isCreating}
-          className="mb-5 inline-flex items-center gap-2 text-xs font-medium text-[#687169] transition hover:text-[#315f3f] disabled:cursor-not-allowed disabled:opacity-50"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-text-secondary transition hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <span className="text-sm">←</span>
+          <ArrowLeft className="h-4 w-4" />
           Kembali ke Penjualan
         </button>
 
-        {/* =================================================
-            HEADER
-        ================================================== */}
+        <div className="mb-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#DCE8D8] bg-[#F1F6EF] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#3F7635]">
+            <Sprout className="h-3.5 w-3.5" />
+            Penjualan
+          </div>
 
-        <header className="mb-7">
-          <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#929a93]">
-            PENJUALAN
-          </p>
-
-          <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-[#17221b]">
+          <h1 className="text-2xl font-semibold tracking-[-0.025em] text-text-primary sm:text-3xl">
             Penjualan Baru
           </h1>
 
-          <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-[#687169]">
-            Buat draft transaksi untuk mulai mencatat hasil penjualan.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-text-secondary">
+            Buat draft transaksi, lalu pilih cara memasukkan data hasil
+            penjualan.
           </p>
-        </header>
+        </div>
 
-        {/* =================================================
-            FORM
-        ================================================== */}
+        {error && (
+          <div className="mb-6 rounded-[12px] border border-[#E8C5C0] bg-[#FFF3F1] px-4 py-3 text-sm font-medium text-[#B5473A]">
+            {error}
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* =================================================
-              INFORMATION
-          ================================================== */}
+        <form onSubmit={handleSubmit}>
+          <section className="rounded-[14px] border border-border bg-white">
+            <div className="border-b border-border px-5 py-5 sm:px-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EAF3E7] text-xs font-bold text-[#3F7635]">
+                  01
+                </div>
 
-          <section className="overflow-hidden rounded-2xl border border-[#e3e8e1] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
-            {/* SECTION HEADER */}
+                <div>
+                  <h2 className="text-base font-semibold text-text-primary">
+                    Informasi Penjualan
+                  </h2>
 
-            <div className="flex items-start gap-3.5 border-b border-[#eef1ed] px-4 py-4 sm:px-5">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-[#eaf3e6] text-[9px] font-semibold tracking-[0.05em] text-[#4d873d]">
-                01
-              </span>
-
-              <div>
-                <h2 className="text-sm font-semibold text-[#17221b]">
-                  Informasi Penjualan
-                </h2>
-
-                <p className="mt-1 text-[10px] leading-relaxed text-[#929a93]">
-                  Tentukan kebun, komoditas, dan tanggal transaksi.
-                </p>
+                  <p className="mt-1 text-sm text-text-secondary">
+                    Tentukan kebun, komoditas, dan tanggal transaksi.
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* FIELDS */}
-
-            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5">
-              {/* FARM */}
-
+            <div className="grid gap-5 px-5 py-6 sm:px-6 lg:grid-cols-2">
               <div>
                 <label
                   htmlFor="farm"
-                  className="mb-1.5 block text-[10px] font-medium text-[#4c574f]"
+                  className="mb-2 block text-sm font-medium text-text-primary"
                 >
                   Kebun
                 </label>
@@ -241,24 +244,23 @@ export default function SaleNew() {
                   value={farmId}
                   onChange={(event) => setFarmId(event.target.value)}
                   disabled={isCreating}
-                  className="h-10 w-full appearance-none rounded-[10px] border border-[#dfe5dc] bg-white px-3 text-xs text-[#17221b] outline-none transition focus:border-[#8fbd82] focus:ring-2 focus:ring-[#eaf3e6] disabled:cursor-not-allowed disabled:bg-[#f7f8f6]"
+                  className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
                 >
                   <option value="">Pilih kebun</option>
 
                   {farms.map((farm) => (
                     <option key={farm.id} value={farm.id}>
-                      {farm.name} · {farm.location}
+                      {farm.name}
+                      {farm.location ? ` · ${farm.location}` : ""}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* COMMODITY */}
-
               <div>
                 <label
                   htmlFor="commodity"
-                  className="mb-1.5 block text-[10px] font-medium text-[#4c574f]"
+                  className="mb-2 block text-sm font-medium text-text-primary"
                 >
                   Komoditas
                 </label>
@@ -268,7 +270,7 @@ export default function SaleNew() {
                   value={commodityId}
                   onChange={(event) => setCommodityId(event.target.value)}
                   disabled={isCreating}
-                  className="h-10 w-full appearance-none rounded-[10px] border border-[#dfe5dc] bg-white px-3 text-xs text-[#17221b] outline-none transition focus:border-[#8fbd82] focus:ring-2 focus:ring-[#eaf3e6] disabled:cursor-not-allowed disabled:bg-[#f7f8f6]"
+                  className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
                 >
                   <option value="">Pilih komoditas</option>
 
@@ -280,12 +282,10 @@ export default function SaleNew() {
                 </select>
               </div>
 
-              {/* DATE */}
-
               <div>
                 <label
                   htmlFor="saleDate"
-                  className="mb-1.5 block text-[10px] font-medium text-[#4c574f]"
+                  className="mb-2 block text-sm font-medium text-text-primary"
                 >
                   Tanggal Penjualan
                 </label>
@@ -296,101 +296,158 @@ export default function SaleNew() {
                   value={saleDate}
                   onChange={(event) => setSaleDate(event.target.value)}
                   disabled={isCreating}
-                  className="h-10 w-full rounded-[10px] border border-[#dfe5dc] bg-white px-3 text-xs text-[#17221b] outline-none transition focus:border-[#8fbd82] focus:ring-2 focus:ring-[#eaf3e6] disabled:cursor-not-allowed disabled:bg-[#f7f8f6]"
+                  className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
                 />
-              </div>
-
-              {/* NOTES */}
-
-              <div className="sm:col-span-2">
-                <div className="mb-1.5 flex items-center justify-between">
-                  <label
-                    htmlFor="notes"
-                    className="text-[10px] font-medium text-[#4c574f]"
-                  >
-                    Catatan
-                  </label>
-
-                  <span className="text-[9px] text-[#a1a8a2]">Opsional</span>
-                </div>
-
-                <textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Tambahkan catatan jika diperlukan..."
-                  rows={4}
-                  disabled={isCreating}
-                  className="w-full resize-none rounded-[10px] border border-[#dfe5dc] bg-white px-3 py-2.5 text-xs leading-relaxed text-[#17221b] outline-none transition placeholder:text-[#b0b6b0] focus:border-[#8fbd82] focus:ring-2 focus:ring-[#eaf3e6] disabled:cursor-not-allowed disabled:bg-[#f7f8f6]"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* =================================================
-              INFORMATION BOX
-          ================================================== */}
-
-          <section className="flex items-start gap-3 rounded-2xl border border-[#dfe9dc] bg-[#f4f8f2] p-4 sm:p-5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#eaf3e6] text-[11px] font-semibold text-[#4d873d]">
-              i
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-[#315f3f]">
-                Draft penjualan
-              </p>
-
-              <p className="mt-1 text-[10px] leading-relaxed text-[#687169]">
-                Harga dan total berat belum perlu diisi sekarang. Untuk karet,
-                berat akan dikumpulkan dari data masing-masing worker setelah
-                draft dibuat.
-              </p>
-            </div>
-          </section>
-
-          {/* =================================================
-              ERROR
-          ================================================== */}
-
-          {error && (
-            <div className="flex items-start gap-3 rounded-2xl border border-[#f0d4d4] bg-[#fffafa] p-4">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-xs font-semibold text-[#c85c5c]">
-                !
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-[#a04444]">
-                  Gagal membuat draft
-                </p>
+                <label
+                  htmlFor="notes"
+                  className="mb-2 block text-sm font-medium text-text-primary"
+                >
+                  Catatan
+                  <span className="ml-1 font-normal text-text-muted">
+                    (opsional)
+                  </span>
+                </label>
 
-                <p className="mt-0.5 text-[10px] leading-relaxed text-[#a04444]">
-                  {error}
-                </p>
+                <input
+                  id="notes"
+                  type="text"
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Tambahkan catatan jika diperlukan"
+                  disabled={isCreating}
+                  className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
+                />
               </div>
             </div>
-          )}
+          </section>
 
-          {/* =================================================
-              ACTIONS
-          ================================================== */}
+          <section className="mt-5 rounded-[14px] border border-border bg-white">
+            <div className="border-b border-border px-5 py-5 sm:px-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EAF3E7] text-xs font-bold text-[#3F7635]">
+                  02
+                </div>
 
-          <div className="flex flex-col-reverse gap-2.5 pt-1 sm:flex-row sm:items-center sm:justify-end">
-            <button
-              type="button"
-              onClick={() => router.push("/settlement")}
-              disabled={isCreating}
-              className="h-10 w-full rounded-[10px] border border-[#dfe5dc] bg-white px-5 text-xs font-medium text-[#687169] transition hover:border-[#cfd8cc] hover:bg-[#f8faf7] hover:text-[#315f3f] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-            >
-              Batal
-            </button>
+                <div>
+                  <h2 className="text-base font-semibold text-text-primary">
+                    Cara Input Data
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-5 text-text-secondary">
+                    Pilih bagaimana data worker akan dimasukkan ke penjualan
+                    ini.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 p-5 sm:p-6 md:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setInputMethod("manual")}
+                disabled={isCreating}
+                className={`group relative rounded-[14px] border p-5 text-left transition ${
+                  inputMethod === "manual"
+                    ? "border-[#9FBA96] bg-[#F4F8F2] ring-2 ring-[#E6EFE2]"
+                    : "border-border bg-white hover:border-[#C5D5C0] hover:bg-[#FAFBF9]"
+                } disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                {inputMethod === "manual" && (
+                  <div className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-[#3F7635] text-[11px] font-bold text-white">
+                    ✓
+                  </div>
+                )}
+
+                <div
+                  className={`mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] ${
+                    inputMethod === "manual"
+                      ? "bg-[#DDEBD9] text-[#3F7635]"
+                      : "bg-[#F2F4F1] text-text-secondary"
+                  }`}
+                >
+                  <FilePenLine className="h-5 w-5" />
+                </div>
+
+                <h3 className="text-[15px] font-semibold text-text-primary">
+                  Input Manual
+                </h3>
+
+                <p className="mt-1.5 max-w-sm text-sm leading-5 text-text-secondary">
+                  Masukkan worker, jumlah keping, dan berat secara manual.
+                </p>
+
+                <div className="mt-4 text-xs font-semibold text-[#3F7635]">
+                  Cocok jika data sudah tersedia
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setInputMethod("scan")}
+                disabled={isCreating}
+                className={`group relative rounded-[14px] border p-5 text-left transition ${
+                  inputMethod === "scan"
+                    ? "border-[#9FBA96] bg-[#F4F8F2] ring-2 ring-[#E6EFE2]"
+                    : "border-border bg-white hover:border-[#C5D5C0] hover:bg-[#FAFBF9]"
+                } disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                {inputMethod === "scan" && (
+                  <div className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-[#3F7635] text-[11px] font-bold text-white">
+                    ✓
+                  </div>
+                )}
+
+                <div
+                  className={`mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] ${
+                    inputMethod === "scan"
+                      ? "bg-[#DDEBD9] text-[#3F7635]"
+                      : "bg-[#F2F4F1] text-text-secondary"
+                  }`}
+                >
+                  <Camera className="h-5 w-5" />
+                </div>
+
+                <h3 className="text-[15px] font-semibold text-text-primary">
+                  Scan Catatan
+                </h3>
+
+                <p className="mt-1.5 max-w-sm text-sm leading-5 text-text-secondary">
+                  Upload foto catatan dan biarkan sistem membaca data worker
+                  secara otomatis.
+                </p>
+
+                <div className="mt-4 text-xs font-semibold text-[#3F7635]">
+                  Dibantu AI Vision
+                </div>
+              </button>
+            </div>
+          </section>
+
+          <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-5 text-text-muted">
+              Draft penjualan akan dibuat terlebih dahulu sebelum data worker
+              dimasukkan.
+            </p>
 
             <button
               type="submit"
               disabled={isCreating || !farmId || !commodityId || !saleDate}
-              className="h-10 w-full rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] disabled:shadow-none sm:w-auto sm:min-w-[190px]"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-[#17221B] px-5 text-sm font-semibold text-white transition hover:bg-[#26352B] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isCreating ? "Membuat Draft..." : "Buat Draft Penjualan"}
+              {isCreating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Membuat Penjualan...
+                </>
+              ) : (
+                <>
+                  Lanjutkan
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </button>
           </div>
         </form>
