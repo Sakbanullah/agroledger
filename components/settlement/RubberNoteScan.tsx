@@ -223,13 +223,11 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
   };
 
   const handleCreateNewWorker = async () => {
-    console.log("🔥 BUTTON TAMBAH WORKER DIKLIK");
-
-    if (newWorkerIndex === null) return;
-    console.log("❌ newWorkerIndex NULL");
+    if (newWorkerIndex === null) {
+      return;
+    }
 
     const scannedWorker = workers[newWorkerIndex];
-    console.log("👤 SCANNED WORKER:", scannedWorker);
     const name = scannedWorker?.name?.trim();
 
     if (!name) {
@@ -243,7 +241,9 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     try {
       const response = await fetch("http://localhost:3001/workers", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ name }),
       });
 
@@ -292,7 +292,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
       setIsCreatingWorker(false);
     }
   };
-
+  
   const openNewWorkerModal = (index: number) => {
     const worker = workers[index];
 
