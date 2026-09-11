@@ -37,9 +37,7 @@ export default function SaleList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [filter, setFilter] = useState<
-    "ALL" | "PENDING" | "COMPLETED"
-  >("ALL");
+  const [filter, setFilter] = useState<"ALL" | "PENDING" | "COMPLETED">("ALL");
 
   useEffect(() => {
     const fetchSales = async () => {
@@ -47,20 +45,15 @@ export default function SaleList() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(
-          "http://localhost:3001/sales",
-        );
+        const response = await fetch("http://localhost:3001/sales");
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.message ||
-              "Gagal mengambil data penjualan.",
-          );
+          throw new Error(data.message || "Gagal mengambil data penjualan.");
         }
 
-        setSales(data);
+        setSales(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
 
@@ -77,21 +70,27 @@ export default function SaleList() {
     fetchSales();
   }, []);
 
+  const pendingCount = useMemo(
+    () => sales.filter((sale) => sale.status === "PENDING").length,
+    [sales],
+  );
+
+  const completedCount = useMemo(
+    () => sales.filter((sale) => sale.status === "COMPLETED").length,
+    [sales],
+  );
+
   const filteredSales = useMemo(() => {
     if (filter === "ALL") {
       return sales;
     }
 
-    return sales.filter(
-      (sale) => sale.status === filter,
-    );
+    return sales.filter((sale) => sale.status === filter);
   }, [sales, filter]);
 
   const sortedSales = useMemo(() => {
     return [...filteredSales].sort(
-      (a, b) =>
-        new Date(b.saleDate).getTime() -
-        new Date(a.saleDate).getTime(),
+      (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime(),
     );
   }, [filteredSales]);
 
@@ -108,23 +107,17 @@ export default function SaleList() {
       return "-";
     }
 
-    return new Intl.NumberFormat("id-ID").format(
-      Number(value),
-    );
+    return new Intl.NumberFormat("id-ID").format(Number(value));
   };
 
   const handleOpenSale = (sale: Sale) => {
     if (sale.status === "PENDING") {
-      router.push(
-        `/settlement/sale/${sale.id}/confirm`,
-      );
+      router.push(`/settlement/sale/${sale.id}/confirm`);
 
       return;
     }
 
-    router.push(
-      `/settlement/sale/${sale.id}/settlement`,
-    );
+    router.push(`/settlement/sale/${sale.id}/settlement`);
   };
 
   if (loading) {
@@ -133,7 +126,11 @@ export default function SaleList() {
         <div className={styles.container}>
           <div className={styles.loading}>
             <div className={styles.loadingSpinner} />
-            <p>Memuat data penjualan...</p>
+
+            <div className={styles.loadingText}>
+              <strong>Memuat penjualan</strong>
+              <span>Menyiapkan data transaksi...</span>
+            </div>
           </div>
         </div>
       </main>
@@ -147,9 +144,17 @@ export default function SaleList() {
           <div className={styles.error}>
             <div className={styles.errorIcon}>!</div>
 
-            <div>
+            <div className={styles.errorContent}>
               <h2>Gagal memuat penjualan</h2>
               <p>{error}</p>
+
+              <button
+                type="button"
+                className={styles.retryButton}
+                onClick={() => window.location.reload()}
+              >
+                Coba lagi
+              </button>
             </div>
           </div>
         </div>
@@ -160,77 +165,69 @@ export default function SaleList() {
   return (
     <main className={styles.page}>
       <div className={styles.container}>
-
         {/* HEADER */}
         <header className={styles.header}>
-          <div>
-            <div className={styles.eyebrow}>
-              AGROLEDGER
-            </div>
+          <div className={styles.headerContent}>
+            <div className={styles.eyebrow}>SETTLEMENT</div>
 
             <h1>Penjualan</h1>
 
             <p>
-              Kelola transaksi penjualan dan settlement
-              hasil panen.
+              Riwayat transaksi penjualan hasil panen dan proses settlement.
             </p>
           </div>
 
           <button
             type="button"
             className={styles.createButton}
-            onClick={() =>
-              router.push(
-                "/settlement/sale/new",
-              )
-            }
+            onClick={() => router.push("/settlement/sale/new")}
           >
-            <span>+</span>
-            Penjualan Baru
+            <span className={styles.createIcon}>+</span>
+
+            <span>Penjualan Baru</span>
           </button>
         </header>
 
         {/* SUMMARY */}
-        <section className={styles.summary}>
+        <section className={styles.summary} aria-label="Ringkasan penjualan">
           <div className={styles.summaryCard}>
-            <span>Total Penjualan</span>
-            <strong>{sales.length}</strong>
+            <div className={styles.summaryLabel}>Total Penjualan</div>
+
+            <div className={styles.summaryValue}>{sales.length}</div>
+
+            <div className={styles.summaryHint}>seluruh transaksi</div>
           </div>
 
           <div className={styles.summaryCard}>
-            <span>Draft</span>
-            <strong>
-              {
-                sales.filter(
-                  (sale) =>
-                    sale.status === "PENDING",
-                ).length
-              }
-            </strong>
+            <div className={styles.summaryLabel}>Draft</div>
+
+            <div className={styles.summaryValue}>{pendingCount}</div>
+
+            <div className={styles.summaryHint}>menunggu konfirmasi</div>
           </div>
 
           <div className={styles.summaryCard}>
-            <span>Selesai</span>
-            <strong>
-              {
-                sales.filter(
-                  (sale) =>
-                    sale.status === "COMPLETED",
-                ).length
-              }
-            </strong>
+            <div className={styles.summaryLabel}>Selesai</div>
+
+            <div className={styles.summaryValue}>{completedCount}</div>
+
+            <div className={styles.summaryHint}>transaksi selesai</div>
           </div>
         </section>
 
         {/* FILTER */}
         <div className={styles.toolbar}>
-          <div className={styles.filterGroup}>
+          <div
+            className={styles.filterGroup}
+            role="tablist"
+            aria-label="Filter penjualan"
+          >
             <button
               type="button"
+              role="tab"
+              aria-selected={filter === "ALL"}
               className={
-                filter === "ALL"
-                  ? styles.filterActive
-                  : styles.filterButton
+                filter === "ALL" ? styles.filterActive : styles.filterButton
               }
               onClick={() => setFilter("ALL")}
             >
@@ -239,53 +236,59 @@ export default function SaleList() {
 
             <button
               type="button"
+              role="tab"
+              aria-selected={filter === "PENDING"}
               className={
-                filter === "PENDING"
-                  ? styles.filterActive
-                  : styles.filterButton
+                filter === "PENDING" ? styles.filterActive : styles.filterButton
               }
-              onClick={() =>
-                setFilter("PENDING")
-              }
+              onClick={() => setFilter("PENDING")}
             >
               Draft
+              {pendingCount > 0 && (
+                <span className={styles.filterCount}>{pendingCount}</span>
+              )}
             </button>
 
             <button
               type="button"
+              role="tab"
+              aria-selected={filter === "COMPLETED"}
               className={
                 filter === "COMPLETED"
                   ? styles.filterActive
                   : styles.filterButton
               }
-              onClick={() =>
-                setFilter("COMPLETED")
-              }
+              onClick={() => setFilter("COMPLETED")}
             >
               Selesai
             </button>
           </div>
 
-          <span className={styles.resultCount}>
-            {sortedSales.length} transaksi
-          </span>
+          <div className={styles.resultCount}>
+            <strong>{sortedSales.length}</strong> transaksi
+          </div>
         </div>
 
         {/* LIST */}
         {sortedSales.length === 0 ? (
           <div className={styles.empty}>
             <div className={styles.emptyIcon}>
-              ∅
+              <span>∅</span>
             </div>
 
-            <h2>
-              Belum ada penjualan
-            </h2>
+            <h2>Belum ada penjualan</h2>
 
-            <p>
-              Belum ada transaksi dengan filter
-              yang dipilih.
-            </p>
+            <p>Belum ada transaksi dengan filter yang dipilih.</p>
+
+            {filter !== "ALL" && (
+              <button
+                type="button"
+                className={styles.emptyAction}
+                onClick={() => setFilter("ALL")}
+              >
+                Tampilkan semua
+              </button>
+            )}
           </div>
         ) : (
           <div className={styles.list}>
@@ -293,15 +296,9 @@ export default function SaleList() {
               <SaleCard
                 key={sale.id}
                 sale={sale}
-                formattedDate={formatDate(
-                  sale.saleDate,
-                )}
-                formattedWeight={formatNumber(
-                  sale.totalWeightKg,
-                )}
-                onClick={() =>
-                  handleOpenSale(sale)
-                }
+                formattedDate={formatDate(sale.saleDate)}
+                formattedWeight={formatNumber(sale.totalWeightKg)}
+                onClick={() => handleOpenSale(sale)}
               />
             ))}
           </div>

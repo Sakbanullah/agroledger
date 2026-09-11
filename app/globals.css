@@ -1,26 +1,125 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f7f3;
+  --foreground: #17221b;
+
+  /* Brand */
+  --agro-primary: #5f9f4a;
+  --agro-primary-dark: #4d873d;
+  --agro-primary-soft: #eaf3e6;
+
+  /* Surface */
+  --surface: #ffffff;
+  --surface-soft: #f0f3ee;
+  --surface-muted: #f7f8f6;
+
+  /* Text */
+  --text-primary: #17221b;
+  --text-secondary: #687169;
+  --text-muted: #929a93;
+
+  /* Border */
+  --border: #e3e8e1;
+  --border-strong: #d6ddd3;
+
+  /* Status */
+  --success: #5f9f4a;
+  --success-soft: #eaf3e6;
+
+  --warning: #d5a33a;
+  --warning-soft: #fbf3df;
+
+  --danger: #c85c5c;
+  --danger-soft: #faeaea;
+
+  --info: #668ba8;
+  --info-soft: #edf3f7;
+
+  /* Radius */
+  --radius-card: 18px;
+  --radius-button: 10px;
+  --radius-input: 10px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-card:
+    0 1px 2px rgba(23, 34, 27, 0.02),
+    0 8px 24px rgba(23, 34, 27, 0.035);
+
+  --shadow-modal:
+    0 20px 60px rgba(23, 34, 27, 0.14);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-agro-primary: var(--agro-primary);
+  --color-agro-primary-dark: var(--agro-primary-dark);
+  --color-agro-primary-soft: var(--agro-primary-soft);
+
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-surface-muted: var(--surface-muted);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
 }
 
 body {
+  min-height: 100vh;
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
 }

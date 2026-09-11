@@ -1,10 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-import Sidebar from "@/components/dashboard/Sidebar";
-import MobileHeader from "@/components/dashboard/MobileHeader";
-import PageHeader from "@/components/dashboard/PageHeader";
 import CashPosition from "@/components/dashboard/CashPosition";
 import CashFlowChart from "@/components/dashboard/CashFlowChart";
 import HarvestSummary from "@/components/dashboard/HarvestSummary";
@@ -109,14 +105,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#F7F8F6] text-[#17221B]">
-      <Sidebar />
-
-      <MobileHeader />
-
-      <main className="min-h-screen lg:pl-[236px]">
-        <div className="mx-auto w-full max-w-[1440px] px-5 py-6 sm:px-7 lg:px-9">
-          <PageHeader />
-
+      <main className="min-h-screen">
+        <div className="w-full px-5 py-6 sm:px-7 lg:px-9">
           {loading ? (
             <div className="mt-6 rounded-[10px] border border-[#E5E7E4] bg-white p-10 text-center">
               <p className="text-[12px] text-[#8A918B]">Memuat dashboard...</p>
