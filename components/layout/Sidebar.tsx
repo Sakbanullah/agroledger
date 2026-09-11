@@ -7,6 +7,7 @@ import {
   FileText,
   LayoutDashboard,
   Leaf,
+  LandPlot,
   MoreHorizontal,
   ReceiptText,
   Settings,
@@ -45,6 +46,11 @@ const navigation = [
         label: "Settlement",
         icon: FileText,
         path: "/settlement",
+      },
+      {
+        label: "Farm",
+        icon: LandPlot,
+        path: "/farm",
       },
       {
         label: "Reports",
