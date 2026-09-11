@@ -2,8 +2,6 @@
 
 import { ChangeEvent, useEffect, useState } from "react";
 
-import styles from "./RubberNoteScan.module.css";
-
 interface RubberNoteScanProps {
   saleId: number;
 }
@@ -48,7 +46,6 @@ interface FinalReview {
 
 export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
   const [file, setFile] = useState<File | null>(null);
-
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const [workers, setWorkers] = useState<ScannedWorker[]>([]);
@@ -72,6 +69,11 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
   const [newWorkerIndex, setNewWorkerIndex] = useState<number | null>(null);
 
   const [isCreatingWorker, setIsCreatingWorker] = useState(false);
+
+  // =========================================================
+  // PREVIEW CLEANUP
+  // =========================================================
+
   useEffect(() => {
     return () => {
       if (previewUrl) {
@@ -79,6 +81,10 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
       }
     };
   }, [previewUrl]);
+
+  // =========================================================
+  // FILE
+  // =========================================================
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -95,14 +101,16 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     setWorkers([]);
 
     setFile(selectedFile);
-
     setPreviewUrl(URL.createObjectURL(selectedFile));
   };
+
+  // =========================================================
+  // SCAN
+  // =========================================================
 
   const handleScan = async () => {
     if (!file) {
       setError("Pilih foto catatan terlebih dahulu.");
-
       return;
     }
 
@@ -153,6 +161,10 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     }
   };
 
+  // =========================================================
+  // UPDATE WORKER
+  // =========================================================
+
   const updateWorker = (
     index: number,
     field: "name" | "pieces" | "weightKg",
@@ -160,7 +172,9 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
   ) => {
     setWorkers((current) =>
       current.map((worker, workerIndex) => {
-        if (workerIndex !== index) return worker;
+        if (workerIndex !== index) {
+          return worker;
+        }
 
         if (field === "name") {
           return {
@@ -189,6 +203,10 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     );
   };
 
+  // =========================================================
+  // SWAP
+  // =========================================================
+
   const handleSwap = (index: number) => {
     setWorkers((current) =>
       current.map((worker, workerIndex) => {
@@ -206,6 +224,10 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     );
   };
 
+  // =========================================================
+  // SELECT WORKER
+  // =========================================================
+
   const handleSelectWorker = (workerIndex: number, workerId: number) => {
     setWorkers((current) =>
       current.map((worker, index) => {
@@ -222,12 +244,17 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     );
   };
 
+  // =========================================================
+  // CREATE NEW WORKER
+  // =========================================================
+
   const handleCreateNewWorker = async () => {
     if (newWorkerIndex === null) {
       return;
     }
 
     const scannedWorker = workers[newWorkerIndex];
+
     const name = scannedWorker?.name?.trim();
 
     if (!name) {
@@ -244,7 +271,9 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+        }),
       });
 
       const data = await response.json();
@@ -292,7 +321,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
       setIsCreatingWorker(false);
     }
   };
-  
+
   const openNewWorkerModal = (index: number) => {
     const worker = workers[index];
 
@@ -306,10 +335,16 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     setError(null);
   };
 
+  // =========================================================
+  // CONFIRM WORKER
+  // =========================================================
+
   const handleConfirmWorker = (index: number) => {
     setWorkers((current) =>
       current.map((worker, workerIndex) => {
-        if (workerIndex !== index) return worker;
+        if (workerIndex !== index) {
+          return worker;
+        }
 
         if (
           !worker.name?.trim() ||
@@ -322,10 +357,17 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
           return worker;
         }
 
-        return { ...worker, confirmed: true };
+        return {
+          ...worker,
+          confirmed: true,
+        };
       }),
     );
   };
+
+  // =========================================================
+  // REVIEW DATA
+  // =========================================================
 
   const totalWeight = workers.reduce(
     (total, worker) => total + (worker.weightKg ?? 0),
@@ -399,6 +441,10 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     setError(null);
   };
 
+  // =========================================================
+  // SAVE TO SALE
+  // =========================================================
+
   const handleSaveToSale = async () => {
     if (!finalReview) {
       return;
@@ -446,42 +492,80 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
   };
 
   return (
-    <main className={styles.page}>
-      <div className={styles.container}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.saleLabel}>Sale #{saleId}</div>
+    <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
+      <div className="w-full">
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
 
-          <h1 className={styles.title}>Scan Catatan Karet</h1>
+        <header className="mb-6">
+          <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#929a93]">
+            SALE #{saleId}
+          </p>
 
-          <p className={styles.subtitle}>
+          <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-[#17221b]">
+            Scan Catatan Karet
+          </h1>
+
+          <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-[#687169]">
             Upload catatan penjualan karet untuk membaca data pekerja secara
             otomatis.
           </p>
-        </div>
+        </header>
 
-        {/* Upload */}
-        <section className={styles.card}>
-          <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Upload Catatan</h2>
+        {/* =====================================================
+            UPLOAD
+        ===================================================== */}
 
-            <p className={styles.sectionDescription}>
+        <section className="mb-5 overflow-hidden rounded-2xl border border-[#e3e8e1] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
+          <div className="border-b border-[#eef1ed] px-4 py-4 sm:px-5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+              STEP 01
+            </p>
+
+            <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+              Upload Catatan
+            </h2>
+
+            <p className="mt-1 text-[10px] text-[#929a93]">
               JPG, PNG, atau WebP. Maksimal 5 MB.
             </p>
           </div>
 
-          <div className={styles.uploadGrid}>
+          <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(260px,0.8fr)_minmax(360px,1.2fr)]">
+            {/* UPLOAD BOX */}
+
             <div>
-              <label htmlFor="rubber-note-file" className={styles.uploadBox}>
-                <div className={styles.uploadIcon}>📷</div>
+              <label
+                htmlFor="rubber-note-file"
+                className="group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-[#d7ded5] bg-[#fafbf9] px-6 text-center transition hover:border-[#9db695] hover:bg-[#f7f9f6]"
+              >
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf4ea] text-[#4d873d]">
+                  <svg
+                    width="21"
+                    height="21"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14.5 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.5" />
+                    <path d="M14 4v5h5" />
+                    <circle cx="9" cy="14" r="1.5" />
+                    <path d="m20 14-3.2-3.2L11 16.5" />
+                  </svg>
+                </div>
 
-                <div className={styles.uploadName}>
+                <p className="max-w-full truncate text-xs font-semibold text-[#27322c]">
                   {file ? file.name : "Pilih foto catatan"}
-                </div>
+                </p>
 
-                <div className={styles.uploadHint}>
+                <p className="mt-1.5 text-[10px] text-[#929a93]">
                   Klik untuk memilih gambar
-                </div>
+                </p>
               </label>
 
               <input
@@ -489,176 +573,203 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handleFileChange}
-                className={styles.hiddenInput}
+                className="hidden"
               />
             </div>
 
-            <div className={styles.previewBox}>
+            {/* PREVIEW */}
+
+            <div className="min-h-[220px] overflow-hidden rounded-2xl border border-[#e3e8e1] bg-[#f7f8f6]">
               {previewUrl ? (
                 <img
                   src={previewUrl}
                   alt="Preview catatan karet"
-                  className={styles.previewImage}
+                  className="h-full min-h-[220px] w-full object-contain"
                 />
               ) : (
-                <div className={styles.previewEmpty}>
-                  Preview foto akan muncul di sini
+                <div className="flex min-h-[220px] items-center justify-center px-6 text-center">
+                  <div>
+                    <div className="mx-auto mb-2 text-xl text-[#b4bcb5]">◇</div>
+
+                    <p className="text-[10px] text-[#929a93]">
+                      Preview foto akan muncul di sini
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {error && <div className={styles.error}>{error}</div>}
+          {/* ERROR */}
+
+          {error && (
+            <div className="mx-4 mb-4 flex items-start gap-3 rounded-xl border border-[#f0d4d4] bg-[#fffafa] p-3.5 sm:mx-5">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-xs font-semibold text-[#c85c5c]">
+                !
+              </div>
+
+              <p className="pt-1 text-[10px] leading-relaxed text-[#a04444]">
+                {error}
+              </p>
+            </div>
+          )}
+
+          {/* SUCCESS */}
 
           {saveSuccess && (
             <div
               role="status"
-              style={{
-                marginTop: "20px",
-                padding: "18px 20px",
-                border: "1px solid #bbf7d0",
-                borderRadius: "14px",
-                background: "#f0fdf4",
-                display: "flex",
-                alignItems: "center",
-                gap: "14px",
-              }}
+              className="mx-4 mb-4 flex items-start gap-3 rounded-xl border border-[#d7e8d2] bg-[#f4f9f2] p-3.5 sm:mx-5"
             >
-              <div
-                style={{
-                  width: "40px",
-                  height: "40px",
-                  flexShrink: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "50%",
-                  background: "#dcfce7",
-                  color: "#15803d",
-                  fontSize: "20px",
-                  fontWeight: 700,
-                }}
-              >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf3e6] text-sm font-semibold text-[#4d873d]">
                 ✓
               </div>
 
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    color: "#166534",
-                    marginBottom: "3px",
-                  }}
-                >
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#315f3f]">
                   Data berhasil disimpan
-                </div>
+                </p>
 
-                <div
-                  style={{
-                    fontSize: "13px",
-                    lineHeight: 1.5,
-                    color: "#4b5563",
-                  }}
-                >
+                <p className="mt-0.5 text-[10px] leading-relaxed text-[#687169]">
                   {saveSuccess
                     .replace("Berhasil menyimpan ", "")
                     .replace(".", "")}
-                </div>
+                </p>
               </div>
             </div>
           )}
 
-          <div className={styles.actionRow}>
+          {/* ACTION */}
+
+          <div className="flex justify-end border-t border-[#eef1ed] px-4 py-4 sm:px-5">
             <button
               type="button"
               onClick={handleScan}
               disabled={!file || isScanning}
-              className={styles.primaryButton}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] disabled:shadow-none sm:w-auto sm:min-w-[150px]"
             >
+              {isScanning && (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+
               {isScanning ? "Sedang membaca..." : "Scan Catatan"}
             </button>
           </div>
         </section>
 
-        {/* Extraction Result */}
-        {hasScanned && (
-          <section className={styles.resultSection}>
-            {/* Result Header */}
-            <div className={styles.resultHeader}>
-              <div>
-                <h2 className={styles.resultTitle}>Hasil Extraction</h2>
+        {/* =====================================================
+            EXTRACTION RESULT
+        ===================================================== */}
 
-                <p className={styles.resultDescription}>
+        {hasScanned && (
+          <section className="space-y-4">
+            {/* RESULT HEADER */}
+
+            <div className="flex flex-col gap-4 rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+                  STEP 02
+                </p>
+
+                <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+                  Hasil Extraction
+                </h2>
+
+                <p className="mt-1 text-[10px] text-[#929a93]">
                   Periksa hasil AI sebelum dikonfirmasi.
                 </p>
               </div>
 
-              <div className={styles.stats}>
-                <div className={styles.stat}>
-                  <span className={styles.statLabel}>Worker</span>
+              <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-[#e5e9e3] bg-[#fafbf9]">
+                <div className="min-w-[75px] border-r border-[#e5e9e3] px-3 py-2.5 text-center">
+                  <p className="text-[8px] uppercase tracking-[0.08em] text-[#929a93]">
+                    Worker
+                  </p>
 
-                  <span className={styles.statValue}>{workers.length}</span>
+                  <p className="mt-0.5 text-sm font-semibold text-[#17221b]">
+                    {workers.length}
+                  </p>
                 </div>
 
-                <div className={styles.stat}>
-                  <span className={styles.statLabel}>Total Berat</span>
+                <div className="min-w-[90px] border-r border-[#e5e9e3] px-3 py-2.5 text-center">
+                  <p className="text-[8px] uppercase tracking-[0.08em] text-[#929a93]">
+                    Total Berat
+                  </p>
 
-                  <span className={styles.statValue}>
+                  <p className="mt-0.5 text-sm font-semibold text-[#17221b]">
                     {totalWeight.toLocaleString("id-ID")} kg
-                  </span>
+                  </p>
                 </div>
 
-                <div className={styles.stat}>
-                  <span className={styles.statLabel}>Confirmed</span>
+                <div className="min-w-[85px] px-3 py-2.5 text-center">
+                  <p className="text-[8px] uppercase tracking-[0.08em] text-[#929a93]">
+                    Confirmed
+                  </p>
 
-                  <span className={styles.statValue}>
+                  <p className="mt-0.5 text-sm font-semibold text-[#315f3f]">
                     {confirmedCount}/{workers.length}
-                  </span>
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Workers */}
-            <div className={styles.workerList}>
+            {/* WORKERS */}
+
+            <div className="space-y-3">
               {workers.map((worker, index) => (
                 <div
                   key={index}
-                  className={`${styles.workerCard} ${
-                    worker.confirmed ? styles.workerConfirmed : ""
+                  className={`overflow-hidden rounded-2xl border bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)] ${
+                    worker.confirmed ? "border-[#d7e8d2]" : "border-[#e3e8e1]"
                   }`}
                 >
-                  {/* Worker Header */}
-                  <div className={styles.workerHeader}>
-                    <div>
-                      <div className={styles.workerNumber}>
-                        Worker #{index + 1}
+                  {/* WORKER HEADER */}
+
+                  <div className="flex flex-col gap-3 border-b border-[#eef1ed] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold ${
+                          worker.confirmed
+                            ? "bg-[#eaf3e6] text-[#4d873d]"
+                            : "bg-[#f0f3ee] text-[#929a93]"
+                        }`}
+                      >
+                        {index + 1}
                       </div>
 
-                      <div
-                        className={
-                          worker.confirmed
-                            ? styles.statusConfirmed
-                            : styles.statusReview
-                        }
-                      >
-                        {worker.confirmed ? "Confirmed" : "Review"}
+                      <div>
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                          Worker #{index + 1}
+                        </p>
+
+                        <span
+                          className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] font-semibold ${
+                            worker.confirmed
+                              ? "bg-[#eaf3e6] text-[#4d873d]"
+                              : "bg-[#f5f2e8] text-[#9a7b35]"
+                          }`}
+                        >
+                          {worker.confirmed ? "Confirmed" : "Review"}
+                        </span>
                       </div>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => handleSwap(index)}
-                      className={styles.secondaryButton}
+                      className="inline-flex h-8 w-full items-center justify-center rounded-[9px] border border-[#dfe5dd] px-3 text-[10px] font-medium text-[#687169] transition hover:border-[#b9c7b7] hover:bg-[#f7f9f6] sm:w-auto"
                     >
-                      ⇄ Swap
+                      ⇄&nbsp; Swap
                     </button>
                   </div>
 
-                  {/* Fields */}
-                  <div className={styles.fieldGrid}>
+                  {/* FIELDS */}
+
+                  <div className="grid gap-3 p-4 sm:grid-cols-3 sm:p-5">
                     <div>
-                      <label className={styles.fieldLabel}>Nama Worker</label>
+                      <label className="mb-1.5 block text-[9px] font-medium text-[#687169]">
+                        Nama Worker
+                      </label>
 
                       <input
                         type="text"
@@ -666,12 +777,12 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         onChange={(event) =>
                           updateWorker(index, "name", event.target.value)
                         }
-                        className={styles.input}
+                        className="h-9 w-full rounded-[9px] border border-[#dfe5dd] bg-white px-3 text-xs text-[#27322c] outline-none transition placeholder:text-[#a7aea8] focus:border-[#8baa83] focus:ring-2 focus:ring-[#eaf3e6]"
                       />
                     </div>
 
                     <div>
-                      <label className={styles.fieldLabel}>
+                      <label className="mb-1.5 block text-[9px] font-medium text-[#687169]">
                         Pieces / Keping
                       </label>
 
@@ -683,12 +794,14 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         onChange={(event) =>
                           updateWorker(index, "pieces", event.target.value)
                         }
-                        className={styles.input}
+                        className="h-9 w-full rounded-[9px] border border-[#dfe5dd] bg-white px-3 text-xs text-[#27322c] outline-none transition focus:border-[#8baa83] focus:ring-2 focus:ring-[#eaf3e6]"
                       />
                     </div>
 
                     <div>
-                      <label className={styles.fieldLabel}>Berat / Kg</label>
+                      <label className="mb-1.5 block text-[9px] font-medium text-[#687169]">
+                        Berat / Kg
+                      </label>
 
                       <input
                         type="number"
@@ -698,25 +811,26 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         onChange={(event) =>
                           updateWorker(index, "weightKg", event.target.value)
                         }
-                        className={styles.input}
+                        className="h-9 w-full rounded-[9px] border border-[#dfe5dd] bg-white px-3 text-xs text-[#27322c] outline-none transition focus:border-[#8baa83] focus:ring-2 focus:ring-[#eaf3e6]"
                       />
                     </div>
                   </div>
 
-                  {/* Matches */}
-                  <div className={styles.matchSection}>
-                    <div className={styles.matchHeader}>
-                      <div>
-                        <div className={styles.matchTitle}>Kandidat Worker</div>
+                  {/* MATCHES */}
 
-                        <div className={styles.matchDescription}>
-                          Pilih worker yang sesuai dengan hasil pembacaan.
-                        </div>
-                      </div>
+                  <div className="border-t border-[#eef1ed] bg-[#fafbf9] p-4 sm:p-5">
+                    <div className="mb-3">
+                      <p className="text-[10px] font-semibold text-[#27322c]">
+                        Kandidat Worker
+                      </p>
+
+                      <p className="mt-0.5 text-[9px] text-[#929a93]">
+                        Pilih worker yang sesuai dengan hasil pembacaan.
+                      </p>
                     </div>
 
                     {worker.matches.length > 0 ? (
-                      <div className={styles.matchList}>
+                      <div className="grid gap-2">
                         {worker.matches.map((match) => {
                           const selected = worker.selectedWorkerId === match.id;
 
@@ -727,27 +841,31 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                               onClick={() =>
                                 handleSelectWorker(index, match.id)
                               }
-                              className={`${styles.matchItem} ${
-                                selected ? styles.matchSelected : ""
+                              className={`flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition ${
+                                selected
+                                  ? "border-[#a7c29f] bg-[#eef6eb]"
+                                  : "border-[#e3e8e1] bg-white hover:border-[#cbd6c8] hover:bg-[#fbfcfa]"
                               }`}
                             >
-                              <div>
-                                <div className={styles.matchName}>
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-semibold text-[#27322c]">
                                   {match.name}
-                                </div>
+                                </p>
 
-                                <div className={styles.matchScore}>
+                                <p className="mt-0.5 text-[9px] text-[#929a93]">
                                   Match score: {(match.score * 100).toFixed(0)}%
-                                </div>
+                                </p>
                               </div>
 
                               <div
-                                className={`${styles.radio} ${
-                                  selected ? styles.radioSelected : ""
+                                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                                  selected
+                                    ? "border-[#5f9f4a]"
+                                    : "border-[#cfd7cd]"
                                 }`}
                               >
                                 {selected && (
-                                  <div className={styles.radioDot} />
+                                  <div className="h-2.5 w-2.5 rounded-full bg-[#5f9f4a]" />
                                 )}
                               </div>
                             </button>
@@ -755,21 +873,21 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         })}
                       </div>
                     ) : (
-                      <div className={styles.noMatch}>
-                        <div className={styles.noMatchTitle}>
+                      <div className="rounded-xl border border-[#eadfca] bg-[#fffaf0] p-4">
+                        <p className="text-xs font-semibold text-[#735c2b]">
                           Worker belum ditemukan
-                        </div>
+                        </p>
 
-                        <div className={styles.noMatchText}>
+                        <p className="mt-1 text-[9px] leading-relaxed text-[#927b4b]">
                           Tidak ditemukan worker yang cocok dengan hasil scan.
                           Periksa kembali nama worker sebelum menambahkan worker
                           baru.
-                        </div>
+                        </p>
 
                         <button
                           type="button"
                           onClick={() => openNewWorkerModal(index)}
-                          className={styles.primaryButton}
+                          className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-[9px] bg-[#315f3f] px-4 text-[10px] font-semibold text-white transition hover:bg-[#274f34] sm:w-auto"
                         >
                           + Tambah Worker Baru
                         </button>
@@ -777,8 +895,9 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                     )}
                   </div>
 
-                  {/* Confirm Worker */}
-                  <div className={styles.confirmRow}>
+                  {/* CONFIRM */}
+
+                  <div className="flex justify-end border-t border-[#eef1ed] px-4 py-3 sm:px-5">
                     <button
                       type="button"
                       onClick={() => handleConfirmWorker(index)}
@@ -789,7 +908,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         worker.weightKg === null ||
                         !worker.selectedWorkerId
                       }
-                      className={styles.primaryButton}
+                      className="inline-flex h-9 w-full items-center justify-center rounded-[9px] bg-[#315f3f] px-4 text-[10px] font-semibold text-white transition hover:bg-[#274f34] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] sm:w-auto"
                     >
                       {worker.confirmed ? "Worker Confirmed" : "Confirm Worker"}
                     </button>
@@ -798,93 +917,143 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
               ))}
             </div>
 
-            {/* Review Status */}
-            {workers.length > 0 && (
-              <div className={styles.reviewStatus}>
-                <div>
-                  <div className={styles.reviewStatusTitle}>Status Review</div>
+            {/* =================================================
+                REVIEW STATUS
+            ================================================= */}
 
-                  <div className={styles.reviewStatusText}>
+            {workers.length > 0 && (
+              <div className="flex flex-col gap-4 rounded-2xl border border-[#dce8df] bg-[#f2f7f3] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#718078]">
+                    STATUS REVIEW
+                  </p>
+
+                  <p className="mt-1 text-xs font-semibold text-[#315f3f]">
                     {allConfirmed
                       ? "Semua worker sudah dikonfirmasi."
                       : `${workers.length - confirmedCount} worker masih perlu diperiksa.`}
-                  </div>
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleContinue}
                   disabled={!allConfirmed}
-                  className={styles.successButton}
+                  className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] sm:w-auto sm:min-w-[120px]"
                 >
                   Lanjutkan
                 </button>
               </div>
             )}
 
-            {/* Final Review */}
+            {/* =================================================
+                FINAL REVIEW
+            ================================================= */}
+
             {showFinalReview && finalReview && (
-              <section className={styles.finalReview}>
-                <div className={styles.finalHeader}>
-                  <div className={styles.finalEyebrow}>Final Review</div>
+              <section className="overflow-hidden rounded-2xl border border-[#dce8df] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
+                <div className="border-b border-[#eef1ed] bg-[#f2f7f3] px-4 py-5 sm:px-5">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#718078]">
+                    STEP 03 · FINAL REVIEW
+                  </p>
 
-                  <h2 className={styles.finalTitle}>Data Siap Disimpan</h2>
+                  <h2 className="mt-1 text-sm font-semibold text-[#244c31]">
+                    Data Siap Disimpan
+                  </h2>
 
-                  <p className={styles.finalDescription}>
+                  <p className="mt-1 text-[10px] leading-relaxed text-[#718078]">
                     Pastikan seluruh data worker sudah benar sebelum masuk ke
                     penjualan.
                   </p>
                 </div>
 
-                {/* Summary */}
-                <div className={styles.finalStats}>
-                  <div className={styles.finalStat}>
-                    <span className={styles.statLabel}>Total Worker</span>
+                {/* FINAL STATS */}
 
-                    <span className={styles.finalStatValue}>
+                <div className="grid grid-cols-2 border-b border-[#eef1ed] sm:grid-cols-4">
+                  <div className="border-b border-r border-[#eef1ed] p-4 sm:border-b-0">
+                    <p className="text-[9px] text-[#929a93]">Total Worker</p>
+
+                    <p className="mt-1 text-base font-semibold text-[#17221b]">
                       {finalReview.workers.length}
-                    </span>
+                    </p>
                   </div>
 
-                  <div className={styles.finalStat}>
-                    <span className={styles.statLabel}>Total Berat</span>
+                  <div className="border-b border-[#eef1ed] p-4 sm:border-b-0 sm:border-r">
+                    <p className="text-[9px] text-[#929a93]">Total Berat</p>
 
-                    <span className={styles.finalStatValue}>
+                    <p className="mt-1 text-base font-semibold text-[#315f3f]">
                       {finalReview.totalWeightKg.toLocaleString("id-ID")} kg
-                    </span>
+                    </p>
+                  </div>
+
+                  <div className="border-r border-[#eef1ed] p-4">
+                    <p className="text-[9px] text-[#929a93]">Status</p>
+
+                    <p className="mt-1 text-xs font-semibold text-[#4d873d]">
+                      Ready
+                    </p>
+                  </div>
+
+                  <div className="p-4">
+                    <p className="text-[9px] text-[#929a93]">Sale</p>
+
+                    <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                      #{saleId}
+                    </p>
                   </div>
                 </div>
 
-                {/* Final Worker Table */}
-                <div className={styles.table}>
-                  <div className={styles.tableHeader}>
-                    <div>Worker</div>
+                {/* FINAL TABLE */}
 
-                    <div>Pieces</div>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#eef1ed] bg-[#fafbf9]">
+                        <th className="px-4 py-3 text-left text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93] sm:px-5">
+                          Worker
+                        </th>
 
-                    <div>Berat</div>
-                  </div>
+                        <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                          Pieces
+                        </th>
 
-                  {finalReview.workers.map((worker) => (
-                    <div key={worker.workerId} className={styles.tableRow}>
-                      <div className={styles.tableWorker}>{worker.name}</div>
+                        <th className="px-4 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93] sm:px-5">
+                          Berat
+                        </th>
+                      </tr>
+                    </thead>
 
-                      <div className={styles.tableNumber}>{worker.pieces}</div>
+                    <tbody>
+                      {finalReview.workers.map((worker) => (
+                        <tr
+                          key={worker.workerId}
+                          className="border-b border-[#f0f2ef] last:border-b-0"
+                        >
+                          <td className="px-4 py-3.5 text-xs font-semibold text-[#27322c] sm:px-5">
+                            {worker.name}
+                          </td>
 
-                      <div className={styles.tableNumber}>
-                        {worker.weightKg.toLocaleString("id-ID")} kg
-                      </div>
-                    </div>
-                  ))}
+                          <td className="px-3 py-3.5 text-right text-xs text-[#687169]">
+                            {worker.pieces}
+                          </td>
+
+                          <td className="px-4 py-3.5 text-right text-xs font-medium text-[#315f3f] sm:px-5">
+                            {worker.weightKg.toLocaleString("id-ID")} kg
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
 
-                {/* Final Actions */}
-                <div className={styles.finalActions}>
+                {/* FINAL ACTIONS */}
+
+                <div className="flex flex-col-reverse gap-2 border-t border-[#eef1ed] p-4 sm:flex-row sm:justify-end sm:p-5">
                   <button
                     type="button"
                     onClick={() => setShowFinalReview(false)}
                     disabled={isSaving}
-                    className={styles.secondaryButton}
+                    className="inline-flex h-10 w-full items-center justify-center rounded-[10px] border border-[#dfe5dd] px-5 text-xs font-medium text-[#687169] transition hover:bg-[#f7f9f6] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                   >
                     Kembali Review
                   </button>
@@ -893,8 +1062,12 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                     type="button"
                     onClick={handleSaveToSale}
                     disabled={isSaving}
-                    className={styles.successButton}
+                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] sm:w-auto"
                   >
+                    {isSaving && (
+                      <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    )}
+
                     {isSaving ? "Menyimpan..." : "Simpan ke Penjualan"}
                   </button>
                 </div>
@@ -902,82 +1075,105 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
             )}
           </section>
         )}
-      </div>
 
-      {showNewWorkerModal && newWorkerIndex !== null && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
-            <div className={styles.modalHeader}>
-              <div>
-                <div className={styles.modalEyebrow}>Worker Baru</div>
-                <h2 className={styles.modalTitle}>Tambah Worker</h2>
+        {/* =====================================================
+            NEW WORKER MODAL
+        ===================================================== */}
+
+        {showNewWorkerModal && newWorkerIndex !== null && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#17221b]/35 px-4 py-6 backdrop-blur-[2px]">
+            <div className="w-full max-w-[430px] overflow-hidden rounded-2xl border border-[#e0e5de] bg-white shadow-[0_20px_60px_rgba(23,34,27,0.16)]">
+              {/* MODAL HEADER */}
+
+              <div className="flex items-start justify-between border-b border-[#eef1ed] px-5 py-4">
+                <div>
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+                    WORKER BARU
+                  </p>
+
+                  <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+                    Tambah Worker
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isCreatingWorker) {
+                      return;
+                    }
+
+                    setShowNewWorkerModal(false);
+                    setNewWorkerIndex(null);
+                  }}
+                  disabled={isCreatingWorker}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-lg leading-none text-[#929a93] transition hover:bg-[#f0f3ee] hover:text-[#27322c] disabled:opacity-50"
+                  aria-label="Tutup"
+                >
+                  ×
+                </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (isCreatingWorker) return;
-                  setShowNewWorkerModal(false);
-                  setNewWorkerIndex(null);
-                }}
-                className={styles.modalClose}
-                disabled={isCreatingWorker}
-              >
-                ×
-              </button>
-            </div>
+              {/* MODAL BODY */}
 
-            <div className={styles.modalBody}>
-              <div className={styles.fieldLabel}>Nama hasil scan</div>
+              <div className="px-5 py-5">
+                <p className="mb-1.5 text-[9px] font-medium text-[#687169]">
+                  Nama hasil scan
+                </p>
 
-              <div
-                style={{
-                  padding: "14px 16px",
-                  border: "1px solid #E5E7E4",
-                  borderRadius: "10px",
-                  background: "#F7F8F6",
-                  fontSize: "15px",
-                  fontWeight: 600,
-                  color: "#17221B",
-                }}
-              >
-                {workers[newWorkerIndex]?.name ?? "-"}
+                <div className="rounded-xl border border-[#e3e8e1] bg-[#f7f8f6] px-4 py-3">
+                  <p className="text-xs font-semibold text-[#17221b]">
+                    {workers[newWorkerIndex]?.name ?? "-"}
+                  </p>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-[#dce8df] bg-[#f2f7f3] p-3.5">
+                  <p className="text-[10px] leading-relaxed text-[#687169]">
+                    Worker ini belum terdaftar. Klik{" "}
+                    <strong className="font-semibold text-[#315f3f]">
+                      Tambah Worker
+                    </strong>{" "}
+                    untuk membuat worker baru menggunakan nama hasil scan.
+                  </p>
+                </div>
               </div>
 
-              <p className={styles.modalHint}>
-                Worker ini belum terdaftar. Klik <strong>Tambah Worker</strong>{" "}
-                untuk membuat worker baru menggunakan nama hasil scan.
-              </p>
-            </div>
+              {/* MODAL ACTIONS */}
 
-            <div className={styles.modalActions}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (isCreatingWorker) return;
-                  setShowNewWorkerModal(false);
-                  setNewWorkerIndex(null);
-                }}
-                className={styles.secondaryButton}
-                disabled={isCreatingWorker}
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  console.log("🔥🔥🔥 TOMBOL DIKLIK");
-                  alert("TOMBOL KEKLIK");
-                  handleCreateNewWorker();
-                }}
-                className={styles.successButton}
-              >
-                Tambah Worker
-              </button>
+              <div className="flex flex-col-reverse gap-2 border-t border-[#eef1ed] px-5 py-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isCreatingWorker) {
+                      return;
+                    }
+
+                    setShowNewWorkerModal(false);
+                    setNewWorkerIndex(null);
+                  }}
+                  disabled={isCreatingWorker}
+                  className="inline-flex h-9 w-full items-center justify-center rounded-[9px] border border-[#dfe5dd] px-4 text-[10px] font-medium text-[#687169] transition hover:bg-[#f7f9f6] disabled:opacity-50 sm:w-auto"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCreateNewWorker}
+                  disabled={isCreatingWorker}
+                  className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[9px] bg-[#315f3f] px-4 text-[10px] font-semibold text-white transition hover:bg-[#274f34] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] sm:w-auto"
+                >
+                  {isCreatingWorker && (
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  )}
+
+                  {isCreatingWorker ? "Menambahkan..." : "Tambah Worker"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </main>
   );
 }

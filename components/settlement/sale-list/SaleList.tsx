@@ -3,9 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import SaleCard from "./SaleCard";
-import styles from "./SaleList.module.css";
-
 interface Sale {
   id: number;
   farmId: number;
@@ -30,14 +27,15 @@ interface Sale {
   };
 }
 
+type Filter = "ALL" | "PENDING" | "COMPLETED";
+
 export default function SaleList() {
   const router = useRouter();
 
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const [filter, setFilter] = useState<"ALL" | "PENDING" | "COMPLETED">("ALL");
+  const [filter, setFilter] = useState<Filter>("ALL");
 
   useEffect(() => {
     const fetchSales = async () => {
@@ -46,14 +44,13 @@ export default function SaleList() {
         setError("");
 
         const response = await fetch("http://localhost:3001/sales");
-
         const data = await response.json();
 
         if (!response.ok) {
           throw new Error(data.message || "Gagal mengambil data penjualan.");
         }
 
-        setSales(Array.isArray(data) ? data : []);
+        setSales(data);
       } catch (err) {
         console.error(err);
 
@@ -69,16 +66,6 @@ export default function SaleList() {
 
     fetchSales();
   }, []);
-
-  const pendingCount = useMemo(
-    () => sales.filter((sale) => sale.status === "PENDING").length,
-    [sales],
-  );
-
-  const completedCount = useMemo(
-    () => sales.filter((sale) => sale.status === "COMPLETED").length,
-    [sales],
-  );
 
   const filteredSales = useMemo(() => {
     if (filter === "ALL") {
@@ -110,27 +97,38 @@ export default function SaleList() {
     return new Intl.NumberFormat("id-ID").format(Number(value));
   };
 
+  const formatCurrency = (value: string | null) => {
+    if (value === null) {
+      return "-";
+    }
+
+    return `Rp${new Intl.NumberFormat("id-ID").format(Number(value))}`;
+  };
+
   const handleOpenSale = (sale: Sale) => {
     if (sale.status === "PENDING") {
       router.push(`/settlement/sale/${sale.id}/confirm`);
-
       return;
     }
 
     router.push(`/settlement/sale/${sale.id}/settlement`);
   };
 
+  const totalSales = sales.length;
+
+  const draftSales = sales.filter((sale) => sale.status === "PENDING").length;
+
+  const completedSales = sales.filter(
+    (sale) => sale.status === "COMPLETED",
+  ).length;
+
   if (loading) {
     return (
-      <main className={styles.page}>
-        <div className={styles.container}>
-          <div className={styles.loading}>
-            <div className={styles.loadingSpinner} />
-
-            <div className={styles.loadingText}>
-              <strong>Memuat penjualan</strong>
-              <span>Menyiapkan data transaksi...</span>
-            </div>
+      <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
+        <div className="flex min-h-[60vh] w-full items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#dfe6dc] border-t-[#5f9f4a]" />
+            <p className="text-xs text-[#929a93]">Memuat data penjualan...</p>
           </div>
         </div>
       </main>
@@ -139,22 +137,19 @@ export default function SaleList() {
 
   if (error) {
     return (
-      <main className={styles.page}>
-        <div className={styles.container}>
-          <div className={styles.error}>
-            <div className={styles.errorIcon}>!</div>
+      <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
+        <div className="w-full">
+          <div className="flex items-start gap-3 rounded-2xl border border-[#f0d4d4] bg-white p-5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-sm font-semibold text-[#c85c5c]">
+              !
+            </div>
 
-            <div className={styles.errorContent}>
-              <h2>Gagal memuat penjualan</h2>
-              <p>{error}</p>
+            <div>
+              <h2 className="text-sm font-semibold text-[#17221b]">
+                Gagal memuat penjualan
+              </h2>
 
-              <button
-                type="button"
-                className={styles.retryButton}
-                onClick={() => window.location.reload()}
-              >
-                Coba lagi
-              </button>
+              <p className="mt-1 text-xs text-[#687169]">{error}</p>
             </div>
           </div>
         </div>
@@ -163,144 +158,231 @@ export default function SaleList() {
   }
 
   return (
-    <main className={styles.page}>
-      <div className={styles.container}>
+    <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
+      <div className="w-full">
         {/* HEADER */}
-        <header className={styles.header}>
-          <div className={styles.headerContent}>
-            <div className={styles.eyebrow}>SETTLEMENT</div>
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#929a93]">
+              SETTLEMENT
+            </p>
 
-            <h1>Penjualan</h1>
+            <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-[#17221b]">
+              Penjualan
+            </h1>
 
-            <p>
+            <p className="mt-1.5 text-xs text-[#687169]">
               Riwayat transaksi penjualan hasil panen dan proses settlement.
             </p>
           </div>
 
           <button
             type="button"
-            className={styles.createButton}
             onClick={() => router.push("/settlement/sale/new")}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-[#17221b] px-4 text-[11px] font-medium text-white transition hover:bg-[#26362b]"
           >
-            <span className={styles.createIcon}>+</span>
-
-            <span>Penjualan Baru</span>
+            <span className="text-sm leading-none">+</span>
+            Penjualan Baru
           </button>
         </header>
 
         {/* SUMMARY */}
-        <section className={styles.summary} aria-label="Ringkasan penjualan">
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryLabel}>Total Penjualan</div>
+        <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
+            <p className="text-[10px] text-[#929a93]">Total Penjualan</p>
 
-            <div className={styles.summaryValue}>{sales.length}</div>
+            <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-[#17221b]">
+              {totalSales}
+            </p>
 
-            <div className={styles.summaryHint}>seluruh transaksi</div>
+            <p className="mt-1.5 text-[10px] text-[#929a93]">
+              seluruh transaksi
+            </p>
           </div>
 
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryLabel}>Draft</div>
+          <div className="rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
+            <p className="text-[10px] text-[#929a93]">Draft</p>
 
-            <div className={styles.summaryValue}>{pendingCount}</div>
+            <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-[#17221b]">
+              {draftSales}
+            </p>
 
-            <div className={styles.summaryHint}>menunggu konfirmasi</div>
+            <p className="mt-1.5 text-[10px] text-[#929a93]">
+              menunggu konfirmasi
+            </p>
           </div>
 
-          <div className={styles.summaryCard}>
-            <div className={styles.summaryLabel}>Selesai</div>
+          <div className="rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
+            <p className="text-[10px] text-[#929a93]">Selesai</p>
 
-            <div className={styles.summaryValue}>{completedCount}</div>
+            <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-[#17221b]">
+              {completedSales}
+            </p>
 
-            <div className={styles.summaryHint}>transaksi selesai</div>
+            <p className="mt-1.5 text-[10px] text-[#929a93]">
+              transaksi selesai
+            </p>
           </div>
         </section>
 
         {/* FILTER */}
-        <div className={styles.toolbar}>
-          <div
-            className={styles.filterGroup}
-            role="tablist"
-            aria-label="Filter penjualan"
-          >
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="inline-flex w-fit rounded-xl border border-[#e3e8e1] bg-[#f0f3ee] p-1">
             <button
               type="button"
-              role="tab"
-              aria-selected={filter === "ALL"}
-              className={
-                filter === "ALL" ? styles.filterActive : styles.filterButton
-              }
               onClick={() => setFilter("ALL")}
+              className={`rounded-lg px-3 py-1.5 text-[10px] font-medium transition ${
+                filter === "ALL"
+                  ? "bg-white text-[#17221b] shadow-sm"
+                  : "text-[#687169] hover:text-[#17221b]"
+              }`}
             >
               Semua
             </button>
 
             <button
               type="button"
-              role="tab"
-              aria-selected={filter === "PENDING"}
-              className={
-                filter === "PENDING" ? styles.filterActive : styles.filterButton
-              }
               onClick={() => setFilter("PENDING")}
+              className={`rounded-lg px-3 py-1.5 text-[10px] font-medium transition ${
+                filter === "PENDING"
+                  ? "bg-white text-[#17221b] shadow-sm"
+                  : "text-[#687169] hover:text-[#17221b]"
+              }`}
             >
               Draft
-              {pendingCount > 0 && (
-                <span className={styles.filterCount}>{pendingCount}</span>
+              {draftSales > 0 && (
+                <span className="ml-1.5 rounded-full bg-[#fbf3df] px-1.5 py-0.5 text-[8px] text-[#b48624]">
+                  {draftSales}
+                </span>
               )}
             </button>
 
             <button
               type="button"
-              role="tab"
-              aria-selected={filter === "COMPLETED"}
-              className={
-                filter === "COMPLETED"
-                  ? styles.filterActive
-                  : styles.filterButton
-              }
               onClick={() => setFilter("COMPLETED")}
+              className={`rounded-lg px-3 py-1.5 text-[10px] font-medium transition ${
+                filter === "COMPLETED"
+                  ? "bg-white text-[#17221b] shadow-sm"
+                  : "text-[#687169] hover:text-[#17221b]"
+              }`}
             >
               Selesai
             </button>
           </div>
 
-          <div className={styles.resultCount}>
-            <strong>{sortedSales.length}</strong> transaksi
-          </div>
+          <span className="text-[10px] text-[#929a93]">
+            {sortedSales.length} transaksi
+          </span>
         </div>
 
         {/* LIST */}
         {sortedSales.length === 0 ? (
-          <div className={styles.empty}>
-            <div className={styles.emptyIcon}>
-              <span>∅</span>
+          <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#dfe5dc] bg-white px-6 text-center">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#f0f3ee] text-lg text-[#929a93]">
+              ∅
             </div>
 
-            <h2>Belum ada penjualan</h2>
+            <h2 className="text-sm font-semibold text-[#17221b]">
+              Belum ada penjualan
+            </h2>
 
-            <p>Belum ada transaksi dengan filter yang dipilih.</p>
-
-            {filter !== "ALL" && (
-              <button
-                type="button"
-                className={styles.emptyAction}
-                onClick={() => setFilter("ALL")}
-              >
-                Tampilkan semua
-              </button>
-            )}
+            <p className="mt-1 max-w-xs text-xs text-[#929a93]">
+              Belum ada transaksi dengan filter yang dipilih.
+            </p>
           </div>
         ) : (
-          <div className={styles.list}>
-            {sortedSales.map((sale) => (
-              <SaleCard
-                key={sale.id}
-                sale={sale}
-                formattedDate={formatDate(sale.saleDate)}
-                formattedWeight={formatNumber(sale.totalWeightKg)}
-                onClick={() => handleOpenSale(sale)}
-              />
-            ))}
+          <div className="space-y-3">
+            {sortedSales.map((sale) => {
+              const isPending = sale.status === "PENDING";
+              const isCompleted = sale.status === "COMPLETED";
+
+              const totalAmount =
+                sale.totalWeightKg !== null && sale.pricePerKg !== null
+                  ? Number(sale.totalWeightKg) * Number(sale.pricePerKg)
+                  : null;
+
+              return (
+                <button
+                  key={sale.id}
+                  type="button"
+                  onClick={() => handleOpenSale(sale)}
+                  className="group block w-full rounded-2xl border border-[#e3e8e1] bg-white text-left shadow-[0_1px_2px_rgba(23,34,27,0.02)] transition hover:-translate-y-px hover:border-[#d6ddd3] hover:shadow-[0_8px_24px_rgba(23,34,27,0.04)]"
+                >
+                  <div className="p-4 sm:p-5">
+                    {/* CARD HEADER */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h2 className="text-sm font-semibold text-[#17221b]">
+                          {sale.commodity.name}
+                        </h2>
+
+                        <p className="mt-1 text-[10px] text-[#929a93]">
+                          {formatDate(sale.saleDate)}
+                        </p>
+                      </div>
+
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] ${
+                          isCompleted
+                            ? "bg-[#eaf3e6] text-[#4d873d]"
+                            : "bg-[#fbf3df] text-[#b48624]"
+                        }`}
+                      >
+                        {isCompleted ? "Selesai" : "Draft"}
+                      </span>
+                    </div>
+
+                    {/* METRICS */}
+                    <div className="mt-4 grid grid-cols-1 gap-4 border-y border-[#eef1ed] py-4 sm:grid-cols-3">
+                      <div>
+                        <p className="text-[9px] text-[#929a93]">Berat</p>
+
+                        <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                          {formatNumber(sale.totalWeightKg)} kg
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] text-[#929a93]">Harga / Kg</p>
+
+                        <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                          {formatCurrency(sale.pricePerKg)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] text-[#929a93]">
+                          Total Penjualan
+                        </p>
+
+                        <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                          {formatCurrency(
+                            totalAmount === null ? null : String(totalAmount),
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* CARD FOOTER */}
+                    <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-[10px] font-medium text-[#4c574f]">
+                          {sale.farm.name}
+                        </p>
+
+                        <p className="mt-0.5 text-[9px] text-[#929a93]">
+                          {sale.farm.location || "Lokasi tidak tersedia"}
+                        </p>
+                      </div>
+
+                      <span className="text-[10px] font-semibold text-[#4d873d] transition group-hover:translate-x-0.5">
+                        {isPending ? "Lanjutkan →" : "Lihat settlement →"}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,156 +1,190 @@
 /* =========================
    SCREEN
-========================= */
+   ========================= */
 
 .print-actions {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 20px;
+
+  width: 100%;
+  max-width: 1120px;
+
+  margin: 0 auto;
+  padding: 24px 28px 0;
 }
 
 .print-button {
-  border: none;
-  border-radius: 6px;
-  background: #111827;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 40px;
+
+  padding: 0 15px;
+
+  border: 1px solid var(--text-primary);
+  border-radius: var(--radius-button);
+
+  background: var(--text-primary);
   color: #ffffff;
-  padding: 8px 14px;
-  font-size: 12px;
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 650;
+
   cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .print-button:hover {
-  background: #1f2937;
+  border-color: var(--agro-primary-dark);
+  background: var(--agro-primary-dark);
+
+  box-shadow: 0 5px 16px rgba(23, 34, 27, 0.08);
+
+  transform: translateY(-1px);
 }
 
+.print-button:active {
+  transform: translateY(0);
+}
 
 /* =========================
-   A4
-========================= */
+   CHECKS PAGE
+   ========================= */
 
 .checks-page {
-  width: 210mm;
-  min-height: 297mm;
+  width: 100%;
+  max-width: 1120px;
 
   margin: 0 auto;
-  padding: 10mm;
+  padding: 24px 28px 72px;
 
   box-sizing: border-box;
 
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 
   align-content: start;
 
-  gap: 7mm 5mm;
+  gap: 18px;
 
-  background: #ffffff;
+  background: var(--background);
 }
-
 
 /* =========================
    CHECK
-========================= */
+   ========================= */
 
 .settlement-check {
-  width: 96mm;
-  height: 43mm;
+  width: 100%;
+  min-height: 300px;
 
   box-sizing: border-box;
 
-  padding: 2mm 4mm;
+  padding: 18px 20px;
 
-  background: #ffffff;
+  background: var(--surface);
 
-  border: 0.35mm solid #1f2937;
-  border-radius: 1.5mm;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
 
   overflow: hidden;
 
   display: flex;
   flex-direction: column;
 
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 
-  color: #111827;
+  color: var(--text-primary);
+
+  box-shadow: var(--shadow-card);
 }
-
 
 /* =========================
    HEADER
-========================= */
+   ========================= */
 
 .check-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
 
-  height: 6mm;
+  gap: 16px;
 }
 
 .brand {
-  font-size: 9px;
+  color: var(--text-primary);
+
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.3px;
+
+  letter-spacing: -0.015em;
 }
 
 .document-title {
-  font-size: 6px;
-  font-weight: 600;
+  color: var(--text-muted);
 
-  letter-spacing: 0.5px;
+  font-size: 8px;
+  font-weight: 650;
 
-  color: #6b7280;
+  letter-spacing: 0.09em;
 
-  margin-top: 1px;
+  margin-top: 2px;
+
+  text-align: right;
 }
 
 .header-line {
   width: 100%;
-  height: 0.2mm;
+  height: 1px;
 
-  background: #d1d5db;
+  margin: 12px 0 15px;
 
-  margin: 1mm 0 1.5mm;
+  background: var(--border);
 }
-
 
 /* =========================
    IDENTITY
-========================= */
+   ========================= */
 
 .identity-section {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
 
-  gap: 3mm;
+  gap: 16px;
 
-  margin-bottom: 1.5mm;
+  margin-bottom: 13px;
 }
 
 .label {
-  font-size: 5px;
-  font-weight: 600;
+  margin-bottom: 5px;
 
-  color: #9ca3af;
+  color: var(--text-muted);
 
-  letter-spacing: 0.4px;
+  font-size: 8px;
+  font-weight: 650;
 
-  margin-bottom: 0.6mm;
+  letter-spacing: 0.08em;
 }
 
 .worker-name {
-  font-size: 15px;
+  max-width: 260px;
+
+  overflow: hidden;
+
+  color: var(--text-primary);
+
+  font-size: 19px;
+  line-height: 1.1;
   font-weight: 700;
 
-  line-height: 1;
-
-  max-width: 50mm;
-
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
 }
 
@@ -159,27 +193,27 @@
 }
 
 .date {
-  font-size: 8px;
+  color: var(--text-secondary);
 
-  color: #374151;
+  font-size: 10px;
+  line-height: 1.4;
 
   white-space: nowrap;
 }
 
-
 /* =========================
    DETAIL
-========================= */
+   ========================= */
 
 .details {
   display: flex;
   flex-direction: column;
 
-  gap: 0.7mm;
+  gap: 7px;
 
-  padding-bottom: 1.3mm;
+  padding-bottom: 12px;
 
-  border-bottom: 0.2mm solid #e5e7eb;
+  border-bottom: 1px solid var(--border);
 }
 
 .detail-row {
@@ -188,34 +222,35 @@
   justify-content: space-between;
   align-items: center;
 
-  gap: 3mm;
+  gap: 16px;
 }
 
 .detail-row span {
-  font-size: 4.5px;
+  color: var(--text-secondary);
 
-  color: #6b7280;
+  font-size: 9px;
 }
 
 .detail-row strong {
-  font-size: 5px;
-  font-weight: 600;
+  color: var(--text-primary);
+
+  font-size: 10px;
+  font-weight: 650;
 
   white-space: nowrap;
 }
 
-
 /* =========================
    CALCULATION
-========================= */
+   ========================= */
 
 .calculation {
   display: flex;
   flex-direction: column;
 
-  gap: 0.8mm;
+  gap: 7px;
 
-  padding-top: 1.3mm;
+  padding-top: 12px;
 }
 
 .calc-row {
@@ -224,98 +259,289 @@
   justify-content: space-between;
   align-items: center;
 
-  gap: 3mm;
+  gap: 16px;
 }
 
 .calc-row span {
-  font-size: 4.5px;
+  color: var(--text-secondary);
 
-  color: #6b7280;
+  font-size: 9px;
 
   white-space: nowrap;
 }
 
 .calc-row strong {
-  font-size: 5px;
-  font-weight: 600;
+  color: var(--text-primary);
+
+  font-size: 10px;
+  font-weight: 650;
 
   white-space: nowrap;
 }
 
-
 /* =========================
-   NET INCOME
-========================= */
+   NET / DEBT
+   ========================= */
 
 .payment-section {
   margin-top: auto;
 
-  padding-top: 1.5mm;
+  padding-top: 13px;
 
-  border-top: 0.25mm solid #111827;
+  border-top: 1px solid var(--text-primary);
 
   display: flex;
 
   align-items: center;
   justify-content: space-between;
 
-  gap: 3mm;
+  gap: 16px;
+}
+
+.payment-section.debt {
+  border-top-color: #b56d35;
 }
 
 .payment-label {
-  font-size: 8px;
+  color: var(--text-primary);
+
+  font-size: 10px;
   font-weight: 700;
 
-  letter-spacing: 0.3px;
+  letter-spacing: 0.05em;
 
   white-space: nowrap;
 }
 
+.payment-section.debt .payment-label {
+  color: #9a602d;
+}
+
 .payment-amount {
-  font-size: 8px;
+  color: var(--agro-primary-dark);
+
+  font-size: 13px;
   font-weight: 800;
 
   white-space: nowrap;
 }
 
+.payment-section.debt .payment-amount {
+  color: #a35d2b;
+}
 
 /* =========================
    FOOTER
-========================= */
+   ========================= */
 
 .check-footer {
-  margin-top: 1mm;
+  margin-top: 9px;
 
-  font-size: 3.5px;
+  color: var(--text-muted);
 
-  color: #9ca3af;
+  font-size: 7px;
 
   text-align: right;
 }
 
-
 /* =========================
    STATES
-========================= */
+   ========================= */
 
 .check-loading,
 .check-error,
 .check-empty {
+  min-height: 50vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   padding: 30px;
 
-  text-align: center;
+  color: var(--text-secondary);
 
-  font-size: 13px;
+  font-size: 12px;
+
+  text-align: center;
 }
 
 .check-error {
-  color: #b91c1c;
+  color: var(--danger);
 }
 
+/* =========================
+   TABLET
+   ========================= */
+
+@media (max-width: 900px) {
+  .print-actions {
+    padding: 22px 22px 0;
+  }
+
+  .checks-page {
+    grid-template-columns: 1fr;
+
+    padding: 22px 22px 60px;
+
+    gap: 14px;
+  }
+
+  .settlement-check {
+    min-height: 290px;
+  }
+}
+
+/* =========================
+   MOBILE
+   ========================= */
+
+@media (max-width: 640px) {
+  .print-actions {
+    justify-content: stretch;
+
+    padding: 18px 15px 0;
+  }
+
+  .print-button {
+    width: 100%;
+    min-height: 43px;
+  }
+
+  .checks-page {
+    grid-template-columns: 1fr;
+
+    padding: 15px 15px 50px;
+
+    gap: 10px;
+  }
+
+  .settlement-check {
+    min-height: 0;
+
+    padding: 17px 16px;
+
+    border-radius: 16px;
+  }
+
+  .check-header {
+    gap: 10px;
+  }
+
+  .brand {
+    font-size: 12px;
+  }
+
+  .document-title {
+    font-size: 7px;
+  }
+
+  .header-line {
+    margin: 11px 0 14px;
+  }
+
+  .identity-section {
+    gap: 12px;
+
+    margin-bottom: 13px;
+  }
+
+  .worker-name {
+    max-width: 190px;
+
+    font-size: 18px;
+  }
+
+  .label {
+    font-size: 7px;
+  }
+
+  .date {
+    font-size: 9px;
+  }
+
+  .details {
+    gap: 7px;
+
+    padding-bottom: 11px;
+  }
+
+  .detail-row {
+    gap: 10px;
+  }
+
+  .detail-row span,
+  .calc-row span {
+    font-size: 9px;
+  }
+
+  .detail-row strong,
+  .calc-row strong {
+    font-size: 10px;
+  }
+
+  .calculation {
+    gap: 7px;
+
+    padding-top: 11px;
+  }
+
+  .payment-section {
+    padding-top: 12px;
+
+    gap: 10px;
+  }
+
+  .payment-label {
+    font-size: 9px;
+  }
+
+  .payment-amount {
+    font-size: 12px;
+  }
+
+  .check-footer {
+    font-size: 6px;
+  }
+}
+
+/* =========================
+   SMALL MOBILE
+   ========================= */
+
+@media (max-width: 380px) {
+  .print-actions {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .checks-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .settlement-check {
+    padding: 15px 13px;
+  }
+
+  .worker-name {
+    max-width: 155px;
+
+    font-size: 16px;
+  }
+
+  .payment-label {
+    font-size: 8px;
+  }
+
+  .payment-amount {
+    font-size: 11px;
+  }
+}
 
 /* =========================
    PRINT
-========================= */
+   ========================= */
 
 @media print {
   @page {
@@ -342,6 +568,8 @@
     width: 210mm;
     min-height: 297mm;
 
+    max-width: none;
+
     margin: 0;
     padding: 10mm;
 
@@ -356,10 +584,155 @@
   }
 
   .settlement-check {
+    width: 96mm;
+    height: 43mm;
+    min-height: 43mm;
+
+    box-sizing: border-box;
+
+    padding: 2mm 4mm;
+
+    border: 0.35mm solid #1f2937;
+    border-radius: 1.5mm;
+
+    background: #ffffff;
+
+    box-shadow: none;
+
+    overflow: hidden;
+
+    font-family: Arial, Helvetica, sans-serif;
+
+    color: #111827;
+
     break-inside: avoid;
     page-break-inside: avoid;
 
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .check-header {
+    height: 6mm;
+  }
+
+  .brand {
+    font-size: 9px;
+  }
+
+  .document-title {
+    font-size: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .header-line {
+    height: 0.2mm;
+
+    margin: 1mm 0 1.5mm;
+
+    background: #d1d5db;
+  }
+
+  .identity-section {
+    gap: 3mm;
+
+    margin-bottom: 1.5mm;
+  }
+
+  .label {
+    margin-bottom: 0.6mm;
+
+    color: #9ca3af;
+
+    font-size: 5px;
+    letter-spacing: 0.4px;
+  }
+
+  .worker-name {
+    max-width: 50mm;
+
+    font-size: 15px;
+
+    line-height: 1;
+  }
+
+  .date {
+    font-size: 8px;
+
+    color: #374151;
+  }
+
+  .details {
+    gap: 0.7mm;
+
+    padding-bottom: 1.3mm;
+
+    border-bottom: 0.2mm solid #e5e7eb;
+  }
+
+  .detail-row {
+    gap: 3mm;
+  }
+
+  .detail-row span {
+    font-size: 4.5px;
+
+    color: #6b7280;
+  }
+
+  .detail-row strong {
+    font-size: 5px;
+  }
+
+  .calculation {
+    gap: 0.8mm;
+
+    padding-top: 1.3mm;
+  }
+
+  .calc-row {
+    gap: 3mm;
+  }
+
+  .calc-row span {
+    font-size: 4.5px;
+
+    color: #6b7280;
+  }
+
+  .calc-row strong {
+    font-size: 5px;
+  }
+
+  .payment-section {
+    padding-top: 1.5mm;
+
+    border-top: 0.25mm solid #111827;
+  }
+
+  .payment-label {
+    font-size: 8px;
+    letter-spacing: 0.3px;
+  }
+
+  .payment-amount {
+    font-size: 8px;
+  }
+
+  .check-footer {
+    margin-top: 1mm;
+
+    font-size: 3.5px;
+
+    color: #9ca3af;
+  }
+
+  .payment-section.debt {
+    border-top-color: #111827;
+  }
+
+  .payment-section.debt .payment-label,
+  .payment-section.debt .payment-amount {
+    color: #111827;
   }
 }
