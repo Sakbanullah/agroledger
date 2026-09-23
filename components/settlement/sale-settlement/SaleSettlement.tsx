@@ -42,6 +42,23 @@ interface CreditAccount {
   };
 }
 
+/*
+ * FIX:
+ * Settlement disimpan sebagai snapshot.
+ * Kalau sale sudah settlement, gunakan data ini,
+ * jangan gunakan outstanding kasbon terbaru.
+ */
+interface SettlementRecord {
+  id: number;
+  saleId: number;
+  workerId: number;
+  grossShare: string | number;
+  kasbonAmount: string | number;
+  deductionAmount: string | number;
+  netAmount: string | number;
+  status: string;
+}
+
 interface SaleSettlementProps {
   saleId: number;
 }
@@ -83,6 +100,9 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
   const [outstandingMap, setOutstandingMap] = useState<Record<number, number>>(
     {},
   );
+
+  // FIX: simpan data settlement, bukan hanya boolean
+  const [settlements, setSettlements] = useState<SettlementRecord[]>([]);
 
   const [hasSettlement, setHasSettlement] = useState(false);
 
@@ -141,88 +161,124 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
           );
         }
 
-        setHasSettlement(
-          Array.isArray(settlementData) && settlementData.length > 0,
-        );
+        /*
+         * FIX:
+         * Simpan settlement yang sudah ada.
+         *
+         * Sebelumnya hanya:
+         * setHasSettlement(...)
+         *
+         * Akibatnya data settlement lama tidak digunakan
+         * untuk menghitung kasbon.
+         */
+        const existingSettlements: SettlementRecord[] = Array.isArray(
+          settlementData,
+        )
+          ? settlementData
+          : [];
+
+        setSettlements(existingSettlements);
+        setHasSettlement(existingSettlements.length > 0);
 
         // =====================================================
         // GET CREDIT ACCOUNTS
         // =====================================================
 
-        setLoadingKasbon(true);
+        /*
+         * FIX:
+         * Kalau settlement SUDAH ADA, jangan mengambil
+         * outstanding kasbon terbaru.
+         *
+         * Outstanding terbaru hanya diperlukan untuk
+         * preview sebelum settlement dibuat.
+         */
+        if (existingSettlements.length === 0) {
+          setLoadingKasbon(true);
 
-        const creditResponse = await fetch(
-          "http://localhost:3001/credit/accounts",
-        );
+          const creditResponse = await fetch(
+            "http://localhost:3001/credit/accounts",
+          );
 
-        const creditData = await creditResponse.json();
+          const creditData = await creditResponse.json();
 
-        if (!creditResponse.ok) {
-          throw new Error(creditData.message || "Gagal mengambil data kasbon.");
-        }
+          if (!creditResponse.ok) {
+            throw new Error(
+              creditData.message || "Gagal mengambil data kasbon.",
+            );
+          }
 
-        setCreditAccounts(creditData);
+          setCreditAccounts(creditData);
 
-        // =====================================================
-        // MAP PERSON → CREDIT ACCOUNT
-        // =====================================================
+          // ===================================================
+          // MAP PERSON → CREDIT ACCOUNT
+          // ===================================================
 
-        const accountsByPerson = new Map<number, CreditAccount>();
+          const accountsByPerson = new Map<number, CreditAccount>();
 
-        for (const account of creditData) {
-          accountsByPerson.set(account.personId, account);
-        }
+          for (const account of creditData) {
+            accountsByPerson.set(account.personId, account);
+          }
 
-        // =====================================================
-        // GET OUTSTANDING KASBON
-        // =====================================================
+          // ===================================================
+          // GET OUTSTANDING KASBON
+          // ===================================================
 
-        const workers = saleData.rubberWorkers ?? [];
+          const workers = saleData.rubberWorkers ?? [];
 
-        const outstandingEntries = await Promise.all(
-          workers.map(async (worker: RubberWorker) => {
-            const account = accountsByPerson.get(worker.workerId);
+          const outstandingEntries = await Promise.all(
+            workers.map(async (worker: RubberWorker) => {
+              const account = accountsByPerson.get(worker.workerId);
 
-            if (!account) {
-              return [worker.workerId, 0] as const;
-            }
-
-            try {
-              const response = await fetch(
-                `http://localhost:3001/credit/accounts/${account.id}/outstanding`,
-              );
-
-              const data = await response.json();
-
-              if (!response.ok) {
-                throw new Error(
-                  data.message ||
-                    `Gagal mengambil kasbon ${worker.worker.name}`,
-                );
+              if (!account) {
+                return [worker.workerId, 0] as const;
               }
 
-              return [
-                worker.workerId,
-                Number(data.outstandingBalance ?? 0),
-              ] as const;
-            } catch (err) {
-              console.error(
-                `Gagal mengambil kasbon ${worker.worker.name}`,
-                err,
-              );
+              try {
+                const response = await fetch(
+                  `http://localhost:3001/credit/accounts/${account.id}/outstanding`,
+                );
 
-              throw new Error(`Gagal mengambil kasbon ${worker.worker.name}`);
-            }
-          }),
-        );
+                const data = await response.json();
 
-        const nextOutstandingMap: Record<number, number> = {};
+                if (!response.ok) {
+                  throw new Error(
+                    data.message ||
+                      `Gagal mengambil kasbon ${worker.worker.name}`,
+                  );
+                }
 
-        for (const [workerId, balance] of outstandingEntries) {
-          nextOutstandingMap[workerId] = balance;
+                return [
+                  worker.workerId,
+                  Number(data.outstandingBalance ?? 0),
+                ] as const;
+              } catch (err) {
+                console.error(
+                  `Gagal mengambil kasbon ${worker.worker.name}`,
+                  err,
+                );
+
+                throw new Error(`Gagal mengambil kasbon ${worker.worker.name}`);
+              }
+            }),
+          );
+
+          const nextOutstandingMap: Record<number, number> = {};
+
+          for (const [workerId, balance] of outstandingEntries) {
+            nextOutstandingMap[workerId] = balance;
+          }
+
+          setOutstandingMap(nextOutstandingMap);
+        } else {
+          /*
+           * FIX:
+           * Sale sudah settlement.
+           * Jangan simpan outstanding terbaru karena akan
+           * membuat settlement lama berubah di UI.
+           */
+          setOutstandingMap({});
+          setCreditAccounts([]);
         }
-
-        setOutstandingMap(nextOutstandingMap);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Terjadi kesalahan.");
       } finally {
@@ -235,6 +291,25 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
   }, [saleId]);
 
   const workers = sale?.rubberWorkers ?? [];
+
+  // =========================================================
+  // SETTLEMENT MAP
+  // =========================================================
+
+  /*
+   * FIX:
+   * Mapping settlement berdasarkan workerId supaya setiap
+   * worker mengambil snapshot settlement miliknya.
+   */
+  const settlementMap = useMemo(() => {
+    const map: Record<number, SettlementRecord> = {};
+
+    for (const settlement of settlements) {
+      map[settlement.workerId] = settlement;
+    }
+
+    return map;
+  }, [settlements]);
 
   // =========================================================
   // CALCULATIONS
@@ -251,14 +326,64 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
   const totalSaleValue = totalWeight * pricePerKg;
 
-  const totalWorkerShare = totalSaleValue / 2;
-
   const workerSettlements: WorkerSettlement[] = useMemo(() => {
     return workers.map((worker) => {
       const weightKg = Number(worker.weightKg);
 
       const grossValue = weightKg * pricePerKg;
 
+      /*
+       * FIX:
+       * Cek apakah worker sudah memiliki settlement.
+       */
+      const settlement = settlementMap[worker.workerId];
+
+      // =====================================================
+      // HISTORICAL SETTLEMENT
+      // =====================================================
+
+      if (settlement) {
+        /*
+         * Gunakan snapshot yang tersimpan di database.
+         *
+         * Jangan menggunakan outstandingMap di sini.
+         */
+        const workerShare = Number(settlement.grossShare);
+
+        const kasbon = Number(settlement.kasbonAmount);
+
+        const deduction = Number(settlement.deductionAmount);
+
+        const netAmount = Number(settlement.netAmount);
+
+        /*
+         * Sisa kasbon pada saat settlement dibuat.
+         *
+         * Ini tetap historis walaupun worker mendapatkan
+         * bon baru setelah settlement.
+         */
+        const remainingKasbon = Math.max(0, kasbon - deduction);
+
+        return {
+          worker,
+          weightKg,
+          grossValue,
+          workerShare,
+          kasbon,
+          deduction,
+          netAmount,
+          remainingKasbon,
+        };
+      }
+
+      // =====================================================
+      // PREVIEW BELUM SETTLEMENT
+      // =====================================================
+
+      /*
+       * Kalau belum settlement, baru gunakan outstanding
+       * kasbon terbaru.
+       */
       const workerShare = grossValue / 2;
 
       const kasbon = outstandingMap[worker.workerId] ?? 0;
@@ -280,7 +405,19 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
         remainingKasbon,
       };
     });
-  }, [workers, pricePerKg, outstandingMap]);
+  }, [workers, pricePerKg, outstandingMap, settlementMap]);
+
+  /*
+   * FIX:
+   * Total bagian worker juga mengikuti snapshot settlement
+   * kalau settlement sudah dibuat.
+   */
+  const totalWorkerShare = useMemo(() => {
+    return workerSettlements.reduce(
+      (total, item) => total + item.workerShare,
+      0,
+    );
+  }, [workerSettlements]);
 
   const totalKasbon = useMemo(() => {
     return workerSettlements.reduce((total, item) => total + item.kasbon, 0);

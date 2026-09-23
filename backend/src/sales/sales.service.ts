@@ -13,6 +13,10 @@ import { UpdateSalePriceDto } from './dto/update-sale-price.dto';
 export class SalesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // ==========================================
+  // GET ALL SALES
+  // ==========================================
+
   async findAll() {
     return this.prisma.sale.findMany({
       orderBy: {
@@ -24,6 +28,10 @@ export class SalesService {
       },
     });
   }
+
+  // ==========================================
+  // GET SINGLE SALE
+  // ==========================================
 
   async findOne(id: number) {
     return this.prisma.sale.findUnique({
@@ -46,6 +54,10 @@ export class SalesService {
       },
     });
   }
+
+  // ==========================================
+  // CREATE SALE
+  // ==========================================
 
   async create(createSaleDto: CreateSaleDto) {
     return this.prisma.sale.create({
@@ -79,9 +91,16 @@ export class SalesService {
       },
     });
   }
+
+  // ==========================================
+  // UPDATE SALE PRICE
+  // ==========================================
+
   async updatePrice(id: number, updateSalePriceDto: UpdateSalePriceDto) {
     const sale = await this.prisma.sale.findUnique({
-      where: { id },
+      where: {
+        id,
+      },
     });
 
     if (!sale) {
@@ -95,7 +114,9 @@ export class SalesService {
     }
 
     return this.prisma.sale.update({
-      where: { id },
+      where: {
+        id,
+      },
       data: {
         pricePerKg: updateSalePriceDto.pricePerKg,
       },
@@ -105,6 +126,11 @@ export class SalesService {
       },
     });
   }
+
+  // ==========================================
+  // CONFIRM SALE
+  // ==========================================
+
   async confirmSale(id: number, confirmSaleDto: ConfirmSaleDto) {
     return this.prisma.$transaction(async (tx) => {
       const sale = await tx.sale.findUnique({
@@ -132,6 +158,10 @@ export class SalesService {
         throw new BadRequestException('Berat penjualan harus lebih dari 0');
       }
 
+      // ==========================================
+      // VALIDATE RUBBER WORKERS
+      // ==========================================
+
       if (sale.commodity.name === 'Karet') {
         const rubberWorkers = await tx.rubberSaleWorker.findMany({
           where: {
@@ -152,12 +182,22 @@ export class SalesService {
 
         if (totalWorkerWeight !== Number(sale.totalWeightKg)) {
           throw new BadRequestException(
-            `Total berat worker (${totalWorkerWeight} kg) tidak sama dengan total berat sale (${Number(sale.totalWeightKg)} kg)`,
+            `Total berat worker (${totalWorkerWeight} kg) tidak sama dengan total berat sale (${Number(
+              sale.totalWeightKg,
+            )} kg)`,
           );
         }
       }
 
+      // ==========================================
+      // CALCULATE TOTAL
+      // ==========================================
+
       const totalAmount = Number(sale.totalWeightKg) * Number(sale.pricePerKg);
+
+      // ==========================================
+      // UPDATE SALE STATUS
+      // ==========================================
 
       const updateResult = await tx.sale.updateMany({
         where: {
@@ -166,6 +206,7 @@ export class SalesService {
         },
         data: {
           status: 'COMPLETED',
+
           ...(confirmSaleDto.buyerName !== undefined && {
             buyerName: confirmSaleDto.buyerName,
           }),
@@ -177,6 +218,10 @@ export class SalesService {
           'Sale sudah dikonfirmasi oleh proses lain',
         );
       }
+
+      // ==========================================
+      // CREATE MONEY IN
+      // ==========================================
 
       await tx.moneyTransaction.create({
         data: {
@@ -190,6 +235,10 @@ export class SalesService {
         },
       });
 
+      // ==========================================
+      // RETURN UPDATED SALE
+      // ==========================================
+
       return tx.sale.findUnique({
         where: {
           id: sale.id,
@@ -199,6 +248,67 @@ export class SalesService {
           commodity: true,
         },
       });
+    });
+  }
+
+  // ==========================================
+  // DELETE DRAFT SALE
+  // ==========================================
+
+  async deleteDraftSale(id: number) {
+    return this.prisma.$transaction(async (tx) => {
+      // ==========================================
+      // GET SALE
+      // ==========================================
+
+      const sale = await tx.sale.findUnique({
+        where: {
+          id,
+        },
+      });
+
+      if (!sale) {
+        throw new NotFoundException('Sale tidak ditemukan');
+      }
+
+      // ==========================================
+      // ONLY PENDING CAN BE DELETED
+      // ==========================================
+
+      if (sale.status !== 'PENDING') {
+        throw new BadRequestException(
+          'Sale yang sudah dikonfirmasi tidak dapat dihapus',
+        );
+      }
+
+      // ==========================================
+      // DELETE RUBBER SALE WORKERS
+      // ==========================================
+
+      await tx.rubberSaleWorker.deleteMany({
+        where: {
+          saleId: id,
+        },
+      });
+
+      // ==========================================
+      // DELETE SALE
+      // ==========================================
+
+      await tx.sale.delete({
+        where: {
+          id,
+        },
+      });
+
+      // ==========================================
+      // RESULT
+      // ==========================================
+
+      return {
+        message: 'Draft penjualan berhasil dihapus',
+        saleId: id,
+      };
     });
   }
 }

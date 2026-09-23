@@ -37,35 +37,45 @@ export default function SaleList() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<Filter>("ALL");
 
-  useEffect(() => {
-    const fetchSales = async () => {
-      try {
-        setLoading(true);
-        setError("");
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState("");
 
-        const response = await fetch("http://localhost:3001/sales");
-        const data = await response.json();
+  // =========================================================
+  // FETCH SALES
+  // =========================================================
 
-        if (!response.ok) {
-          throw new Error(data.message || "Gagal mengambil data penjualan.");
-        }
+  const fetchSales = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-        setSales(data);
-      } catch (err) {
-        console.error(err);
+      const response = await fetch("http://localhost:3001/sales");
 
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Gagal mengambil data penjualan.",
-        );
-      } finally {
-        setLoading(false);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Gagal mengambil data penjualan.");
       }
-    };
 
+      setSales(data);
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err instanceof Error ? err.message : "Gagal mengambil data penjualan.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchSales();
   }, []);
+
+  // =========================================================
+  // FILTER
+  // =========================================================
 
   const filteredSales = useMemo(() => {
     if (filter === "ALL") {
@@ -75,11 +85,19 @@ export default function SaleList() {
     return sales.filter((sale) => sale.status === filter);
   }, [sales, filter]);
 
+  // =========================================================
+  // SORT
+  // =========================================================
+
   const sortedSales = useMemo(() => {
     return [...filteredSales].sort(
       (a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime(),
     );
   }, [filteredSales]);
+
+  // =========================================================
+  // FORMAT
+  // =========================================================
 
   const formatDate = (date: string) => {
     return new Intl.DateTimeFormat("id-ID", {
@@ -105,6 +123,10 @@ export default function SaleList() {
     return `Rp${new Intl.NumberFormat("id-ID").format(Number(value))}`;
   };
 
+  // =========================================================
+  // OPEN SALE
+  // =========================================================
+
   const handleOpenSale = (sale: Sale) => {
     if (sale.status === "PENDING") {
       router.push(`/settlement/sale/${sale.id}/confirm`);
@@ -114,6 +136,59 @@ export default function SaleList() {
     router.push(`/settlement/sale/${sale.id}/settlement`);
   };
 
+  // =========================================================
+  // DELETE DRAFT SALE
+  // =========================================================
+
+  const handleDeleteSale = async (event: React.MouseEvent, sale: Sale) => {
+    event.stopPropagation();
+
+    if (sale.status !== "PENDING") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Hapus draft penjualan ${sale.commodity.name} tanggal ${formatDate(
+        sale.saleDate,
+      )}?\n\nData penjualan draft ini akan dihapus dan tidak dapat dikembalikan.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingId(sale.id);
+      setDeleteError("");
+
+      const response = await fetch(`http://localhost:3001/sales/${sale.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Gagal menghapus draft penjualan.");
+      }
+
+      setSales((currentSales) =>
+        currentSales.filter((item) => item.id !== sale.id),
+      );
+    } catch (err) {
+      console.error(err);
+
+      setDeleteError(
+        err instanceof Error ? err.message : "Gagal menghapus draft penjualan.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // =========================================================
+  // SUMMARY
+  // =========================================================
+
   const totalSales = sales.length;
 
   const draftSales = sales.filter((sale) => sale.status === "PENDING").length;
@@ -122,18 +197,27 @@ export default function SaleList() {
     (sale) => sale.status === "COMPLETED",
   ).length;
 
+  // =========================================================
+  // LOADING
+  // =========================================================
+
   if (loading) {
     return (
       <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
         <div className="flex min-h-[60vh] w-full items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#dfe6dc] border-t-[#5f9f4a]" />
+
             <p className="text-xs text-[#929a93]">Memuat data penjualan...</p>
           </div>
         </div>
       </main>
     );
   }
+
+  // =========================================================
+  // ERROR
+  // =========================================================
 
   if (error) {
     return (
@@ -157,10 +241,15 @@ export default function SaleList() {
     );
   }
 
+  // =========================================================
+  // PAGE
+  // =========================================================
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
       <div className="w-full">
         {/* HEADER */}
+
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#929a93]">
@@ -186,7 +275,26 @@ export default function SaleList() {
           </button>
         </header>
 
+        {/* DELETE ERROR */}
+
+        {deleteError && (
+          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#f0d4d4] bg-white p-4">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-xs font-semibold text-[#c85c5c]">
+              !
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-[#a04444]">
+                Gagal menghapus draft
+              </p>
+
+              <p className="mt-0.5 text-[10px] text-[#687169]">{deleteError}</p>
+            </div>
+          </div>
+        )}
+
         {/* SUMMARY */}
+
         <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
             <p className="text-[10px] text-[#929a93]">Total Penjualan</p>
@@ -226,6 +334,7 @@ export default function SaleList() {
         </section>
 
         {/* FILTER */}
+
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="inline-flex w-fit rounded-xl border border-[#e3e8e1] bg-[#f0f3ee] p-1">
             <button
@@ -276,6 +385,7 @@ export default function SaleList() {
         </div>
 
         {/* LIST */}
+
         {sortedSales.length === 0 ? (
           <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#dfe5dc] bg-white px-6 text-center">
             <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#f0f3ee] text-lg text-[#929a93]">
@@ -294,7 +404,10 @@ export default function SaleList() {
           <div className="space-y-3">
             {sortedSales.map((sale) => {
               const isPending = sale.status === "PENDING";
+
               const isCompleted = sale.status === "COMPLETED";
+
+              const isDeleting = deletingId === sale.id;
 
               const totalAmount =
                 sale.totalWeightKg !== null && sale.pricePerKg !== null
@@ -302,85 +415,121 @@ export default function SaleList() {
                   : null;
 
               return (
-                <button
+                <div
                   key={sale.id}
-                  type="button"
-                  onClick={() => handleOpenSale(sale)}
-                  className="group block w-full rounded-2xl border border-[#e3e8e1] bg-white text-left shadow-[0_1px_2px_rgba(23,34,27,0.02)] transition hover:-translate-y-px hover:border-[#d6ddd3] hover:shadow-[0_8px_24px_rgba(23,34,27,0.04)]"
+                  className="group rounded-2xl border border-[#e3e8e1] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)] transition hover:border-[#d6ddd3] hover:shadow-[0_8px_24px_rgba(23,34,27,0.04)]"
                 >
-                  <div className="p-4 sm:p-5">
-                    {/* CARD HEADER */}
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h2 className="text-sm font-semibold text-[#17221b]">
-                          {sale.commodity.name}
-                        </h2>
+                  {/* CLICKABLE CONTENT */}
 
-                        <p className="mt-1 text-[10px] text-[#929a93]">
-                          {formatDate(sale.saleDate)}
-                        </p>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenSale(sale)}
+                    className="block w-full text-left"
+                  >
+                    <div className="p-4 sm:p-5">
+                      {/* CARD HEADER */}
+
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h2 className="text-sm font-semibold text-[#17221b]">
+                            {sale.commodity.name}
+                          </h2>
+
+                          <p className="mt-1 text-[10px] text-[#929a93]">
+                            {formatDate(sale.saleDate)}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] ${
+                            isCompleted
+                              ? "bg-[#eaf3e6] text-[#4d873d]"
+                              : "bg-[#fbf3df] text-[#b48624]"
+                          }`}
+                        >
+                          {isCompleted ? "Selesai" : "Draft"}
+                        </span>
                       </div>
 
-                      <span
-                        className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] ${
-                          isCompleted
-                            ? "bg-[#eaf3e6] text-[#4d873d]"
-                            : "bg-[#fbf3df] text-[#b48624]"
-                        }`}
+                      {/* METRICS */}
+
+                      <div className="mt-4 grid grid-cols-1 gap-4 border-y border-[#eef1ed] py-4 sm:grid-cols-3">
+                        <div>
+                          <p className="text-[9px] text-[#929a93]">Berat</p>
+
+                          <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                            {formatNumber(sale.totalWeightKg)} kg
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-[9px] text-[#929a93]">
+                            Harga / Kg
+                          </p>
+
+                          <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                            {formatCurrency(sale.pricePerKg)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-[9px] text-[#929a93]">
+                            Total Penjualan
+                          </p>
+
+                          <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                            {formatCurrency(
+                              totalAmount === null ? null : String(totalAmount),
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* CARD FOOTER */}
+
+                      <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                          <p className="text-[10px] font-medium text-[#4c574f]">
+                            {sale.farm.name}
+                          </p>
+
+                          <p className="mt-0.5 text-[9px] text-[#929a93]">
+                            {sale.farm.location || "Lokasi tidak tersedia"}
+                          </p>
+                        </div>
+
+                        <span className="text-[10px] font-semibold text-[#4d873d] transition group-hover:translate-x-0.5">
+                          {isPending ? "Lanjutkan →" : "Lihat settlement →"}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* DELETE DRAFT */}
+
+                  {isPending && (
+                    <div className="border-t border-[#eef1ed] px-4 py-3 sm:px-5">
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={(event) => handleDeleteSale(event, sale)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-medium text-[#b65c5c] transition hover:bg-[#faeeee] disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        {isCompleted ? "Selesai" : "Draft"}
-                      </span>
+                        {isDeleting ? (
+                          <>
+                            <span className="h-3 w-3 animate-spin rounded-full border border-[#e5bebe] border-t-[#b65c5c]" />
+                            Menghapus...
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs">🗑</span>
+                            Hapus Draft
+                          </>
+                        )}
+                      </button>
                     </div>
-
-                    {/* METRICS */}
-                    <div className="mt-4 grid grid-cols-1 gap-4 border-y border-[#eef1ed] py-4 sm:grid-cols-3">
-                      <div>
-                        <p className="text-[9px] text-[#929a93]">Berat</p>
-
-                        <p className="mt-1 text-xs font-semibold text-[#17221b]">
-                          {formatNumber(sale.totalWeightKg)} kg
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-[9px] text-[#929a93]">Harga / Kg</p>
-
-                        <p className="mt-1 text-xs font-semibold text-[#17221b]">
-                          {formatCurrency(sale.pricePerKg)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-[9px] text-[#929a93]">
-                          Total Penjualan
-                        </p>
-
-                        <p className="mt-1 text-xs font-semibold text-[#17221b]">
-                          {formatCurrency(
-                            totalAmount === null ? null : String(totalAmount),
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* CARD FOOTER */}
-                    <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-end sm:justify-between">
-                      <div>
-                        <p className="text-[10px] font-medium text-[#4c574f]">
-                          {sale.farm.name}
-                        </p>
-
-                        <p className="mt-0.5 text-[9px] text-[#929a93]">
-                          {sale.farm.location || "Lokasi tidak tersedia"}
-                        </p>
-                      </div>
-
-                      <span className="text-[10px] font-semibold text-[#4d873d] transition group-hover:translate-x-0.5">
-                        {isPending ? "Lanjutkan →" : "Lihat settlement →"}
-                      </span>
-                    </div>
-                  </div>
-                </button>
+                  )}
+                </div>
               );
             })}
           </div>
