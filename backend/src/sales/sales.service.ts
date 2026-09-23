@@ -129,6 +129,7 @@ export class SalesService {
 
   // ==========================================
   // CONFIRM SALE
+  // PENDING → CONFIRMED
   // ==========================================
 
   async confirmSale(id: number, confirmSaleDto: ConfirmSaleDto) {
@@ -146,13 +147,25 @@ export class SalesService {
         throw new NotFoundException('Sale tidak ditemukan');
       }
 
+      // ==========================================
+      // ONLY PENDING CAN BE CONFIRMED
+      // ==========================================
+
       if (sale.status !== 'PENDING') {
         throw new BadRequestException('Sale sudah dikonfirmasi');
       }
 
+      // ==========================================
+      // VALIDATE PRICE
+      // ==========================================
+
       if (sale.pricePerKg === null) {
         throw new BadRequestException('Harga penjualan belum tersedia');
       }
+
+      // ==========================================
+      // VALIDATE WEIGHT
+      // ==========================================
 
       if (Number(sale.totalWeightKg) <= 0) {
         throw new BadRequestException('Berat penjualan harus lebih dari 0');
@@ -197,6 +210,7 @@ export class SalesService {
 
       // ==========================================
       // UPDATE SALE STATUS
+      // PENDING → CONFIRMED
       // ==========================================
 
       const updateResult = await tx.sale.updateMany({
@@ -205,7 +219,7 @@ export class SalesService {
           status: 'PENDING',
         },
         data: {
-          status: 'COMPLETED',
+          status: 'CONFIRMED',
 
           ...(confirmSaleDto.buyerName !== undefined && {
             buyerName: confirmSaleDto.buyerName,
@@ -221,6 +235,14 @@ export class SalesService {
 
       // ==========================================
       // CREATE MONEY IN
+      // ==========================================
+      //
+      // Uang hasil penjualan masuk pada saat
+      // penjualan dikonfirmasi.
+      //
+      // Ini TIDAK berarti sale sudah COMPLETED.
+      // COMPLETED baru diberikan setelah settlement
+      // seluruh worker selesai.
       // ==========================================
 
       await tx.moneyTransaction.create({

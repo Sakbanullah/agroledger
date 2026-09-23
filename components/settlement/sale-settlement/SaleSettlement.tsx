@@ -446,8 +446,7 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
     if (!sale) {
       return;
     }
-
-    if (sale.status !== "COMPLETED") {
+    if (sale.status !== "CONFIRMED") {
       setConfirmError("Sale harus dikonfirmasi terlebih dahulu.");
       return;
     }
@@ -1156,7 +1155,7 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                 isConfirming ||
                 loadingKasbon ||
                 workers.length === 0 ||
-                sale.status !== "COMPLETED"
+                sale.status !== "CONFIRMED"
               }
               className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] disabled:shadow-none sm:w-auto sm:min-w-[210px]"
             >

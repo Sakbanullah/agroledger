@@ -27,7 +27,7 @@ interface Sale {
   };
 }
 
-type Filter = "ALL" | "PENDING" | "COMPLETED";
+type Filter = "ALL" | "PENDING" | "CONFIRMED" | "COMPLETED";
 
 export default function SaleList() {
   const router = useRouter();
@@ -38,6 +38,7 @@ export default function SaleList() {
   const [filter, setFilter] = useState<Filter>("ALL");
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
   const [deleteError, setDeleteError] = useState("");
 
   // =========================================================
@@ -128,12 +129,25 @@ export default function SaleList() {
   // =========================================================
 
   const handleOpenSale = (sale: Sale) => {
+    // Draft
     if (sale.status === "PENDING") {
       router.push(`/settlement/sale/${sale.id}/confirm`);
       return;
     }
 
-    router.push(`/settlement/sale/${sale.id}/settlement`);
+    // Sale sudah dikonfirmasi,
+    // lanjut ke settlement worker
+    if (sale.status === "CONFIRMED") {
+      router.push(`/settlement/sale/${sale.id}/settlement`);
+      return;
+    }
+
+    // Sale sudah COMPLETED,
+    // check sudah tersedia
+    if (sale.status === "COMPLETED") {
+      router.push(`/settlement/sale/${sale.id}/check`);
+      return;
+    }
   };
 
   // =========================================================
@@ -193,9 +207,61 @@ export default function SaleList() {
 
   const draftSales = sales.filter((sale) => sale.status === "PENDING").length;
 
+  const confirmedSales = sales.filter(
+    (sale) => sale.status === "CONFIRMED",
+  ).length;
+
   const completedSales = sales.filter(
     (sale) => sale.status === "COMPLETED",
   ).length;
+
+  // =========================================================
+  // STATUS UI
+  // =========================================================
+
+  const getStatusLabel = (status: string) => {
+    if (status === "PENDING") {
+      return "Draft";
+    }
+
+    if (status === "CONFIRMED") {
+      return "Menunggu Settlement";
+    }
+
+    if (status === "COMPLETED") {
+      return "Selesai";
+    }
+
+    return status;
+  };
+
+  const getStatusClass = (status: string) => {
+    if (status === "COMPLETED") {
+      return "bg-[#eaf3e6] text-[#4d873d]";
+    }
+
+    if (status === "CONFIRMED") {
+      return "bg-[#e8eef7] text-[#4f6f9d]";
+    }
+
+    return "bg-[#fbf3df] text-[#b48624]";
+  };
+
+  const getActionLabel = (status: string) => {
+    if (status === "PENDING") {
+      return "Lanjutkan →";
+    }
+
+    if (status === "CONFIRMED") {
+      return "Lanjutkan Settlement →";
+    }
+
+    if (status === "COMPLETED") {
+      return "Lihat Check →";
+    }
+
+    return "Buka →";
+  };
 
   // =========================================================
   // LOADING
@@ -309,14 +375,14 @@ export default function SaleList() {
           </div>
 
           <div className="rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
-            <p className="text-[10px] text-[#929a93]">Draft</p>
+            <p className="text-[10px] text-[#929a93]">Dalam Proses</p>
 
             <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-[#17221b]">
-              {draftSales}
+              {draftSales + confirmedSales}
             </p>
 
             <p className="mt-1.5 text-[10px] text-[#929a93]">
-              menunggu konfirmasi
+              draft & settlement
             </p>
           </div>
 
@@ -327,9 +393,7 @@ export default function SaleList() {
               {completedSales}
             </p>
 
-            <p className="mt-1.5 text-[10px] text-[#929a93]">
-              transaksi selesai
-            </p>
+            <p className="mt-1.5 text-[10px] text-[#929a93]">check tersedia</p>
           </div>
         </section>
 
@@ -362,6 +426,23 @@ export default function SaleList() {
               {draftSales > 0 && (
                 <span className="ml-1.5 rounded-full bg-[#fbf3df] px-1.5 py-0.5 text-[8px] text-[#b48624]">
                   {draftSales}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilter("CONFIRMED")}
+              className={`rounded-lg px-3 py-1.5 text-[10px] font-medium transition ${
+                filter === "CONFIRMED"
+                  ? "bg-white text-[#17221b] shadow-sm"
+                  : "text-[#687169] hover:text-[#17221b]"
+              }`}
+            >
+              Settlement
+              {confirmedSales > 0 && (
+                <span className="ml-1.5 rounded-full bg-[#e8eef7] px-1.5 py-0.5 text-[8px] text-[#4f6f9d]">
+                  {confirmedSales}
                 </span>
               )}
             </button>
@@ -405,6 +486,8 @@ export default function SaleList() {
             {sortedSales.map((sale) => {
               const isPending = sale.status === "PENDING";
 
+              const isConfirmed = sale.status === "CONFIRMED";
+
               const isCompleted = sale.status === "COMPLETED";
 
               const isDeleting = deletingId === sale.id;
@@ -441,13 +524,11 @@ export default function SaleList() {
                         </div>
 
                         <span
-                          className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] ${
-                            isCompleted
-                              ? "bg-[#eaf3e6] text-[#4d873d]"
-                              : "bg-[#fbf3df] text-[#b48624]"
-                          }`}
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] ${getStatusClass(
+                            sale.status,
+                          )}`}
                         >
-                          {isCompleted ? "Selesai" : "Draft"}
+                          {getStatusLabel(sale.status)}
                         </span>
                       </div>
 
@@ -499,7 +580,7 @@ export default function SaleList() {
                         </div>
 
                         <span className="text-[10px] font-semibold text-[#4d873d] transition group-hover:translate-x-0.5">
-                          {isPending ? "Lanjutkan →" : "Lihat settlement →"}
+                          {getActionLabel(sale.status)}
                         </span>
                       </div>
                     </div>
