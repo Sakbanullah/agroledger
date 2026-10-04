@@ -10,7 +10,10 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+
+import { createFarm, deleteFarm, getFarms, getPeople } from "@/lib/api";
 
 type Farm = {
   id: number;
@@ -19,6 +22,8 @@ type Farm = {
 };
 
 export default function FarmList() {
+  const router = useRouter();
+
   const [farms, setFarms] = useState<Farm[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -32,6 +37,13 @@ export default function FarmList() {
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
 
+  const [ownershipType, setOwnershipType] = useState<"OWN" | "RELATIVE">(
+    "OWN",
+  );
+  const [ownerId, setOwnerId] = useState<number | null>(null);
+  const [people, setPeople] = useState<Array<{ id: number; name: string }>>([]);
+  const [peopleLoading, setPeopleLoading] = useState(true);
+  const [peopleError, setPeopleError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -40,13 +52,7 @@ export default function FarmList() {
       setLoading(true);
       setError("");
 
-      const response = await fetch("http://localhost:3001/farms");
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Gagal mengambil data ladang.");
-      }
+      const data = await getFarms();
 
       setFarms(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -64,9 +70,34 @@ export default function FarmList() {
     fetchFarms();
   }, []);
 
+  useEffect(() => {
+    const loadPeople = async () => {
+      try {
+        setPeopleLoading(true);
+        setPeopleError("");
+
+        const data = await getPeople();
+
+        setPeople(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+
+        setPeopleError(
+          err instanceof Error ? err.message : "Gagal mengambil data person.",
+        );
+      } finally {
+        setPeopleLoading(false);
+      }
+    };
+
+    loadPeople();
+  }, []);
+
   const openAddModal = () => {
     setName("");
     setLocation("");
+    setOwnershipType("OWN");
+    setOwnerId(null);
     setError("");
     setShowAddModal(true);
   };
@@ -77,6 +108,8 @@ export default function FarmList() {
     setShowAddModal(false);
     setName("");
     setLocation("");
+    setOwnershipType("OWN");
+    setOwnerId(null);
   };
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
@@ -95,32 +128,21 @@ export default function FarmList() {
       return;
     }
 
+    if (ownershipType === "RELATIVE" && !ownerId) {
+      setError("Pemilik wajib dipilih untuk ladang milik saudara.");
+      return;
+    }
+
     try {
       setIsSaving(true);
       setError("");
 
-      const response = await fetch("http://localhost:3001/farms", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: trimmedName,
-          ...(trimmedLocation && {
-            location: trimmedLocation,
-          }),
-        }),
+      const data = await createFarm({
+        name: trimmedName,
+        location: trimmedLocation,
+        ownershipType: ownershipType,
+        ...(ownershipType === "RELATIVE" && { ownerId: ownerId as number }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          Array.isArray(data.message)
-            ? data.message.join(", ")
-            : data.message || "Gagal menambahkan ladang.",
-        );
-      }
 
       setFarms((current) =>
         [...current, data].sort((a, b) => a.name.localeCompare(b.name, "id")),
@@ -158,22 +180,7 @@ export default function FarmList() {
       setIsDeleting(true);
       setError("");
 
-      const response = await fetch(
-        `http://localhost:3001/farms/${selectedFarm.id}`,
-        {
-          method: "DELETE",
-        },
-      );
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        throw new Error(
-          Array.isArray(data?.message)
-            ? data.message.join(", ")
-            : data?.message || "Ladang tidak dapat dihapus.",
-        );
-      }
+      await deleteFarm(selectedFarm.id);
 
       setFarms((current) =>
         current.filter((farm) => farm.id !== selectedFarm.id),
@@ -214,7 +221,7 @@ export default function FarmList() {
         <button
           type="button"
           onClick={openAddModal}
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-[9px] bg-[#3F7635] px-3.5 text-[11px] font-semibold text-white transition hover:bg-[#35642D] active:scale-[0.98]"
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-[9px] bg-success-soft px-3.5 text-[11px] font-semibold text-white transition hover:bg-success-soft active:scale-[0.98]"
         >
           <Plus size={14} strokeWidth={2} />
           Tambah Ladang
@@ -275,7 +282,7 @@ export default function FarmList() {
             <button
               type="button"
               onClick={openAddModal}
-              className="mt-4 inline-flex h-9 items-center gap-2 rounded-[9px] border border-border bg-white px-3.5 text-[10px] font-semibold text-text-secondary transition hover:bg-surface-soft hover:text-text-primary"
+              className="mt-4 inline-flex h-9 items-center gap-2 rounded-[9px] border border-border bg-surface px-3.5 text-[10px] font-semibold text-text-secondary transition hover:bg-surface-soft hover:text-text-primary"
             >
               <Plus size={13} />
               Tambah Ladang
@@ -284,9 +291,11 @@ export default function FarmList() {
         ) : (
           <div className="divide-y divide-border">
             {farms.map((farm) => (
-              <div
+              <button
                 key={farm.id}
-                className="group flex items-center gap-3 px-4 py-4 transition hover:bg-surface-muted/50 sm:px-5"
+                type="button"
+                onClick={() => router.push(`/farm/${farm.id}`)}
+                className="group flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-surface-muted/50 sm:px-5"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-success-soft">
                   <LandPlot
@@ -314,15 +323,25 @@ export default function FarmList() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => openDeleteModal(farm)}
+                <span
+                  role="button"
+                  tabIndex={0}
                   title={`Hapus ${farm.name}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openDeleteModal(farm);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.stopPropagation();
+                      openDeleteModal(farm);
+                    }
+                  }}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-text-muted transition hover:bg-danger-soft hover:text-danger"
                 >
                   <Ellipsis size={16} strokeWidth={1.8} />
-                </button>
-              </div>
+                </span>
+              </button>
             ))}
           </div>
         )}
@@ -383,7 +402,7 @@ export default function FarmList() {
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Contoh: Kebun Sawit Utama"
                     autoFocus
-                    className="h-10 w-full rounded-[9px] border border-border bg-white px-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#5F9F4A]"
+                    className="h-10 w-full rounded-[9px] border border-border bg-surface px-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-border"
                   />
                 </div>
 
@@ -404,9 +423,76 @@ export default function FarmList() {
                     value={location}
                     onChange={(event) => setLocation(event.target.value)}
                     placeholder="Contoh: Banyuasin"
-                    className="h-10 w-full rounded-[9px] border border-border bg-white px-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#5F9F4A]"
+                    className="h-10 w-full rounded-[9px] border border-border bg-surface px-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-border"
                   />
                 </div>
+
+                <div>
+                  <label
+                    htmlFor="farm-ownership"
+                    className="mb-1.5 block text-[10px] font-semibold text-text-secondary"
+                  >
+                    Kepemilikan
+                  </label>
+
+                  <select
+                    id="farm-ownership"
+                    value={ownershipType}
+                    onChange={(event) => {
+                    setOwnershipType(event.target.value as "OWN" | "RELATIVE");
+                      if (event.target.value !== "RELATIVE") setOwnerId(null);
+                    }}
+                    className="h-10 w-full rounded-[9px] border border-border bg-surface px-3 text-[11px] text-text-primary outline-none transition focus:border-border"
+                  >
+                    <option value="OWN">Milik Sendiri (OWN)</option>
+                    <option value="RELATIVE">Milik Saudara (RELATIVE)</option>
+                  </select>
+                </div>
+
+                {ownershipType === "RELATIVE" && (
+                  <div>
+                    <label
+                      htmlFor="farm-owner"
+                      className="mb-1.5 block text-[10px] font-semibold text-text-secondary"
+                    >
+                      Pemilik
+                    </label>
+
+                    <select
+                      id="farm-owner"
+                      value={ownerId ?? ""}
+                      onChange={(event) =>
+                        setOwnerId(
+                          event.target.value ? Number(event.target.value) : null,
+                        )
+                      }
+                      disabled={peopleLoading}
+                      className="h-10 w-full rounded-[9px] border border-border bg-surface px-3 text-[11px] text-text-primary outline-none transition focus:border-border disabled:bg-surface-soft"
+                    >
+                      <option value="">
+                        {peopleLoading ? "Memuat person..." : "Pilih pemilik"}
+                      </option>
+
+                      {people.map((person) => (
+                        <option key={person.id} value={person.id}>
+                          {person.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {peopleError && (
+                      <p className="mt-1.5 text-[10px] text-danger">
+                        {peopleError}
+                      </p>
+                    )}
+
+                    {!peopleLoading && !peopleError && people.length === 0 && (
+                      <p className="mt-1.5 text-[10px] text-text-muted">
+                        Belum ada person. Tambahkan data di menu People.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2 border-t border-border bg-surface-muted px-5 py-3.5">
@@ -414,15 +500,18 @@ export default function FarmList() {
                   type="button"
                   onClick={closeAddModal}
                   disabled={isSaving}
-                  className="h-9 rounded-[9px] px-3.5 text-[10px] font-semibold text-text-secondary transition hover:bg-white hover:text-text-primary disabled:opacity-50"
+                  className="h-9 rounded-[9px] px-3.5 text-[10px] font-semibold text-text-secondary transition hover:bg-surface hover:text-text-primary disabled:opacity-50"
                 >
                   Batal
                 </button>
 
                 <button
                   type="submit"
-                  disabled={isSaving}
-                  className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-[#3F7635] px-4 text-[10px] font-semibold text-white transition hover:bg-[#35642D] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={
+                    isSaving ||
+                    (ownershipType === "RELATIVE" && !ownerId)
+                  }
+                  className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-success-soft px-4 text-[10px] font-semibold text-white transition hover:bg-success-soft disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSaving ? (
                     "Menyimpan..."
@@ -479,7 +568,7 @@ export default function FarmList() {
                 type="button"
                 onClick={closeDeleteModal}
                 disabled={isDeleting}
-                className="h-9 rounded-[9px] px-3.5 text-[10px] font-semibold text-text-secondary transition hover:bg-white hover:text-text-primary disabled:opacity-50"
+                className="h-9 rounded-[9px] px-3.5 text-[10px] font-semibold text-text-secondary transition hover:bg-surface hover:text-text-primary disabled:opacity-50"
               >
                 Batal
               </button>

@@ -237,14 +237,14 @@ export default function SaleList() {
 
   const getStatusClass = (status: string) => {
     if (status === "COMPLETED") {
-      return "bg-[#eaf3e6] text-[#4d873d]";
+      return "bg-success-soft text-success";
     }
 
     if (status === "CONFIRMED") {
-      return "bg-[#e8eef7] text-[#4f6f9d]";
+      return "bg-info-soft text-info";
     }
 
-    return "bg-[#fbf3df] text-[#b48624]";
+    return "bg-warning-soft text-warning";
   };
 
   const getActionLabel = (status: string) => {
@@ -274,7 +274,7 @@ export default function SaleList() {
           <div className="flex flex-col items-center gap-3">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#dfe6dc] border-t-[#5f9f4a]" />
 
-            <p className="text-xs text-[#929a93]">Memuat data penjualan...</p>
+            <p className="text-xs text-text-muted">Memuat data penjualan...</p>
           </div>
         </div>
       </main>
@@ -289,17 +289,17 @@ export default function SaleList() {
     return (
       <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
         <div className="w-full">
-          <div className="flex items-start gap-3 rounded-2xl border border-[#f0d4d4] bg-white p-5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-sm font-semibold text-[#c85c5c]">
+          <div className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger-soft text-sm font-semibold text-danger">
               !
             </div>
 
             <div>
-              <h2 className="text-sm font-semibold text-[#17221b]">
+              <h2 className="text-sm font-semibold text-text-primary">
                 Gagal memuat penjualan
               </h2>
 
-              <p className="mt-1 text-xs text-[#687169]">{error}</p>
+              <p className="mt-1 text-xs text-text-secondary">{error}</p>
             </div>
           </div>
         </div>
@@ -318,43 +318,53 @@ export default function SaleList() {
 
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#929a93]">
+            <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted">
               SETTLEMENT
             </p>
 
-            <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-[#17221b]">
+            <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-text-primary">
               Penjualan
             </h1>
 
-            <p className="mt-1.5 text-xs text-[#687169]">
+            <p className="mt-1.5 text-xs text-text-secondary">
               Riwayat transaksi penjualan hasil panen dan proses settlement.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => router.push("/settlement/sale/new")}
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-[#17221b] px-4 text-[11px] font-medium text-white transition hover:bg-[#26362b]"
-          >
-            <span className="text-sm leading-none">+</span>
-            Penjualan Baru
-          </button>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={() => router.push("/owner-settlement")}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[10px] border border-border bg-surface px-4 text-[11px] font-medium text-[#4c574f] transition hover:bg-surface-soft"
+            >
+              Pembayaran Pemilik
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/settlement/sale/new")}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-surface px-4 text-[11px] font-medium text-white transition hover:bg-surface-soft"
+            >
+              <span className="text-sm leading-none">+</span>
+              Penjualan Baru
+            </button>
+          </div>
         </header>
 
         {/* DELETE ERROR */}
 
         {deleteError && (
-          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#f0d4d4] bg-white p-4">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-xs font-semibold text-[#c85c5c]">
+          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-border bg-surface p-4">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger-soft text-xs font-semibold text-danger">
               !
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-[#a04444]">
+              <p className="text-xs font-semibold text-danger">
                 Gagal menghapus draft
               </p>
 
-              <p className="mt-0.5 text-[10px] text-[#687169]">{deleteError}</p>
+              <p className="mt-0.5 text-[10px] text-text-secondary">{deleteError}</p>
             </div>
           </div>
         )}
@@ -362,52 +372,52 @@ export default function SaleList() {
         {/* SUMMARY */}
 
         <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
-            <p className="text-[10px] text-[#929a93]">Total Penjualan</p>
+          <div className="rounded-2xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
+            <p className="text-[10px] text-text-muted">Total Penjualan</p>
 
-            <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-[#17221b]">
+            <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-text-primary">
               {totalSales}
             </p>
 
-            <p className="mt-1.5 text-[10px] text-[#929a93]">
+            <p className="mt-1.5 text-[10px] text-text-muted">
               seluruh transaksi
             </p>
           </div>
 
-          <div className="rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
-            <p className="text-[10px] text-[#929a93]">Dalam Proses</p>
+          <div className="rounded-2xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
+            <p className="text-[10px] text-text-muted">Dalam Proses</p>
 
-            <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-[#17221b]">
+            <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-text-primary">
               {draftSales + confirmedSales}
             </p>
 
-            <p className="mt-1.5 text-[10px] text-[#929a93]">
+            <p className="mt-1.5 text-[10px] text-text-muted">
               draft & settlement
             </p>
           </div>
 
-          <div className="rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
-            <p className="text-[10px] text-[#929a93]">Selesai</p>
+          <div className="rounded-2xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5">
+            <p className="text-[10px] text-text-muted">Selesai</p>
 
-            <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-[#17221b]">
+            <p className="mt-1.5 text-[23px] font-semibold leading-none tracking-[-0.035em] text-text-primary">
               {completedSales}
             </p>
 
-            <p className="mt-1.5 text-[10px] text-[#929a93]">check tersedia</p>
+            <p className="mt-1.5 text-[10px] text-text-muted">check tersedia</p>
           </div>
         </section>
 
         {/* FILTER */}
 
         <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex w-fit rounded-xl border border-[#e3e8e1] bg-[#f0f3ee] p-1">
+          <div className="inline-flex w-fit rounded-xl border border-border bg-surface-soft p-1">
             <button
               type="button"
               onClick={() => setFilter("ALL")}
               className={`rounded-lg px-3 py-1.5 text-[10px] font-medium transition ${
                 filter === "ALL"
-                  ? "bg-white text-[#17221b] shadow-sm"
-                  : "text-[#687169] hover:text-[#17221b]"
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
               Semua
@@ -418,13 +428,13 @@ export default function SaleList() {
               onClick={() => setFilter("PENDING")}
               className={`rounded-lg px-3 py-1.5 text-[10px] font-medium transition ${
                 filter === "PENDING"
-                  ? "bg-white text-[#17221b] shadow-sm"
-                  : "text-[#687169] hover:text-[#17221b]"
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
               Draft
               {draftSales > 0 && (
-                <span className="ml-1.5 rounded-full bg-[#fbf3df] px-1.5 py-0.5 text-[8px] text-[#b48624]">
+                <span className="ml-1.5 rounded-full bg-warning-soft px-1.5 py-0.5 text-[8px] text-warning">
                   {draftSales}
                 </span>
               )}
@@ -435,13 +445,13 @@ export default function SaleList() {
               onClick={() => setFilter("CONFIRMED")}
               className={`rounded-lg px-3 py-1.5 text-[10px] font-medium transition ${
                 filter === "CONFIRMED"
-                  ? "bg-white text-[#17221b] shadow-sm"
-                  : "text-[#687169] hover:text-[#17221b]"
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
               Settlement
               {confirmedSales > 0 && (
-                <span className="ml-1.5 rounded-full bg-[#e8eef7] px-1.5 py-0.5 text-[8px] text-[#4f6f9d]">
+                <span className="ml-1.5 rounded-full bg-info-soft px-1.5 py-0.5 text-[8px] text-info">
                   {confirmedSales}
                 </span>
               )}
@@ -452,15 +462,15 @@ export default function SaleList() {
               onClick={() => setFilter("COMPLETED")}
               className={`rounded-lg px-3 py-1.5 text-[10px] font-medium transition ${
                 filter === "COMPLETED"
-                  ? "bg-white text-[#17221b] shadow-sm"
-                  : "text-[#687169] hover:text-[#17221b]"
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
               Selesai
             </button>
           </div>
 
-          <span className="text-[10px] text-[#929a93]">
+          <span className="text-[10px] text-text-muted">
             {sortedSales.length} transaksi
           </span>
         </div>
@@ -468,16 +478,16 @@ export default function SaleList() {
         {/* LIST */}
 
         {sortedSales.length === 0 ? (
-          <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#dfe5dc] bg-white px-6 text-center">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#f0f3ee] text-lg text-[#929a93]">
+          <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface px-6 text-center">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-soft text-lg text-text-muted">
               ∅
             </div>
 
-            <h2 className="text-sm font-semibold text-[#17221b]">
+            <h2 className="text-sm font-semibold text-text-primary">
               Belum ada penjualan
             </h2>
 
-            <p className="mt-1 max-w-xs text-xs text-[#929a93]">
+            <p className="mt-1 max-w-xs text-xs text-text-muted">
               Belum ada transaksi dengan filter yang dipilih.
             </p>
           </div>
@@ -500,7 +510,7 @@ export default function SaleList() {
               return (
                 <div
                   key={sale.id}
-                  className="group rounded-2xl border border-[#e3e8e1] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)] transition hover:border-[#d6ddd3] hover:shadow-[0_8px_24px_rgba(23,34,27,0.04)]"
+                  className="group rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(23,34,27,0.02)] transition hover:border-border hover:shadow-[0_8px_24px_rgba(23,34,27,0.04)]"
                 >
                   {/* CLICKABLE CONTENT */}
 
@@ -514,11 +524,11 @@ export default function SaleList() {
 
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <h2 className="text-sm font-semibold text-[#17221b]">
+                          <h2 className="text-sm font-semibold text-text-primary">
                             {sale.commodity.name}
                           </h2>
 
-                          <p className="mt-1 text-[10px] text-[#929a93]">
+                          <p className="mt-1 text-[10px] text-text-muted">
                             {formatDate(sale.saleDate)}
                           </p>
                         </div>
@@ -534,31 +544,31 @@ export default function SaleList() {
 
                       {/* METRICS */}
 
-                      <div className="mt-4 grid grid-cols-1 gap-4 border-y border-[#eef1ed] py-4 sm:grid-cols-3">
+                      <div className="mt-4 grid grid-cols-1 gap-4 border-y border-border py-4 sm:grid-cols-3">
                         <div>
-                          <p className="text-[9px] text-[#929a93]">Berat</p>
+                          <p className="text-[9px] text-text-muted">Berat</p>
 
-                          <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                          <p className="mt-1 text-xs font-semibold text-text-primary">
                             {formatNumber(sale.totalWeightKg)} kg
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-[9px] text-[#929a93]">
+                          <p className="text-[9px] text-text-muted">
                             Harga / Kg
                           </p>
 
-                          <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                          <p className="mt-1 text-xs font-semibold text-text-primary">
                             {formatCurrency(sale.pricePerKg)}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-[9px] text-[#929a93]">
+                          <p className="text-[9px] text-text-muted">
                             Total Penjualan
                           </p>
 
-                          <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                          <p className="mt-1 text-xs font-semibold text-text-primary">
                             {formatCurrency(
                               totalAmount === null ? null : String(totalAmount),
                             )}
@@ -574,12 +584,12 @@ export default function SaleList() {
                             {sale.farm.name}
                           </p>
 
-                          <p className="mt-0.5 text-[9px] text-[#929a93]">
+                          <p className="mt-0.5 text-[9px] text-text-muted">
                             {sale.farm.location || "Lokasi tidak tersedia"}
                           </p>
                         </div>
 
-                        <span className="text-[10px] font-semibold text-[#4d873d] transition group-hover:translate-x-0.5">
+                        <span className="text-[10px] font-semibold text-success transition group-hover:translate-x-0.5">
                           {getActionLabel(sale.status)}
                         </span>
                       </div>
@@ -589,12 +599,12 @@ export default function SaleList() {
                   {/* DELETE DRAFT */}
 
                   {isPending && (
-                    <div className="border-t border-[#eef1ed] px-4 py-3 sm:px-5">
+                    <div className="border-t border-border px-4 py-3 sm:px-5">
                       <button
                         type="button"
                         disabled={isDeleting}
                         onClick={(event) => handleDeleteSale(event, sale)}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-medium text-[#b65c5c] transition hover:bg-[#faeeee] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-medium text-danger transition hover:bg-[#faeeee] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isDeleting ? (
                           <>

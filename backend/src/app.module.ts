@@ -10,10 +10,12 @@ import { CommoditiesModule } from './commodities/commodities.module';
 import { RubberWorkersModule } from './rubber-workers/rubber-workers.module';
 import { CreditModule } from './credit/credit.module';
 import { SettlementsModule } from './settlements/settlements.module';
+import { OwnerSettlementsModule } from './owner-settlements/owner-settlements.module';
 import { MoneyTransactionsModule } from './money-transactions/money-transactions.module';
 import { ReportsModule } from './reports/reports.module';
 import { AiModule } from './ai/ai.module';
 import { WorkersModule } from './workers/workers.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -30,10 +32,12 @@ import { WorkersModule } from './workers/workers.module';
     RubberWorkersModule,
     CreditModule,
     SettlementsModule,
+    OwnerSettlementsModule,
     MoneyTransactionsModule,
     ReportsModule,
     AiModule,
     WorkersModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}

@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
+import ThemeToggle from "@/components/ThemeToggle";
+
 type SidebarProps = {
   collapsed: boolean;
   onToggle: () => void;
@@ -63,9 +65,9 @@ const navigation = [
     section: "People",
     items: [
       {
-        label: "Workers",
+        label: "People",
         icon: Users,
-        path: "/workers",
+        path: "/people",
       },
       {
         label: "Kasbon",
@@ -124,7 +126,7 @@ export default function Sidebar({
           fixed inset-y-0 left-0 z-50
           flex flex-col
           border-r border-border
-          bg-[#F7F8F5]
+          bg-surface-soft
           transition-[width,transform] duration-200 ease-out
           ${
             mobileOpen
@@ -149,7 +151,7 @@ export default function Sidebar({
               onClick={() => navigate("/")}
               className="group flex min-w-0 items-center"
             >
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-[#17221B] text-white">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-surface text-white">
                 <Leaf size={17} strokeWidth={2} />
               </div>
 
@@ -207,8 +209,8 @@ export default function Sidebar({
                           }
                           ${
                             active
-                              ? "bg-[#E6EFE2] text-[#3F7635]"
-                              : "text-text-secondary hover:bg-white hover:text-text-primary"
+                              ? "bg-surface-soft text-success"
+                              : "text-text-secondary hover:bg-surface hover:text-text-primary"
                           }
                         `}
                       >
@@ -235,7 +237,7 @@ export default function Sidebar({
 
           {/* ACCOUNT */}
           <div className="shrink-0 border-t border-border p-3">
-            {/* COLLAPSE */}
+            <ThemeToggle collapsed={collapsed} />
             <button
               type="button"
               onClick={onToggle}
@@ -244,7 +246,7 @@ export default function Sidebar({
                 rounded-[9px]
                 text-text-muted
                 transition-colors
-                hover:bg-white hover:text-text-primary
+                hover:bg-surface hover:text-text-primary
                 ${collapsed ? "justify-center" : "gap-3 px-3"}
               `}
               title={collapsed ? "Perbesar sidebar" : "Kecilkan sidebar"}
@@ -265,11 +267,11 @@ export default function Sidebar({
             {/* ACCOUNT CARD */}
             <div
               className={`
-                flex items-center rounded-[10px] bg-white
+                flex items-center rounded-[10px] bg-surface
                 ${collapsed ? "justify-center p-2" : "gap-3 px-2.5 py-2"}
               `}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#DDE8D9] text-[10px] font-semibold text-[#3F7635]">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-soft text-[10px] font-semibold text-success">
                 SD
               </div>
 

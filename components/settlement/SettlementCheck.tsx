@@ -100,7 +100,7 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#f5f6f4] px-4 py-6 sm:px-5 lg:px-7">
+      <main className="min-h-screen bg-surface-soft px-4 py-6 sm:px-5 lg:px-7">
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#d0d0d0] border-t-black" />
@@ -118,9 +118,9 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-[#f5f6f4] px-4 py-6 sm:px-5 lg:px-7">
+      <main className="min-h-screen bg-surface-soft px-4 py-6 sm:px-5 lg:px-7">
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="w-full max-w-md border border-black bg-white p-5">
+          <div className="w-full max-w-md border border-black bg-surface p-5">
             <h2 className="text-sm font-semibold text-black">
               Gagal memuat check
             </h2>
@@ -138,9 +138,9 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
 
   if (checks.length === 0) {
     return (
-      <main className="min-h-screen bg-[#f5f6f4] px-4 py-6 sm:px-5 lg:px-7">
+      <main className="min-h-screen bg-surface-soft px-4 py-6 sm:px-5 lg:px-7">
         <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="w-full max-w-md border border-black bg-white p-6 text-center">
+          <div className="w-full max-w-md border border-black bg-surface p-6 text-center">
             <div className="mx-auto mb-3 text-lg text-black">—</div>
 
             <h2 className="text-sm font-semibold text-black">
@@ -387,7 +387,7 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
       ========================================================= */}
 
       <div className="print:hidden">
-        <main className="min-h-0 bg-[#f5f6f4] px-4 pb-4 pt-5 sm:px-5 sm:pt-6 lg:px-7">
+        <main className="min-h-0 bg-surface-soft px-4 pb-4 pt-5 sm:px-5 sm:pt-6 lg:px-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-black">
@@ -406,7 +406,7 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 border border-black bg-black px-5 text-xs font-semibold text-white transition hover:bg-white hover:text-black sm:w-auto sm:min-w-[150px]"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 border border-black bg-black px-5 text-xs font-semibold text-white transition hover:bg-surface hover:text-black sm:w-auto sm:min-w-[150px]"
             >
               <svg
                 width="16"
@@ -435,9 +435,9 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
           SCREEN PREVIEW
       ========================================================= */}
 
-      <main className="bg-[#f5f6f4] px-4 pb-10 sm:px-5 lg:px-7 print:hidden">
+      <main className="bg-surface-soft px-4 pb-10 sm:px-5 lg:px-7 print:hidden">
         <div className="mx-auto w-full max-w-[900px]">
-          <div className="mb-4 border border-black bg-white px-4 py-3">
+          <div className="mb-4 border border-black bg-surface px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black">
               Preview Cetak
             </p>
@@ -464,7 +464,7 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
               return (
                 <div
                   key={sheetIndex}
-                  className="relative mx-auto mb-6 h-[891px] w-[630px] overflow-hidden bg-white shadow-[0_8px_30px_rgba(0,0,0,0.10)]"
+                  className="relative mx-auto mb-6 h-[891px] w-[630px] overflow-hidden bg-surface shadow-[0_8px_30px_rgba(0,0,0,0.10)]"
                 >
                   {/* =================================================
                       PREVIEW CHECKS
@@ -483,7 +483,7 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
                     return (
                       <div
                         key={check.settlementId}
-                        className="absolute overflow-hidden border border-black bg-white"
+                        className="absolute overflow-hidden border border-black bg-surface"
                         style={{
                           left: column === 0 ? "7.5px" : "322.5px",
 

@@ -2,6 +2,7 @@
 
 import {
   ArrowDownLeft,
+  ArrowDownRight,
   ArrowUpRight,
   ChevronDown,
   CircleDollarSign,
@@ -17,15 +18,73 @@ import {
   getCashFlow,
   getCashFlowSummary,
   getDashboardSummary,
+  getSalesSummary,
+  getSettlements,
 } from "@/lib/api";
 
 type Period = "daily" | "weekly" | "monthly";
 
 type DashboardData = {
   cashPosition: {
+    cashIn: number;
+    cashOut: number;
+    netCash: number;
     totalIncome: number;
     totalExpense: number;
     currentCash: number;
+  };
+  income: {
+    grossSales: number;
+    ownIncome: number;
+    commissionIncome: number;
+    ownFarmSalesGross: number;
+    relativeFarmSalesGross: number;
+  };
+  obligation: {
+    ownerShareOutstanding: number;
+    ownerSharePaid: number;
+  };
+  sales: {
+    totalSales: number;
+    totalWeightKg: number;
+    grossSales: number;
+    ownIncome: number;
+    commissionIncome: number;
+    totalRevenue: number;
+    summaryByCommodity: Array<{
+      commodityId: number;
+      commodityName: string;
+      unit: string;
+      totalSales: number;
+      totalWeightKg: number;
+      grossSales: number;
+      ownIncome: number;
+      commissionIncome: number;
+    }>;
+    summaryByOwnership: Array<{
+      ownershipType: string;
+      totalSales: number;
+      totalWeightKg: number;
+      grossSales: number;
+      ownIncome: number;
+      commissionIncome: number;
+    }>;
+    summaryByFarm: Array<{
+      farmId: number;
+      farmName: string;
+      ownershipType: string;
+      totalSales: number;
+      totalWeightKg: number;
+      grossSales: number;
+      ownIncome: number;
+      commissionIncome: number;
+    }>;
+  };
+  settlements: {
+    totalSettlements: number;
+    totalWorkerShare: number;
+    totalDeduction: number;
+    totalNetPayment: number;
   };
   recentTransactions: Array<{
     id: number;
@@ -163,9 +222,9 @@ function PageHeader() {
 }
 
 function CashPosition({ data }: { data?: DashboardData["cashPosition"] }) {
-  const totalIncome = data?.totalIncome ?? 0;
-  const totalExpense = data?.totalExpense ?? 0;
-  const currentCash = data?.currentCash ?? 0;
+  const totalIncome = data?.cashIn ?? data?.totalIncome ?? 0;
+  const totalExpense = data?.cashOut ?? data?.totalExpense ?? 0;
+  const currentCash = data?.netCash ?? data?.currentCash ?? 0;
 
   return (
     <section>
@@ -181,7 +240,7 @@ function CashPosition({ data }: { data?: DashboardData["cashPosition"] }) {
 
       <div className="grid gap-4 md:grid-cols-3">
         {/* Saldo */}
-        <div className="rounded-[12px] border border-border bg-white p-5">
+        <div className="rounded-[12px] border border-border bg-surface p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
@@ -197,21 +256,21 @@ function CashPosition({ data }: { data?: DashboardData["cashPosition"] }) {
               </p>
             </div>
 
-            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#F1F4EF] text-[#3F7635]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-success">
               <Wallet size={16} strokeWidth={1.8} />
             </div>
           </div>
         </div>
 
         {/* Income */}
-        <div className="rounded-[12px] border border-border bg-white p-5">
+        <div className="rounded-[12px] border border-border bg-surface p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
                 Total Pemasukan
               </p>
 
-              <p className="mt-2 text-[24px] font-semibold tracking-[-0.03em] text-[#3F7635]">
+              <p className="mt-2 text-[24px] font-semibold tracking-[-0.03em] text-success">
                 {formatRupiah(totalIncome)}
               </p>
 
@@ -220,14 +279,14 @@ function CashPosition({ data }: { data?: DashboardData["cashPosition"] }) {
               </p>
             </div>
 
-            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#EAF3E7] text-[#3F7635]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-success">
               <ArrowDownLeft size={16} strokeWidth={1.8} />
             </div>
           </div>
         </div>
 
         {/* Expense */}
-        <div className="rounded-[12px] border border-border bg-white p-5">
+        <div className="rounded-[12px] border border-border bg-surface p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
@@ -243,9 +302,306 @@ function CashPosition({ data }: { data?: DashboardData["cashPosition"] }) {
               </p>
             </div>
 
-            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#F3F4F1] text-text-secondary">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-text-secondary">
               <ArrowUpRight size={16} strokeWidth={1.8} />
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function IncomeSummary({
+  income,
+  obligation,
+}: {
+  income?: DashboardData["income"];
+  obligation?: DashboardData["obligation"];
+}) {
+  const grossSales = income?.grossSales ?? 0;
+
+  const ownIncome = income?.ownIncome ?? 0;
+
+  const commissionIncome = income?.commissionIncome ?? 0;
+
+  const ownerShareOutstanding = obligation?.ownerShareOutstanding ?? 0;
+
+  return (
+    <section>
+      <div className="mb-3">
+        <h2 className="text-[15px] font-semibold text-text-primary">
+          Pendapatan
+        </h2>
+
+        <p className="mt-1 text-[11px] text-text-secondary">
+          Bagian penjualan yang benar-benar menjadi hak Anda
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className="rounded-[12px] border border-border bg-surface p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                Gross Sales
+              </p>
+
+              <p className="mt-2 text-[20px] font-semibold tracking-[-0.03em] text-text-primary">
+                {formatRupiah(grossSales)}
+              </p>
+
+              <p className="mt-1 text-[10px] text-text-muted">
+                Nilai penjualan ke pembeli
+              </p>
+            </div>
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-success">
+              <Leaf size={16} strokeWidth={1.8} />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[12px] border border-border bg-surface p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                Own Income
+              </p>
+
+              <p className="mt-2 text-[20px] font-semibold tracking-[-0.03em] text-success">
+                {formatRupiah(ownIncome)}
+              </p>
+
+              <p className="mt-1 text-[10px] text-text-muted">
+                Bagian yang menjadi hak Anda
+              </p>
+            </div>
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-success">
+              <Wallet size={16} strokeWidth={1.8} />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[12px] border border-border bg-surface p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                Commission Income
+              </p>
+
+              <p className="mt-2 text-[20px] font-semibold tracking-[-0.03em] text-success">
+                {formatRupiah(commissionIncome)}
+              </p>
+
+              <p className="mt-1 text-[10px] text-text-muted">
+                Komisi kebun milik saudara
+              </p>
+            </div>
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-success">
+              <CircleDollarSign size={16} strokeWidth={1.8} />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[12px] border border-border bg-surface p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                Owner Share Outstanding
+              </p>
+
+              <p className="mt-2 text-[20px] font-semibold tracking-[-0.03em] text-warning">
+                {formatRupiah(ownerShareOutstanding)}
+              </p>
+
+              <p className="mt-1 text-[10px] text-text-muted">
+                Kewajiban ke pemilik kebun
+              </p>
+            </div>
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-warning-soft text-warning">
+              <ArrowUpRight size={16} strokeWidth={1.8} />
+            </div>
+          </div>
+        </div>
+        <div className="rounded-[12px] border border-border bg-surface p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                Owner Share Paid
+              </p>
+
+              <p className="mt-2 text-[20px] font-semibold tracking-[-0.03em] text-success">
+                {formatRupiah(obligation?.ownerSharePaid ?? 0)}
+              </p>
+
+              <p className="mt-1 text-[10px] text-text-muted">
+                Kewajiban yang sudah dibayar
+              </p>
+            </div>
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-success">
+              <ArrowDownRight size={16} strokeWidth={1.8} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PerformanceBreakdown({
+  byOwnership,
+  byFarm,
+}: {
+  byOwnership: DashboardData["sales"]["summaryByOwnership"];
+  byFarm: DashboardData["sales"]["summaryByFarm"];
+}) {
+  return (
+    <section>
+      <div className="mb-4">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+          Performance Breakdown
+        </p>
+
+        <h2 className="mt-1 text-[16px] font-semibold text-text-primary">
+          Rincian Kinerja
+        </h2>
+
+        <p className="mt-0.5 text-[11px] text-text-secondary">
+          Penjualan berdasarkan kepemilikan dan kebun
+        </p>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[1fr_1.4fr]">
+        <div className="rounded-[12px] border border-border bg-surface">
+          <div className="border-b border-border px-5 py-4">
+            <h3 className="text-[13px] font-semibold text-text-primary">
+              By Ownership
+            </h3>
+          </div>
+
+          <div className="p-5">
+            {byOwnership.length === 0 ? (
+              <p className="text-[11px] text-text-muted">
+                Belum ada data kepemilikan.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {byOwnership.map((item) => (
+                  <div
+                    key={item.ownershipType}
+                    className="rounded-[10px] border border-border p-4"
+                  >
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
+                      {item.ownershipType}
+                    </p>
+
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-text-secondary">Gross Sales</span>
+
+                        <span className="font-medium text-text-primary">
+                          {formatRupiah(item.grossSales)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-text-secondary">Own Income</span>
+
+                        <span className="font-medium text-success">
+                          {formatRupiah(item.ownIncome)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-text-secondary">Commission</span>
+
+                        <span className="font-medium text-success">
+                          {formatRupiah(item.commissionIncome)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-[12px] border border-border bg-surface">
+          <div className="border-b border-border px-5 py-4">
+            <h3 className="text-[13px] font-semibold text-text-primary">
+              By Farm
+            </h3>
+          </div>
+
+          <div className="p-5">
+            {byFarm.length === 0 ? (
+              <p className="text-[11px] text-text-muted">
+                Belum ada data kebun.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[420px] text-left">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="pb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-text-muted">
+                        Kebun
+                      </th>
+
+                      <th className="pb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-text-muted">
+                        Kepemilikan
+                      </th>
+
+                      <th className="pb-2 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-text-muted">
+                        Gross Sales
+                      </th>
+
+                      <th className="pb-2 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-text-muted">
+                        Own Income
+                      </th>
+
+                      <th className="pb-2 text-right text-[10px] font-semibold uppercase tracking-[0.1em] text-text-muted">
+                        Commission
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {byFarm.map((item) => (
+                      <tr
+                        key={item.farmId}
+                        className="border-b border-border last:border-b-0"
+                      >
+                        <td className="py-3 text-[11px] font-medium text-text-primary">
+                          {item.farmName}
+                        </td>
+
+                        <td className="py-3 text-[11px] text-text-secondary">
+                          {item.ownershipType}
+                        </td>
+
+                        <td className="py-3 text-right text-[11px] font-medium text-text-primary">
+                          {formatRupiah(item.grossSales)}
+                        </td>
+
+                        <td className="py-3 text-right text-[11px] font-medium text-success">
+                          {formatRupiah(item.ownIncome)}
+                        </td>
+
+                        <td className="py-3 text-right text-[11px] font-medium text-success">
+                          {formatRupiah(item.commissionIncome)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -300,8 +656,8 @@ function CashFlowCard({
   };
 
   return (
-    <section className="rounded-[12px] border border-border bg-white">
-      <div className="border-b border-[#EAECE8] px-5 py-4">
+    <section className="rounded-[12px] border border-border bg-surface">
+      <div className="border-b border-border px-5 py-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
@@ -321,7 +677,7 @@ function CashFlowCard({
             <select
               value={period}
               onChange={(event) => onPeriodChange(event.target.value as Period)}
-              className="h-8 cursor-pointer appearance-none rounded-[8px] border border-border bg-white pl-3 pr-8 text-[11px] font-medium text-text-secondary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2]"
+              className="h-8 cursor-pointer appearance-none rounded-[8px] border border-border bg-surface pl-3 pr-8 text-[11px] font-medium text-text-secondary outline-none transition focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft"
             >
               <option value="daily">Harian</option>
               <option value="weekly">Mingguan</option>
@@ -335,16 +691,16 @@ function CashFlowCard({
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-3 border-t border-[#EEF0EC] pt-4">
+        <div className="mt-5 grid grid-cols-3 border-t border-border pt-4">
           <div>
             <p className="text-[10px] text-text-muted">Masuk</p>
 
-            <p className="mt-1 text-[14px] font-semibold text-[#3F7635]">
+            <p className="mt-1 text-[14px] font-semibold text-success">
               {formatCompactRupiah(totalIn)}
             </p>
           </div>
 
-          <div className="border-l border-[#EAECE8] pl-4">
+          <div className="border-l border-border pl-4">
             <p className="text-[10px] text-text-muted">Keluar</p>
 
             <p className="mt-1 text-[14px] font-semibold text-text-primary">
@@ -352,12 +708,12 @@ function CashFlowCard({
             </p>
           </div>
 
-          <div className="border-l border-[#EAECE8] pl-4">
+          <div className="border-l border-border pl-4">
             <p className="text-[10px] text-text-muted">Bersih</p>
 
             <p
               className={`mt-1 text-[14px] font-semibold ${
-                netCashFlow >= 0 ? "text-[#3F7635]" : "text-[#B5473A]"
+                netCashFlow >= 0 ? "text-success" : "text-danger"
               }`}
             >
               {netCashFlow >= 0 ? "+" : "-"}
@@ -370,7 +726,7 @@ function CashFlowCard({
       <div className="px-5 pb-5 pt-6">
         {data.length === 0 ? (
           <div className="flex h-[220px] flex-col items-center justify-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#F3F5F2] text-text-muted">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-surface-soft text-text-muted">
               <CircleDollarSign size={18} />
             </div>
 
@@ -406,10 +762,10 @@ function CashFlowCard({
                         height: `${inHeight}%`,
                       }}
                     >
-                      <div className="h-full w-full rounded-t-[4px] bg-[#3F7635]/75 transition group-hover:bg-[#3F7635]" />
+                      <div className="h-full w-full rounded-t-[4px] bg-success-soft/75 transition group-hover:bg-success-soft" />
 
                       {moneyIn > 0 && (
-                        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[7px] bg-[#17221B] px-2.5 py-1.5 text-[10px] text-white shadow-lg group-hover:block">
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[7px] bg-surface px-2.5 py-1.5 text-[10px] text-white shadow-lg group-hover:block">
                           Masuk: {formatRupiah(moneyIn)}
                         </div>
                       )}
@@ -421,10 +777,10 @@ function CashFlowCard({
                         height: `${outHeight}%`,
                       }}
                     >
-                      <div className="h-full w-full rounded-t-[4px] bg-[#C8A96B]/75 transition group-hover:bg-[#C8A96B]" />
+                      <div className="h-full w-full rounded-t-[4px] bg-warning-soft/75 transition group-hover:bg-warning-soft" />
 
                       {moneyOut > 0 && (
-                        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[7px] bg-[#17221B] px-2.5 py-1.5 text-[10px] text-white shadow-lg group-hover:block">
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[7px] bg-surface px-2.5 py-1.5 text-[10px] text-white shadow-lg group-hover:block">
                           Keluar: {formatRupiah(moneyOut)}
                         </div>
                       )}
@@ -434,7 +790,7 @@ function CashFlowCard({
               })}
             </div>
 
-            <div className="mt-3 flex justify-between gap-2 overflow-x-auto border-t border-[#EEF0EC] pt-3">
+            <div className="mt-3 flex justify-between gap-2 overflow-x-auto border-t border-border pt-3">
               {data.map((item: any, index: number) => (
                 <span
                   key={`${item.date}-label-${index}`}
@@ -448,12 +804,12 @@ function CashFlowCard({
             <div className="mt-5 flex items-center justify-between">
               <div className="flex gap-5 text-[10px] text-text-secondary">
                 <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#3F7635]" />
+                  <span className="h-2 w-2 rounded-full bg-success-soft" />
                   Uang masuk
                 </span>
 
                 <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#C8A96B]" />
+                  <span className="h-2 w-2 rounded-full bg-warning-soft" />
                   Uang keluar
                 </span>
               </div>
@@ -479,8 +835,8 @@ function HarvestOverview({ data }: { data: SalesSummary | null }) {
   );
 
   return (
-    <section className="rounded-[12px] border border-border bg-white">
-      <div className="border-b border-[#EAECE8] px-5 py-4">
+    <section className="rounded-[12px] border border-border bg-surface">
+      <div className="border-b border-border px-5 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
           Harvest Overview
         </p>
@@ -496,17 +852,17 @@ function HarvestOverview({ data }: { data: SalesSummary | null }) {
             </p>
           </div>
 
-          <span className="rounded-full bg-[#F1F4EF] px-2.5 py-1 text-[10px] font-semibold text-[#3F7635]">
+          <span className="rounded-full bg-surface-soft px-2.5 py-1 text-[10px] font-semibold text-success">
             {data?.totalSales ?? 0} penjualan
           </span>
         </div>
       </div>
 
       <div className="space-y-4 px-5 py-5">
-        <div className="rounded-[10px] bg-[#F8FAF7] p-4">
+        <div className="rounded-[10px] bg-surface-soft p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#EAF3E7] text-[#3F7635]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-success">
                 <Sprout size={17} strokeWidth={1.8} />
               </div>
 
@@ -522,7 +878,7 @@ function HarvestOverview({ data }: { data: SalesSummary | null }) {
             <div className="text-right">
               <p className="text-[10px] text-text-muted">Nilai penjualan</p>
 
-              <p className="mt-0.5 text-[13px] font-semibold text-[#3F7635]">
+              <p className="mt-0.5 text-[13px] font-semibold text-success">
                 {formatCompactRupiah(data?.totalRevenue ?? 0)}
               </p>
             </div>
@@ -599,8 +955,8 @@ function RecentTransactions({
   };
 
   return (
-    <section className="rounded-[12px] border border-border bg-white">
-      <div className="flex items-center justify-between border-b border-[#EAECE8] px-5 py-4">
+    <section className="rounded-[12px] border border-border bg-surface">
+      <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
             Transactions
@@ -617,7 +973,7 @@ function RecentTransactions({
 
         <a
           href="/transactions"
-          className="text-[11px] font-semibold text-[#3F7635] transition hover:text-[#315C2A]"
+          className="text-[11px] font-semibold text-success transition hover:text-success"
         >
           Lihat semua
         </a>
@@ -626,7 +982,7 @@ function RecentTransactions({
       <div className="divide-y divide-[#EEF0EC]">
         {transactions.length === 0 ? (
           <div className="flex min-h-[190px] flex-col items-center justify-center px-5 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#F3F5F2] text-text-muted">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-surface-soft text-text-muted">
               <ReceiptText size={17} />
             </div>
 
@@ -650,8 +1006,8 @@ function RecentTransactions({
                 <div
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] ${
                     isIncome
-                      ? "bg-[#EAF3E7] text-[#3F7635]"
-                      : "bg-[#F3F4F1] text-text-secondary"
+                      ? "bg-surface-soft text-success"
+                      : "bg-surface-soft text-text-secondary"
                   }`}
                 >
                   {isIncome ? (
@@ -675,7 +1031,7 @@ function RecentTransactions({
                 <div className="shrink-0 text-right">
                   <p
                     className={`text-[12px] font-semibold ${
-                      isIncome ? "text-[#3F7635]" : "text-text-primary"
+                      isIncome ? "text-success" : "text-text-primary"
                     }`}
                   >
                     {isIncome ? "+" : "-"}
@@ -698,8 +1054,8 @@ function RecentTransactions({
 function LatestSettlement({ settlement }: { settlement: Settlement | null }) {
   if (!settlement) {
     return (
-      <section className="rounded-[12px] border border-border bg-white">
-        <div className="border-b border-[#EAECE8] px-5 py-4">
+      <section className="rounded-[12px] border border-border bg-surface">
+        <div className="border-b border-border px-5 py-4">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
             Settlement
           </p>
@@ -710,7 +1066,7 @@ function LatestSettlement({ settlement }: { settlement: Settlement | null }) {
         </div>
 
         <div className="flex min-h-[190px] flex-col items-center justify-center px-5 text-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#F3F5F2] text-text-muted">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-surface-soft text-text-muted">
             <FileText size={17} />
           </div>
 
@@ -731,8 +1087,8 @@ function LatestSettlement({ settlement }: { settlement: Settlement | null }) {
   const net = Number(settlement.netAmount);
 
   return (
-    <section className="rounded-[12px] border border-border bg-white">
-      <div className="flex items-start justify-between border-b border-[#EAECE8] px-5 py-4">
+    <section className="rounded-[12px] border border-border bg-surface">
+      <div className="flex items-start justify-between border-b border-border px-5 py-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
             Settlement
@@ -747,14 +1103,14 @@ function LatestSettlement({ settlement }: { settlement: Settlement | null }) {
           </p>
         </div>
 
-        <span className="rounded-full bg-[#EAF3E7] px-2.5 py-1 text-[10px] font-semibold text-[#3F7635]">
+        <span className="rounded-full bg-surface-soft px-2.5 py-1 text-[10px] font-semibold text-success">
           Confirmed
         </span>
       </div>
 
       <div className="px-5 py-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#EAF3E7] text-[#3F7635]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-success">
             <Sprout size={17} strokeWidth={1.8} />
           </div>
 
@@ -771,7 +1127,7 @@ function LatestSettlement({ settlement }: { settlement: Settlement | null }) {
           </div>
         </div>
 
-        <div className="mt-5 space-y-2.5 border-t border-[#EEF0EC] pt-4">
+        <div className="mt-5 space-y-2.5 border-t border-border pt-4">
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-text-secondary">Gross share</span>
 
@@ -783,17 +1139,17 @@ function LatestSettlement({ settlement }: { settlement: Settlement | null }) {
           <div className="flex items-center justify-between text-[11px]">
             <span className="text-text-secondary">Kasbon</span>
 
-            <span className="font-medium text-[#A96D2E]">
+            <span className="font-medium text-warning">
               {deduction > 0 ? `-${formatRupiah(deduction)}` : formatRupiah(0)}
             </span>
           </div>
 
-          <div className="flex items-center justify-between border-t border-[#EEF0EC] pt-3">
+          <div className="flex items-center justify-between border-t border-border pt-3">
             <span className="text-[12px] font-semibold text-text-primary">
               Diterima worker
             </span>
 
-            <span className="text-[15px] font-semibold text-[#3F7635]">
+            <span className="text-[15px] font-semibold text-success">
               {formatRupiah(net)}
             </span>
           </div>
@@ -804,7 +1160,7 @@ function LatestSettlement({ settlement }: { settlement: Settlement | null }) {
 
           <a
             href={`/settlement/sale/${settlement.saleId}/check`}
-            className="font-semibold text-[#3F7635] hover:text-[#315C2A]"
+            className="font-semibold text-success hover:text-success"
           >
             Lihat check
           </a>
@@ -839,24 +1195,8 @@ export default function Home() {
 
         const [dashboardData, salesData, settlementsData] = await Promise.all([
           getDashboardSummary(),
-
-          fetch(
-            `http://localhost:3001/reports/sales?startDate=${monthRange.startDate}&endDate=${monthRange.endDate}`,
-          ).then(async (response) => {
-            if (!response.ok) {
-              throw new Error("Gagal mengambil ringkasan panen.");
-            }
-
-            return response.json();
-          }),
-
-          fetch("http://localhost:3001/settlements").then(async (response) => {
-            if (!response.ok) {
-              throw new Error("Gagal mengambil settlement.");
-            }
-
-            return response.json();
-          }),
+          getSalesSummary(monthRange.startDate, monthRange.endDate),
+          getSettlements(),
         ]);
 
         setDashboard(dashboardData);
@@ -907,11 +1247,11 @@ export default function Home() {
       <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
         <div className="w-full">
           <div className="border-b border-border pb-6">
-            <div className="h-3 w-20 animate-pulse rounded bg-[#E7EBE5]" />
+            <div className="h-3 w-20 animate-pulse rounded bg-surface-soft" />
 
-            <div className="mt-3 h-8 w-32 animate-pulse rounded bg-[#E7EBE5]" />
+            <div className="mt-3 h-8 w-32 animate-pulse rounded bg-surface-soft" />
 
-            <div className="mt-2 h-3 w-64 animate-pulse rounded bg-[#E7EBE5]" />
+            <div className="mt-2 h-3 w-64 animate-pulse rounded bg-surface-soft" />
           </div>
 
           <div className="mt-7 space-y-7">
@@ -919,15 +1259,15 @@ export default function Home() {
               {[1, 2, 3].map((item) => (
                 <div
                   key={item}
-                  className="h-[130px] animate-pulse rounded-[12px] border border-border bg-white"
+                  className="h-[130px] animate-pulse rounded-[12px] border border-border bg-surface"
                 />
               ))}
             </div>
 
             <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
-              <div className="h-[430px] animate-pulse rounded-[12px] border border-border bg-white" />
+              <div className="h-[430px] animate-pulse rounded-[12px] border border-border bg-surface" />
 
-              <div className="h-[430px] animate-pulse rounded-[12px] border border-border bg-white" />
+              <div className="h-[430px] animate-pulse rounded-[12px] border border-border bg-surface" />
             </div>
           </div>
         </div>
@@ -943,6 +1283,11 @@ export default function Home() {
         <div className="mt-7 space-y-7">
           <CashPosition data={dashboard?.cashPosition} />
 
+          <IncomeSummary
+            income={dashboard?.income}
+            obligation={dashboard?.obligation}
+          />
+
           <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
             <CashFlowCard
               cashFlow={cashFlow}
@@ -953,6 +1298,11 @@ export default function Home() {
 
             <HarvestOverview data={salesSummary} />
           </div>
+
+          <PerformanceBreakdown
+            byOwnership={dashboard?.sales?.summaryByOwnership ?? []}
+            byFarm={dashboard?.sales?.summaryByFarm ?? []}
+          />
 
           <section>
             <div className="mb-4">

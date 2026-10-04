@@ -36,11 +36,18 @@ export default function SaleNew() {
   const [saleDate, setSaleDate] = useState("");
   const [notes, setNotes] = useState("");
 
+  // Sawit-specific fields
+  const [weightKg, setWeightKg] = useState("");
+  const [pricePerKg, setPricePerKg] = useState("");
+
   const [inputMethod, setInputMethod] = useState<InputMethod>("manual");
 
   const [loadingData, setLoadingData] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState("");
+
+  const selectedCommodity = commodities.find(c => String(c.id) === commodityId);
+  const isSawit = selectedCommodity?.name?.toLowerCase() === "sawit";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -116,6 +123,19 @@ export default function SaleNew() {
       return;
     }
 
+    // Sawit requires weight + price at draft time (confirm page validates them).
+    if (isSawit) {
+      if (!weightKg || Number(weightKg) <= 0) {
+        setError("Berat sawit harus lebih dari 0 kg.");
+        return;
+      }
+
+      if (!pricePerKg || Number(pricePerKg) <= 0) {
+        setError("Harga sawit per kg harus lebih dari 0.");
+        return;
+      }
+    }
+
     setIsCreating(true);
     setError("");
 
@@ -130,6 +150,10 @@ export default function SaleNew() {
           commodityId: Number(commodityId),
           saleDate,
           status: "PENDING",
+          ...(isSawit && {
+            totalWeightKg: Number(weightKg),
+            pricePerKg: Number(pricePerKg),
+          }),
           ...(notes.trim() && {
             notes: notes.trim(),
           }),
@@ -146,10 +170,16 @@ export default function SaleNew() {
         );
       }
 
-      if (inputMethod === "scan") {
-        router.push(`/settlement/sale/${data.id}/scan`);
+      if (isSawit) {
+        // Sawit goes to confirm sale (no worker settlement)
+        router.push(`/settlement/sale/${data.id}/confirm`);
       } else {
-        router.push(`/settlement/sale/${data.id}/manual`);
+        // Karet (rubber) uses scan or manual worker input
+        if (inputMethod === "scan") {
+          router.push(`/settlement/sale/${data.id}/scan`);
+        } else {
+          router.push(`/settlement/sale/${data.id}/manual`);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -189,7 +219,7 @@ export default function SaleNew() {
         </button>
 
         <div className="mb-8">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#DCE8D8] bg-[#F1F6EF] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#3F7635]">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-border bg-[#F1F6EF] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-success">
             <Sprout className="h-3.5 w-3.5" />
             Penjualan
           </div>
@@ -205,16 +235,16 @@ export default function SaleNew() {
         </div>
 
         {error && (
-          <div className="mb-6 rounded-[12px] border border-[#E8C5C0] bg-[#FFF3F1] px-4 py-3 text-sm font-medium text-[#B5473A]">
+          <div className="mb-6 rounded-[12px] border border-border bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <section className="rounded-[14px] border border-border bg-white">
+          <section className="rounded-[14px] border border-border bg-surface">
             <div className="border-b border-border px-5 py-5 sm:px-6">
               <div className="flex items-start gap-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EAF3E7] text-xs font-bold text-[#3F7635]">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-soft text-xs font-bold text-success">
                   01
                 </div>
 
@@ -244,7 +274,7 @@ export default function SaleNew() {
                   value={farmId}
                   onChange={(event) => setFarmId(event.target.value)}
                   disabled={isCreating}
-                  className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
+                  className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
                 >
                   <option value="">Pilih kebun</option>
 
@@ -270,7 +300,7 @@ export default function SaleNew() {
                   value={commodityId}
                   onChange={(event) => setCommodityId(event.target.value)}
                   disabled={isCreating}
-                  className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
+                  className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
                 >
                   <option value="">Pilih komoditas</option>
 
@@ -296,7 +326,7 @@ export default function SaleNew() {
                   value={saleDate}
                   onChange={(event) => setSaleDate(event.target.value)}
                   disabled={isCreating}
-                  className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
+                  className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
                 />
               </div>
 
@@ -318,124 +348,177 @@ export default function SaleNew() {
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="Tambahkan catatan jika diperlukan"
                   disabled={isCreating}
-                  className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
+                  className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
                 />
               </div>
+
+              {isSawit && (
+                <>
+                  <div>
+                    <label
+                      htmlFor="weightKg"
+                      className="mb-2 block text-sm font-medium text-text-primary"
+                    >
+                      Berat (kg)
+                    </label>
+                    <input
+                      id="weightKg"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={weightKg}
+                      onChange={(event) => setWeightKg(event.target.value)}
+                      placeholder="Masukkan berat sawit"
+                      disabled={isCreating}
+                      className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="pricePerKg"
+                      className="mb-2 block text-sm font-medium text-text-primary"
+                    >
+                      Harga per Kg
+                    </label>
+                    <input
+                      id="pricePerKg"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={pricePerKg}
+                      onChange={(event) => setPricePerKg(event.target.value)}
+                      placeholder="Masukkan harga per kg"
+                      disabled={isCreating}
+                      className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </section>
 
-          <section className="mt-5 rounded-[14px] border border-border bg-white">
-            <div className="border-b border-border px-5 py-5 sm:px-6">
-              <div className="flex items-start gap-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EAF3E7] text-xs font-bold text-[#3F7635]">
-                  02
-                </div>
+          {!isSawit && (
+            <section className="mt-5 rounded-[14px] border border-border bg-surface">
+              <div className="border-b border-border px-5 py-5 sm:px-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-soft text-xs font-bold text-success">
+                    02
+                  </div>
 
-                <div>
-                  <h2 className="text-base font-semibold text-text-primary">
-                    Cara Input Data
-                  </h2>
+                  <div>
+                    <h2 className="text-base font-semibold text-text-primary">
+                      Cara Input Data
+                    </h2>
 
-                  <p className="mt-1 text-sm leading-5 text-text-secondary">
-                    Pilih bagaimana data worker akan dimasukkan ke penjualan
-                    ini.
-                  </p>
+                    <p className="mt-1 text-sm leading-5 text-text-secondary">
+                      Pilih bagaimana data worker akan dimasukkan ke penjualan
+                      ini.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid gap-4 p-5 sm:p-6 md:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setInputMethod("manual")}
-                disabled={isCreating}
-                className={`group relative rounded-[14px] border p-5 text-left transition ${
-                  inputMethod === "manual"
-                    ? "border-[#9FBA96] bg-[#F4F8F2] ring-2 ring-[#E6EFE2]"
-                    : "border-border bg-white hover:border-[#C5D5C0] hover:bg-[#FAFBF9]"
-                } disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                {inputMethod === "manual" && (
-                  <div className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-[#3F7635] text-[11px] font-bold text-white">
-                    ✓
-                  </div>
-                )}
-
-                <div
-                  className={`mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] ${
+              <div className="grid gap-4 p-5 sm:p-6 md:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setInputMethod("manual")}
+                  disabled={isCreating}
+                  className={`group relative rounded-[14px] border p-5 text-left transition ${
                     inputMethod === "manual"
-                      ? "bg-[#DDEBD9] text-[#3F7635]"
-                      : "bg-[#F2F4F1] text-text-secondary"
-                  }`}
+                      ? "border-agro-primary bg-surface-soft ring-2 ring-agro-primary-soft"
+                      : "border-border bg-surface hover:border-agro-primary hover:bg-surface-soft"
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
                 >
-                  <FilePenLine className="h-5 w-5" />
-                </div>
+                  {inputMethod === "manual" && (
+                    <div className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-success-soft text-[11px] font-bold text-white">
+                      ✓
+                    </div>
+                  )}
 
-                <h3 className="text-[15px] font-semibold text-text-primary">
-                  Input Manual
-                </h3>
-
-                <p className="mt-1.5 max-w-sm text-sm leading-5 text-text-secondary">
-                  Masukkan worker, jumlah keping, dan berat secara manual.
-                </p>
-
-                <div className="mt-4 text-xs font-semibold text-[#3F7635]">
-                  Cocok jika data sudah tersedia
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setInputMethod("scan")}
-                disabled={isCreating}
-                className={`group relative rounded-[14px] border p-5 text-left transition ${
-                  inputMethod === "scan"
-                    ? "border-[#9FBA96] bg-[#F4F8F2] ring-2 ring-[#E6EFE2]"
-                    : "border-border bg-white hover:border-[#C5D5C0] hover:bg-[#FAFBF9]"
-                } disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                {inputMethod === "scan" && (
-                  <div className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-[#3F7635] text-[11px] font-bold text-white">
-                    ✓
+                  <div
+                    className={`mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] ${
+                      inputMethod === "manual"
+                        ? "bg-success-soft text-success"
+                        : "bg-surface-soft text-text-secondary"
+                    }`}
+                  >
+                    <FilePenLine className="h-5 w-5" />
                   </div>
-                )}
 
-                <div
-                  className={`mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] ${
+                  <h3 className="text-[15px] font-semibold text-text-primary">
+                    Input Manual
+                  </h3>
+
+                  <p className="mt-1.5 max-w-sm text-sm leading-5 text-text-secondary">
+                    Masukkan worker, jumlah keping, dan berat secara manual.
+                  </p>
+
+                  <div className="mt-4 text-xs font-semibold text-success">
+                    Cocok jika data sudah tersedia
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setInputMethod("scan")}
+                  disabled={isCreating}
+                  className={`group relative rounded-[14px] border p-5 text-left transition ${
                     inputMethod === "scan"
-                      ? "bg-[#DDEBD9] text-[#3F7635]"
-                      : "bg-[#F2F4F1] text-text-secondary"
-                  }`}
+                      ? "border-agro-primary bg-surface-soft ring-2 ring-agro-primary-soft"
+                      : "border-border bg-surface hover:border-agro-primary hover:bg-surface-soft"
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
                 >
-                  <Camera className="h-5 w-5" />
-                </div>
+                  {inputMethod === "scan" && (
+                    <div className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-success-soft text-[11px] font-bold text-white">
+                      ✓
+                    </div>
+                  )}
 
-                <h3 className="text-[15px] font-semibold text-text-primary">
-                  Scan Catatan
-                </h3>
+                  <div
+                    className={`mb-4 flex h-11 w-11 items-center justify-center rounded-[11px] ${
+                      inputMethod === "scan"
+                        ? "bg-success-soft text-success"
+                        : "bg-surface-soft text-text-secondary"
+                    }`}
+                  >
+                    <Camera className="h-5 w-5" />
+                  </div>
 
-                <p className="mt-1.5 max-w-sm text-sm leading-5 text-text-secondary">
-                  Upload foto catatan dan biarkan sistem membaca data worker
-                  secara otomatis.
-                </p>
+                  <h3 className="text-[15px] font-semibold text-text-primary">
+                    Scan Catatan
+                  </h3>
 
-                <div className="mt-4 text-xs font-semibold text-[#3F7635]">
-                  Dibantu AI Vision
-                </div>
-              </button>
-            </div>
-          </section>
+                  <p className="mt-1.5 max-w-sm text-sm leading-5 text-text-secondary">
+                    Upload foto catatan dan biarkan sistem membaca data worker
+                    secara otomatis.
+                  </p>
+
+                  <div className="mt-4 text-xs font-semibold text-success">
+                    Dibantu AI Vision
+                  </div>
+                </button>
+              </div>
+            </section>
+          )}
 
           <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs leading-5 text-text-muted">
-              Draft penjualan akan dibuat terlebih dahulu sebelum data worker
-              dimasukkan.
+              {isSawit
+                ? "Penjualan sawit tidak memerlukan data worker."
+                : "Draft penjualan akan dibuat terlebih dahulu sebelum data worker dimasukkan."}
             </p>
 
             <button
               type="submit"
-              disabled={isCreating || !farmId || !commodityId || !saleDate}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-[#17221B] px-5 text-sm font-semibold text-white transition hover:bg-[#26352B] disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={
+                isCreating ||
+                !farmId ||
+                !commodityId ||
+                !saleDate ||
+                (isSawit && (!weightKg || !pricePerKg))
+              }
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-surface px-5 text-sm font-semibold text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isCreating ? (
                 <>
@@ -444,7 +527,7 @@ export default function SaleNew() {
                 </>
               ) : (
                 <>
-                  Lanjutkan
+                  {isSawit ? "Lanjut ke Konfirmasi" : "Lanjutkan"}
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}

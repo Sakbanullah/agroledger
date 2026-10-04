@@ -117,7 +117,7 @@ export default function Payment({
         }
       }}
     >
-      <div className="w-full max-w-[480px] overflow-hidden rounded-[16px] border border-border bg-white shadow-[0_20px_60px_rgba(23,34,27,0.14)]">
+      <div className="w-full max-w-[480px] overflow-hidden rounded-[16px] border border-border bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.14)]">
         {/* Header */}
         <div className="border-b border-border px-5 py-4 sm:px-6">
           <div className="flex items-start justify-between gap-4">
@@ -144,7 +144,7 @@ export default function Payment({
               onClick={onClose}
               disabled={loading}
               aria-label="Tutup"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] text-[20px] leading-none text-text-muted transition hover:bg-[#F3F5F2] hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] text-[20px] leading-none text-text-muted transition hover:bg-surface-soft hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               ×
             </button>
@@ -159,8 +159,8 @@ export default function Payment({
                 Worker
               </label>
 
-              <div className="flex items-center gap-3 rounded-[10px] border border-border bg-[#F8FAF7] px-3 py-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-[#EAF3E7] text-[12px] font-semibold text-[#3F7635]">
+              <div className="flex items-center gap-3 rounded-[10px] border border-border bg-surface-soft px-3 py-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-surface-soft text-[12px] font-semibold text-success">
                   {workerName.charAt(0).toUpperCase()}
                 </div>
 
@@ -177,19 +177,19 @@ export default function Payment({
             </div>
 
             {/* Outstanding balance */}
-            <div className="rounded-[12px] border border-[#DCE8D8] bg-[#F5F9F3] px-4 py-3.5">
+            <div className="rounded-[12px] border border-border bg-[#F5F9F3] px-4 py-3.5">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-text-muted">
                     Sisa Kasbon
                   </p>
 
-                  <p className="mt-1 text-[17px] font-semibold tracking-[-0.02em] text-[#3F7635]">
+                  <p className="mt-1 text-[17px] font-semibold tracking-[-0.02em] text-success">
                     {formatCurrency(outstandingBalance)}
                   </p>
                 </div>
 
-                <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-[#E6EFE2] text-[#3F7635]">
+                <div className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-surface-soft text-success">
                   ↗
                 </div>
               </div>
@@ -223,7 +223,7 @@ export default function Payment({
                   placeholder="0"
                   disabled={loading || outstandingBalance <= 0}
                   autoFocus
-                  className="h-12 w-full rounded-[10px] border border-border bg-white pl-10 pr-3 text-[15px] font-semibold text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
+                  className="h-12 w-full rounded-[10px] border border-border bg-surface pl-10 pr-3 text-[15px] font-semibold text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
                 />
               </div>
 
@@ -240,7 +240,7 @@ export default function Payment({
                       setError("");
                     }}
                     disabled={loading}
-                    className="text-[10px] font-semibold text-[#3F7635] transition hover:text-[#315C2A] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="text-[10px] font-semibold text-success transition hover:text-success disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Bayar penuh
                   </button>
@@ -266,7 +266,7 @@ export default function Payment({
                   setError("");
                 }}
                 disabled={loading}
-                className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-[13px] text-text-primary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
+                className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-[13px] text-text-primary outline-none transition focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
               />
             </div>
 
@@ -292,14 +292,14 @@ export default function Payment({
                 placeholder="Contoh: pembayaran tunai, pelunasan..."
                 rows={3}
                 disabled={loading}
-                className="w-full resize-none rounded-[10px] border border-border bg-white px-3 py-2.5 text-[13px] leading-5 text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F7F8F6]"
+                className="w-full resize-none rounded-[10px] border border-border bg-surface px-3 py-2.5 text-[13px] leading-5 text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
               />
             </div>
 
             {/* No balance */}
             {outstandingBalance <= 0 && !error && (
-              <div className="rounded-[10px] border border-[#DCE8D8] bg-[#EAF3E7] px-3 py-3">
-                <p className="text-[12px] font-medium text-[#3F7635]">
+              <div className="rounded-[10px] border border-border bg-surface-soft px-3 py-3">
+                <p className="text-[12px] font-medium text-success">
                   Kasbon worker sudah lunas.
                 </p>
               </div>
@@ -307,23 +307,23 @@ export default function Payment({
 
             {/* Error */}
             {error && (
-              <div className="flex items-start gap-2.5 rounded-[10px] border border-[#E8C8C3] bg-[#FFF3F1] px-3 py-3">
-                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F3D8D3] text-[11px] font-bold text-[#B5473A]">
+              <div className="flex items-start gap-2.5 rounded-[10px] border border-[#E8C8C3] bg-danger-soft px-3 py-3">
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-danger-soft text-[11px] font-bold text-danger">
                   !
                 </div>
 
-                <p className="text-[12px] leading-5 text-[#B5473A]">{error}</p>
+                <p className="text-[12px] leading-5 text-danger">{error}</p>
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="flex flex-col-reverse gap-2 border-t border-border bg-[#FBFCFA] px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <div className="flex flex-col-reverse gap-2 border-t border-border bg-surface-soft px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="h-10 rounded-[10px] border border-border bg-white px-4 text-[12px] font-medium text-text-secondary transition hover:bg-[#F5F7F4] hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-10 rounded-[10px] border border-border bg-surface px-4 text-[12px] font-medium text-text-secondary transition hover:bg-surface-soft hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
               Batal
             </button>
@@ -333,7 +333,7 @@ export default function Payment({
               disabled={
                 loading || numericAmount <= 0 || outstandingBalance <= 0
               }
-              className="h-10 rounded-[10px] bg-[#17221B] px-5 text-[12px] font-semibold text-white transition hover:bg-[#26352B] disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-10 rounded-[10px] bg-surface px-5 text-[12px] font-semibold text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Menyimpan..." : "Simpan Pembayaran"}
             </button>

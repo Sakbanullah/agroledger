@@ -228,7 +228,7 @@ export default function Workers() {
   };
 
   const inputClass =
-    "h-11 w-full rounded-[10px] border border-border bg-white px-3.5 text-[13px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2]";
+    "h-11 w-full rounded-[10px] border border-border bg-surface px-3.5 text-[13px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft";
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
@@ -252,7 +252,7 @@ export default function Workers() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#17221B] px-4 text-[12px] font-medium text-white transition hover:bg-[#26352B] active:scale-[0.99]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[12px] font-medium text-white transition hover:bg-surface-soft active:scale-[0.99]"
           >
             <Plus size={15} />
             Tambah Worker
@@ -261,7 +261,7 @@ export default function Workers() {
 
         {/* SUMMARY */}
         <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="rounded-[12px] border border-border bg-white p-4">
+          <div className="rounded-[12px] border border-border bg-surface p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted">
@@ -273,25 +273,25 @@ export default function Workers() {
                 </p>
               </div>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#E6EFE2] text-[#3F7635]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-surface-soft text-success">
                 <Users size={17} />
               </div>
             </div>
           </div>
 
-          <div className="rounded-[12px] border border-border bg-white p-4">
+          <div className="rounded-[12px] border border-border bg-surface p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted">
                   Status
                 </p>
 
-                <p className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-[#3F7635]">
+                <p className="mt-2 text-[20px] font-semibold tracking-[-0.02em] text-success">
                   Aktif
                 </p>
               </div>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#E6EFE2] text-[#3F7635]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-surface-soft text-success">
                 <Check size={17} />
               </div>
             </div>
@@ -299,7 +299,7 @@ export default function Workers() {
         </section>
 
         {/* TABLE CARD */}
-        <section className="overflow-hidden rounded-[14px] border border-border bg-white">
+        <section className="overflow-hidden rounded-[14px] border border-border bg-surface">
           <div className="flex flex-col gap-4 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div>
               <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-text-muted">
@@ -322,7 +322,7 @@ export default function Workers() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Cari worker..."
-                className="h-9 w-full rounded-[9px] border border-border bg-[#F7F8F5] pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#9FBA96] focus:bg-white"
+                className="h-9 w-full rounded-[9px] border border-border bg-surface-muted pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:bg-surface"
               />
             </div>
           </div>
@@ -336,7 +336,7 @@ export default function Workers() {
             </div>
           ) : error ? (
             <div className="flex min-h-[260px] items-center justify-center px-5">
-              <div className="rounded-[10px] bg-[#FFF4F2] px-4 py-3 text-center text-[12px] text-[#B5473A]">
+              <div className="rounded-[10px] bg-danger-soft px-4 py-3 text-center text-[12px] text-danger">
                 {error}
               </div>
             </div>
@@ -346,7 +346,7 @@ export default function Workers() {
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[680px]">
                   <thead>
-                    <tr className="border-b border-border bg-[#FAFAF8] text-left">
+                    <tr className="border-b border-border bg-surface-muted text-left">
                       <th className="px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.1em] text-text-muted">
                         ID
                       </th>
@@ -370,7 +370,7 @@ export default function Workers() {
                       <tr>
                         <td colSpan={5}>
                           <div className="flex min-h-[220px] flex-col items-center justify-center">
-                            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F3EF] text-text-muted">
+                            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-soft text-text-muted">
                               <UserRound size={18} />
                             </div>
 
@@ -392,7 +392,7 @@ export default function Workers() {
                       filteredWorkers.map((worker) => (
                         <tr
                           key={worker.id}
-                          className="border-b border-border last:border-0 hover:bg-[#FCFCFA]"
+                          className="border-b border-border last:border-0 hover:bg-surface-soft"
                         >
                           <td className="px-5 py-4 text-[11px] text-text-muted">
                             #{worker.id}
@@ -400,7 +400,7 @@ export default function Workers() {
 
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E6EFE2] text-[10px] font-semibold text-[#3F7635]">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-soft text-[10px] font-semibold text-success">
                                 {worker.name
                                   .split(" ")
                                   .slice(0, 2)
@@ -425,8 +425,8 @@ export default function Workers() {
                           </td>
 
                           <td className="px-5 py-4">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF3E7] px-2.5 py-1 text-[10px] font-medium text-[#3F7635]">
-                              <span className="h-1.5 w-1.5 rounded-full bg-[#5B8F50]" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-soft px-2.5 py-1 text-[10px] font-medium text-success">
+                              <span className="h-1.5 w-1.5 rounded-full bg-success" />
                               Aktif
                             </span>
                           </td>
@@ -436,7 +436,7 @@ export default function Workers() {
                               <button
                                 type="button"
                                 onClick={() => openEditModal(worker)}
-                                className="inline-flex h-8 items-center gap-1.5 rounded-[8px] px-2.5 text-[10px] font-medium text-text-secondary transition hover:bg-[#F1F3EF] hover:text-text-primary"
+                                className="inline-flex h-8 items-center gap-1.5 rounded-[8px] px-2.5 text-[10px] font-medium text-text-secondary transition hover:bg-surface-soft hover:text-text-primary"
                               >
                                 <Pencil size={13} />
                                 Edit
@@ -445,7 +445,7 @@ export default function Workers() {
                               <button
                                 type="button"
                                 onClick={() => openDeleteModal(worker)}
-                                className="inline-flex h-8 items-center gap-1.5 rounded-[8px] px-2.5 text-[10px] font-medium text-[#B5473A] transition hover:bg-[#FFF2F0]"
+                                className="inline-flex h-8 items-center gap-1.5 rounded-[8px] px-2.5 text-[10px] font-medium text-danger transition hover:bg-danger-soft"
                               >
                                 <Trash2 size={13} />
                                 Hapus
@@ -473,7 +473,7 @@ export default function Workers() {
                     <div key={worker.id} className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6EFE2] text-[10px] font-semibold text-[#3F7635]">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-[10px] font-semibold text-success">
                             {worker.name
                               .split(" ")
                               .slice(0, 2)
@@ -493,7 +493,7 @@ export default function Workers() {
                           </div>
                         </div>
 
-                        <span className="shrink-0 rounded-full bg-[#EAF3E7] px-2 py-1 text-[9px] font-medium text-[#3F7635]">
+                        <span className="shrink-0 rounded-full bg-surface-soft px-2 py-1 text-[9px] font-medium text-success">
                           Aktif
                         </span>
                       </div>
@@ -502,7 +502,7 @@ export default function Workers() {
                         <button
                           type="button"
                           onClick={() => openEditModal(worker)}
-                          className="rounded-[8px] px-3 py-2 text-[10px] font-medium text-text-secondary hover:bg-[#F1F3EF]"
+                          className="rounded-[8px] px-3 py-2 text-[10px] font-medium text-text-secondary hover:bg-surface-soft"
                         >
                           Edit
                         </button>
@@ -510,7 +510,7 @@ export default function Workers() {
                         <button
                           type="button"
                           onClick={() => openDeleteModal(worker)}
-                          className="rounded-[8px] px-3 py-2 text-[10px] font-medium text-[#B5473A] hover:bg-[#FFF2F0]"
+                          className="rounded-[8px] px-3 py-2 text-[10px] font-medium text-danger hover:bg-danger-soft"
                         >
                           Hapus
                         </button>
@@ -531,7 +531,7 @@ export default function Workers() {
           onMouseDown={closeModal}
         >
           <div
-            className="w-full max-w-[430px] rounded-[16px] border border-border bg-white shadow-[0_20px_60px_rgba(23,34,27,0.14)]"
+            className="w-full max-w-[430px] rounded-[16px] border border-border bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.14)]"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between border-b border-border px-5 py-5">
@@ -555,7 +555,7 @@ export default function Workers() {
                 type="button"
                 onClick={closeModal}
                 disabled={submitting}
-                className="flex h-8 w-8 items-center justify-center rounded-[8px] text-text-muted hover:bg-[#F1F3EF] hover:text-text-primary"
+                className="flex h-8 w-8 items-center justify-center rounded-[8px] text-text-muted hover:bg-surface-soft hover:text-text-primary"
               >
                 <X size={16} />
               </button>
@@ -594,7 +594,7 @@ export default function Workers() {
               </div>
 
               {actionError && (
-                <div className="rounded-[9px] bg-[#FFF3F1] px-3 py-2.5 text-[11px] text-[#B5473A]">
+                <div className="rounded-[9px] bg-danger-soft px-3 py-2.5 text-[11px] text-danger">
                   {actionError}
                 </div>
               )}
@@ -605,7 +605,7 @@ export default function Workers() {
                 type="button"
                 onClick={closeModal}
                 disabled={submitting}
-                className="h-9 rounded-[9px] px-3.5 text-[11px] font-medium text-text-secondary hover:bg-[#F1F3EF]"
+                className="h-9 rounded-[9px] px-3.5 text-[11px] font-medium text-text-secondary hover:bg-surface-soft"
               >
                 Batal
               </button>
@@ -614,7 +614,7 @@ export default function Workers() {
                 type="button"
                 onClick={modal === "create" ? handleCreate : handleUpdate}
                 disabled={submitting}
-                className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-[#17221B] px-4 text-[11px] font-medium text-white hover:bg-[#26352B] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-surface px-4 text-[11px] font-medium text-white hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting && <Loader2 size={13} className="animate-spin" />}
                 {submitting
@@ -635,11 +635,11 @@ export default function Workers() {
           onMouseDown={closeModal}
         >
           <div
-            className="w-full max-w-[400px] rounded-[16px] border border-border bg-white shadow-[0_20px_60px_rgba(23,34,27,0.14)]"
+            className="w-full max-w-[400px] rounded-[16px] border border-border bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.14)]"
             onMouseDown={(event) => event.stopPropagation()}
           >
             <div className="p-5">
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#FFF2F0] text-[#B5473A]">
+              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-danger-soft text-danger">
                 <Trash2 size={17} />
               </div>
 
@@ -659,13 +659,13 @@ export default function Workers() {
                 ?
               </p>
 
-              <div className="mt-4 rounded-[9px] bg-[#FFF8F6] px-3 py-2.5 text-[10px] leading-4 text-[#A14B40]">
+              <div className="mt-4 rounded-[9px] bg-danger-soft px-3 py-2.5 text-[10px] leading-4 text-danger">
                 Worker yang sudah memiliki riwayat penjualan karet atau akun
                 kasbon tidak dapat dihapus.
               </div>
 
               {actionError && (
-                <div className="mt-3 rounded-[9px] bg-[#FFF3F1] px-3 py-2.5 text-[11px] text-[#B5473A]">
+                <div className="mt-3 rounded-[9px] bg-danger-soft px-3 py-2.5 text-[11px] text-danger">
                   {actionError}
                 </div>
               )}
@@ -676,7 +676,7 @@ export default function Workers() {
                 type="button"
                 onClick={closeModal}
                 disabled={submitting}
-                className="h-9 rounded-[9px] px-3.5 text-[11px] font-medium text-text-secondary hover:bg-[#F1F3EF]"
+                className="h-9 rounded-[9px] px-3.5 text-[11px] font-medium text-text-secondary hover:bg-surface-soft"
               >
                 Batal
               </button>
@@ -685,7 +685,7 @@ export default function Workers() {
                 type="button"
                 onClick={handleDelete}
                 disabled={submitting}
-                className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-[#B5473A] px-4 text-[11px] font-medium text-white hover:bg-[#963B31] disabled:opacity-60"
+                className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-danger-soft px-4 text-[11px] font-medium text-white hover:bg-[#963B31] disabled:opacity-60"
               >
                 {submitting && <Loader2 size={13} className="animate-spin" />}
                 {submitting ? "Menghapus..." : "Hapus Worker"}

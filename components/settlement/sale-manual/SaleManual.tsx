@@ -94,10 +94,12 @@ export default function SaleManual({ saleId }: SaleManualProps) {
           );
         }
 
-        if (saleData.commodity?.name !== "Karet") {
-          throw new Error(
-            "Input manual worker hanya tersedia untuk komoditas Karet.",
-          );
+        const commodityName = saleData.commodity?.name?.toLowerCase();
+        if (commodityName !== "karet") {
+          // Non-Karet (e.g. Sawit) must never use worker input.
+          // Redirect to the correct sale flow instead of showing an error.
+          router.push(`/settlement/sale/${saleId}/confirm`);
+          return;
         }
 
         setSale(saleData);
@@ -291,7 +293,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
             Kembali ke Penjualan
           </button>
 
-          <div className="rounded-[12px] border border-[#E8C5C0] bg-[#FFF3F1] px-4 py-4 text-sm font-medium text-[#B5473A]">
+          <div className="rounded-[12px] border border-border bg-danger-soft px-4 py-4 text-sm font-medium text-danger">
             {error}
           </div>
         </div>
@@ -314,7 +316,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
           </button>
 
           <header className="mb-7">
-            <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#3F7635]">
+            <div className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-success">
               <span>SALE #{saleId}</span>
               <span className="text-text-muted">/</span>
               <span>INPUT MANUAL</span>
@@ -331,7 +333,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
           </header>
 
           {sale && (
-            <section className="mb-5 rounded-[14px] border border-border bg-white">
+            <section className="mb-5 rounded-[14px] border border-border bg-surface">
               <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
                 <div className="px-5 py-4">
                   <p className="text-xs text-text-muted">Kebun</p>
@@ -362,7 +364,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
           )}
 
           {error && (
-            <div className="mb-5 flex items-center justify-between gap-3 rounded-[12px] border border-[#E8C5C0] bg-[#FFF3F1] px-4 py-3 text-sm font-medium text-[#B5473A]">
+            <div className="mb-5 flex items-center justify-between gap-3 rounded-[12px] border border-border bg-danger-soft px-4 py-3 text-sm font-medium text-danger">
               <span>{error}</span>
 
               <button
@@ -376,16 +378,16 @@ export default function SaleManual({ saleId }: SaleManualProps) {
           )}
 
           {success && (
-            <div className="mb-5 flex items-center gap-2 rounded-[12px] border border-[#CFE1CA] bg-[#EEF6EB] px-4 py-3 text-sm font-medium text-[#3F7635]">
+            <div className="mb-5 flex items-center gap-2 rounded-[12px] border border-[#CFE1CA] bg-success-soft px-4 py-3 text-sm font-medium text-success">
               <Check className="h-4 w-4" />
               Data worker berhasil disimpan. Melanjutkan...
             </div>
           )}
 
-          <section className="rounded-[14px] border border-border bg-white">
+          <section className="rounded-[14px] border border-border bg-surface">
             <div className="border-b border-border px-5 py-5 sm:px-6">
               <div className="flex items-start gap-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EAF3E7] text-xs font-bold text-[#3F7635]">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-soft text-xs font-bold text-success">
                   01
                 </div>
 
@@ -403,8 +405,8 @@ export default function SaleManual({ saleId }: SaleManualProps) {
 
             <div className="p-5 sm:p-6">
               {rows.length === 0 ? (
-                <div className="rounded-[12px] border border-dashed border-[#C9D5C5] bg-[#FBFCFA] px-5 py-10 text-center">
-                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-[12px] bg-[#EAF3E7] text-[#3F7635]">
+                <div className="rounded-[12px] border border-dashed border-[#C9D5C5] bg-surface-soft px-5 py-10 text-center">
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-[12px] bg-surface-soft text-success">
                     <UserRound className="h-5 w-5" />
                   </div>
 
@@ -420,7 +422,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                     type="button"
                     onClick={() => setPickerOpen(true)}
                     disabled={workers.length === 0 || isSaving}
-                    className="mt-5 inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#17221B] px-4 text-sm font-semibold text-white transition hover:bg-[#26352B] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-5 inline-flex h-10 items-center gap-2 rounded-[10px] bg-surface px-4 text-sm font-semibold text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Plus className="h-4 w-4" />
                     Pilih Worker
@@ -435,11 +437,11 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                       return (
                         <div
                           key={row.id}
-                          className="rounded-[12px] border border-border bg-[#FBFCFA] p-4"
+                          className="rounded-[12px] border border-border bg-surface-soft p-4"
                         >
                           <div className="mb-4 flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EAF3E7] text-[#3F7635]">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-soft text-success">
                                 <UserRound className="h-4 w-4" />
                               </div>
 
@@ -458,7 +460,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                               type="button"
                               onClick={() => removeWorker(row.id)}
                               disabled={isSaving}
-                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-text-muted transition hover:bg-[#FFF3F1] hover:text-[#B5473A] disabled:opacity-50"
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-text-muted transition hover:bg-danger-soft hover:text-danger disabled:opacity-50"
                               title="Hapus worker"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -485,7 +487,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                                 }
                                 placeholder="0"
                                 disabled={isSaving}
-                                className="h-11 w-full rounded-[10px] border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F4F5F3]"
+                                className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-sm text-text-primary outline-none transition focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-soft"
                               />
                             </div>
 
@@ -509,7 +511,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                                   }
                                   placeholder="0"
                                   disabled={isSaving}
-                                  className="h-11 w-full rounded-[10px] border border-border bg-white px-3 pr-12 text-sm text-text-primary outline-none transition focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2] disabled:cursor-not-allowed disabled:bg-[#F4F5F3]"
+                                  className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 pr-12 text-sm text-text-primary outline-none transition focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:cursor-not-allowed disabled:bg-surface-soft"
                                 />
 
                                 <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-muted">
@@ -527,7 +529,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                     type="button"
                     onClick={() => setPickerOpen(true)}
                     disabled={availableWorkers.length === 0 || isSaving}
-                    className="mt-4 inline-flex h-10 items-center gap-2 rounded-[10px] border border-border bg-white px-4 text-sm font-semibold text-text-primary transition hover:border-[#B8CBB2] hover:bg-[#F7F9F6] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="mt-4 inline-flex h-10 items-center gap-2 rounded-[10px] border border-border bg-surface px-4 text-sm font-semibold text-text-primary transition hover:border-[#B8CBB2] hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Plus className="h-4 w-4" />
                     Pilih Worker
@@ -543,10 +545,10 @@ export default function SaleManual({ saleId }: SaleManualProps) {
             </div>
           </section>
 
-          <section className="mt-5 rounded-[14px] border border-border bg-white">
+          <section className="mt-5 rounded-[14px] border border-border bg-surface">
             <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0">
               <div className="flex items-center gap-4 px-5 py-5 sm:px-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#EAF3E7] text-[#3F7635]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-surface-soft text-success">
                   <UserRound className="h-5 w-5" />
                 </div>
 
@@ -560,7 +562,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
               </div>
 
               <div className="flex items-center gap-4 px-5 py-5 sm:px-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#EAF3E7] text-[#3F7635]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-surface-soft text-success">
                   <Weight className="h-5 w-5" />
                 </div>
 
@@ -592,7 +594,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
               type="button"
               onClick={handleSave}
               disabled={isSaving || rows.length === 0 || totalWeight <= 0}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-[#17221B] px-5 text-sm font-semibold text-white transition hover:bg-[#26352B] disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-surface px-5 text-sm font-semibold text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSaving ? (
                 <>
@@ -620,7 +622,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
             }
           }}
         >
-          <div className="flex max-h-[80vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[16px] border border-border bg-white shadow-[0_20px_60px_rgba(23,34,27,0.14)]">
+          <div className="flex max-h-[80vh] w-full max-w-[520px] flex-col overflow-hidden rounded-[16px] border border-border bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.14)]">
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold text-text-primary">
@@ -638,7 +640,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                   setPickerOpen(false);
                   setSearch("");
                 }}
-                className="flex h-8 w-8 items-center justify-center rounded-[8px] text-text-muted transition hover:bg-[#F4F5F3] hover:text-text-primary"
+                className="flex h-8 w-8 items-center justify-center rounded-[8px] text-text-muted transition hover:bg-surface-soft hover:text-text-primary"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -654,7 +656,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Cari nama worker..."
-                  className="h-11 w-full rounded-[10px] border border-border bg-white pl-10 pr-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#9FBA96] focus:ring-2 focus:ring-[#E6EFE2]"
+                  className="h-11 w-full rounded-[10px] border border-border bg-surface pl-10 pr-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft"
                 />
               </div>
             </div>
@@ -662,7 +664,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
               {availableWorkers.length === 0 ? (
                 <div className="px-5 py-10 text-center">
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#F4F5F3] text-text-muted">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-[10px] bg-surface-soft text-text-muted">
                     <UserRound className="h-5 w-5" />
                   </div>
 
@@ -683,7 +685,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                       onClick={() => addWorker(worker)}
                       className="flex w-full items-center gap-3 rounded-[10px] px-3 py-3 text-left transition hover:bg-[#F5F8F3]"
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EAF3E7] text-[#3F7635]">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-soft text-success">
                         <UserRound className="h-4 w-4" />
                       </div>
 
@@ -706,7 +708,7 @@ export default function SaleManual({ saleId }: SaleManualProps) {
               )}
             </div>
 
-            <div className="border-t border-border bg-[#FBFCFA] px-5 py-3">
+            <div className="border-t border-border bg-surface-soft px-5 py-3">
               <p className="text-xs text-text-muted">
                 {availableWorkers.length} worker tersedia
               </p>

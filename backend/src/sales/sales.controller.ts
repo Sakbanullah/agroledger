@@ -16,6 +16,8 @@ import { ConfirmSaleDto } from './dto/confirm-sale.dto';
 
 import { UpdateSalePriceDto } from './dto/update-sale-price.dto';
 
+import { SetCommissionDto } from './dto/set-commission.dto';
+
 @Controller('sales')
 export class SalesController {
   constructor(
@@ -88,6 +90,29 @@ export class SalesController {
       Number(id),
       confirmSaleDto,
     );
+  }
+
+  // ==========================================
+  // COMPLETE SALE
+  // ==========================================
+
+  @Put(':id/complete')
+  complete(
+    @Param('id') id: string,
+  ) {
+    return this.salesService.completeSale(Number(id));
+  }
+
+  // ==========================================
+  // SET COMMISSION
+  // ==========================================
+
+  @Put(':id/commission')
+  setCommission(
+    @Param('id') id: string,
+    @Body() setCommissionDto: SetCommissionDto,
+  ) {
+    return this.salesService.setCommission(Number(id), setCommissionDto);
   }
 
   // ==========================================

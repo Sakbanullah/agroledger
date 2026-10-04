@@ -499,15 +499,15 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
         ===================================================== */}
 
         <header className="mb-6">
-          <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#929a93]">
+          <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted">
             SALE #{saleId}
           </p>
 
-          <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-[#17221b]">
+          <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-text-primary">
             Scan Catatan Karet
           </h1>
 
-          <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-[#687169]">
+          <p className="mt-1.5 max-w-xl text-xs leading-relaxed text-text-secondary">
             Upload catatan penjualan karet untuk membaca data pekerja secara
             otomatis.
           </p>
@@ -517,17 +517,17 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
             UPLOAD
         ===================================================== */}
 
-        <section className="mb-5 overflow-hidden rounded-2xl border border-[#e3e8e1] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
-          <div className="border-b border-[#eef1ed] px-4 py-4 sm:px-5">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+        <section className="mb-5 overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
+          <div className="border-b border-border px-4 py-4 sm:px-5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted">
               STEP 01
             </p>
 
-            <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+            <h2 className="mt-1 text-sm font-semibold text-text-primary">
               Upload Catatan
             </h2>
 
-            <p className="mt-1 text-[10px] text-[#929a93]">
+            <p className="mt-1 text-[10px] text-text-muted">
               JPG, PNG, atau WebP. Maksimal 5 MB.
             </p>
           </div>
@@ -538,9 +538,9 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
             <div>
               <label
                 htmlFor="rubber-note-file"
-                className="group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-[#d7ded5] bg-[#fafbf9] px-6 text-center transition hover:border-[#9db695] hover:bg-[#f7f9f6]"
+                className="group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface-soft px-6 text-center transition hover:border-[#9db695] hover:bg-surface-soft"
               >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf4ea] text-[#4d873d]">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-success-soft text-success">
                   <svg
                     width="21"
                     height="21"
@@ -559,11 +559,11 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                   </svg>
                 </div>
 
-                <p className="max-w-full truncate text-xs font-semibold text-[#27322c]">
+                <p className="max-w-full truncate text-xs font-semibold text-text-primary">
                   {file ? file.name : "Pilih foto catatan"}
                 </p>
 
-                <p className="mt-1.5 text-[10px] text-[#929a93]">
+                <p className="mt-1.5 text-[10px] text-text-muted">
                   Klik untuk memilih gambar
                 </p>
               </label>
@@ -579,7 +579,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
             {/* PREVIEW */}
 
-            <div className="min-h-[220px] overflow-hidden rounded-2xl border border-[#e3e8e1] bg-[#f7f8f6]">
+            <div className="min-h-[220px] overflow-hidden rounded-2xl border border-border bg-surface-muted">
               {previewUrl ? (
                 <img
                   src={previewUrl}
@@ -591,7 +591,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                   <div>
                     <div className="mx-auto mb-2 text-xl text-[#b4bcb5]">◇</div>
 
-                    <p className="text-[10px] text-[#929a93]">
+                    <p className="text-[10px] text-text-muted">
                       Preview foto akan muncul di sini
                     </p>
                   </div>
@@ -603,12 +603,12 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
           {/* ERROR */}
 
           {error && (
-            <div className="mx-4 mb-4 flex items-start gap-3 rounded-xl border border-[#f0d4d4] bg-[#fffafa] p-3.5 sm:mx-5">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-xs font-semibold text-[#c85c5c]">
+            <div className="mx-4 mb-4 flex items-start gap-3 rounded-xl border border-border bg-surface-soft p-3.5 sm:mx-5">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger-soft text-xs font-semibold text-danger">
                 !
               </div>
 
-              <p className="pt-1 text-[10px] leading-relaxed text-[#a04444]">
+              <p className="pt-1 text-[10px] leading-relaxed text-danger">
                 {error}
               </p>
             </div>
@@ -619,18 +619,18 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
           {saveSuccess && (
             <div
               role="status"
-              className="mx-4 mb-4 flex items-start gap-3 rounded-xl border border-[#d7e8d2] bg-[#f4f9f2] p-3.5 sm:mx-5"
+              className="mx-4 mb-4 flex items-start gap-3 rounded-xl border border-border bg-surface-soft p-3.5 sm:mx-5"
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eaf3e6] text-sm font-semibold text-[#4d873d]">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-soft text-sm font-semibold text-success">
                 ✓
               </div>
 
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-[#315f3f]">
+                <p className="text-xs font-semibold text-success">
                   Data berhasil disimpan
                 </p>
 
-                <p className="mt-0.5 text-[10px] leading-relaxed text-[#687169]">
+                <p className="mt-0.5 text-[10px] leading-relaxed text-text-secondary">
                   {saveSuccess
                     .replace("Berhasil menyimpan ", "")
                     .replace(".", "")}
@@ -641,12 +641,12 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
           {/* ACTION */}
 
-          <div className="flex justify-end border-t border-[#eef1ed] px-4 py-4 sm:px-5">
+          <div className="flex justify-end border-t border-border px-4 py-4 sm:px-5">
             <button
               type="button"
               onClick={handleScan}
               disabled={!file || isScanning}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] disabled:shadow-none sm:w-auto sm:min-w-[150px]"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-success-soft px-5 text-xs font-semibold text-white transition hover:bg-success-soft hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-surface-soft disabled:shadow-none sm:w-auto sm:min-w-[150px]"
             >
               {isScanning && (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -665,48 +665,48 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
           <section className="space-y-4">
             {/* RESULT HEADER */}
 
-            <div className="flex flex-col gap-4 rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted">
                   STEP 02
                 </p>
 
-                <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+                <h2 className="mt-1 text-sm font-semibold text-text-primary">
                   Hasil Extraction
                 </h2>
 
-                <p className="mt-1 text-[10px] text-[#929a93]">
+                <p className="mt-1 text-[10px] text-text-muted">
                   Periksa hasil AI sebelum dikonfirmasi.
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-[#e5e9e3] bg-[#fafbf9]">
-                <div className="min-w-[75px] border-r border-[#e5e9e3] px-3 py-2.5 text-center">
-                  <p className="text-[8px] uppercase tracking-[0.08em] text-[#929a93]">
+              <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-border bg-surface-soft">
+                <div className="min-w-[75px] border-r border-border px-3 py-2.5 text-center">
+                  <p className="text-[8px] uppercase tracking-[0.08em] text-text-muted">
                     Worker
                   </p>
 
-                  <p className="mt-0.5 text-sm font-semibold text-[#17221b]">
+                  <p className="mt-0.5 text-sm font-semibold text-text-primary">
                     {workers.length}
                   </p>
                 </div>
 
-                <div className="min-w-[90px] border-r border-[#e5e9e3] px-3 py-2.5 text-center">
-                  <p className="text-[8px] uppercase tracking-[0.08em] text-[#929a93]">
+                <div className="min-w-[90px] border-r border-border px-3 py-2.5 text-center">
+                  <p className="text-[8px] uppercase tracking-[0.08em] text-text-muted">
                     Total Berat
                   </p>
 
-                  <p className="mt-0.5 text-sm font-semibold text-[#17221b]">
+                  <p className="mt-0.5 text-sm font-semibold text-text-primary">
                     {totalWeight.toLocaleString("id-ID")} kg
                   </p>
                 </div>
 
                 <div className="min-w-[85px] px-3 py-2.5 text-center">
-                  <p className="text-[8px] uppercase tracking-[0.08em] text-[#929a93]">
+                  <p className="text-[8px] uppercase tracking-[0.08em] text-text-muted">
                     Confirmed
                   </p>
 
-                  <p className="mt-0.5 text-sm font-semibold text-[#315f3f]">
+                  <p className="mt-0.5 text-sm font-semibold text-success">
                     {confirmedCount}/{workers.length}
                   </p>
                 </div>
@@ -719,34 +719,34 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
               {workers.map((worker, index) => (
                 <div
                   key={index}
-                  className={`overflow-hidden rounded-2xl border bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)] ${
-                    worker.confirmed ? "border-[#d7e8d2]" : "border-[#e3e8e1]"
+                  className={`overflow-hidden rounded-2xl border bg-surface shadow-[0_1px_2px_rgba(23,34,27,0.02)] ${
+                    worker.confirmed ? "border-border" : "border-border"
                   }`}
                 >
                   {/* WORKER HEADER */}
 
-                  <div className="flex flex-col gap-3 border-b border-[#eef1ed] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                  <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                     <div className="flex items-center gap-3">
                       <div
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold ${
                           worker.confirmed
-                            ? "bg-[#eaf3e6] text-[#4d873d]"
-                            : "bg-[#f0f3ee] text-[#929a93]"
+                            ? "bg-success-soft text-success"
+                            : "bg-surface-soft text-text-muted"
                         }`}
                       >
                         {index + 1}
                       </div>
 
                       <div>
-                        <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                           Worker #{index + 1}
                         </p>
 
                         <span
                           className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[8px] font-semibold ${
                             worker.confirmed
-                              ? "bg-[#eaf3e6] text-[#4d873d]"
-                              : "bg-[#f5f2e8] text-[#9a7b35]"
+                              ? "bg-success-soft text-success"
+                              : "bg-warning-soft text-warning"
                           }`}
                         >
                           {worker.confirmed ? "Confirmed" : "Review"}
@@ -757,7 +757,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                     <button
                       type="button"
                       onClick={() => handleSwap(index)}
-                      className="inline-flex h-8 w-full items-center justify-center rounded-[9px] border border-[#dfe5dd] px-3 text-[10px] font-medium text-[#687169] transition hover:border-[#b9c7b7] hover:bg-[#f7f9f6] sm:w-auto"
+                      className="inline-flex h-8 w-full items-center justify-center rounded-[9px] border border-border px-3 text-[10px] font-medium text-text-secondary transition hover:border-border hover:bg-surface-soft sm:w-auto"
                     >
                       ⇄&nbsp; Swap
                     </button>
@@ -767,7 +767,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
                   <div className="grid gap-3 p-4 sm:grid-cols-3 sm:p-5">
                     <div>
-                      <label className="mb-1.5 block text-[9px] font-medium text-[#687169]">
+                      <label className="mb-1.5 block text-[9px] font-medium text-text-secondary">
                         Nama Worker
                       </label>
 
@@ -777,12 +777,12 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         onChange={(event) =>
                           updateWorker(index, "name", event.target.value)
                         }
-                        className="h-9 w-full rounded-[9px] border border-[#dfe5dd] bg-white px-3 text-xs text-[#27322c] outline-none transition placeholder:text-[#a7aea8] focus:border-[#8baa83] focus:ring-2 focus:ring-[#eaf3e6]"
+                        className="h-9 w-full rounded-[9px] border border-border bg-surface px-3 text-xs text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#8baa83] focus:ring-2 focus:ring-success-soft"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-[9px] font-medium text-[#687169]">
+                      <label className="mb-1.5 block text-[9px] font-medium text-text-secondary">
                         Pieces / Keping
                       </label>
 
@@ -794,12 +794,12 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         onChange={(event) =>
                           updateWorker(index, "pieces", event.target.value)
                         }
-                        className="h-9 w-full rounded-[9px] border border-[#dfe5dd] bg-white px-3 text-xs text-[#27322c] outline-none transition focus:border-[#8baa83] focus:ring-2 focus:ring-[#eaf3e6]"
+                        className="h-9 w-full rounded-[9px] border border-border bg-surface px-3 text-xs text-text-primary outline-none transition focus:border-[#8baa83] focus:ring-2 focus:ring-success-soft"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1.5 block text-[9px] font-medium text-[#687169]">
+                      <label className="mb-1.5 block text-[9px] font-medium text-text-secondary">
                         Berat / Kg
                       </label>
 
@@ -811,20 +811,20 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         onChange={(event) =>
                           updateWorker(index, "weightKg", event.target.value)
                         }
-                        className="h-9 w-full rounded-[9px] border border-[#dfe5dd] bg-white px-3 text-xs text-[#27322c] outline-none transition focus:border-[#8baa83] focus:ring-2 focus:ring-[#eaf3e6]"
+                        className="h-9 w-full rounded-[9px] border border-border bg-surface px-3 text-xs text-text-primary outline-none transition focus:border-[#8baa83] focus:ring-2 focus:ring-success-soft"
                       />
                     </div>
                   </div>
 
                   {/* MATCHES */}
 
-                  <div className="border-t border-[#eef1ed] bg-[#fafbf9] p-4 sm:p-5">
+                  <div className="border-t border-border bg-surface-soft p-4 sm:p-5">
                     <div className="mb-3">
-                      <p className="text-[10px] font-semibold text-[#27322c]">
+                      <p className="text-[10px] font-semibold text-text-primary">
                         Kandidat Worker
                       </p>
 
-                      <p className="mt-0.5 text-[9px] text-[#929a93]">
+                      <p className="mt-0.5 text-[9px] text-text-muted">
                         Pilih worker yang sesuai dengan hasil pembacaan.
                       </p>
                     </div>
@@ -843,16 +843,16 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                               }
                               className={`flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition ${
                                 selected
-                                  ? "border-[#a7c29f] bg-[#eef6eb]"
-                                  : "border-[#e3e8e1] bg-white hover:border-[#cbd6c8] hover:bg-[#fbfcfa]"
+                                  ? "border-success bg-success-soft"
+                                  : "border-border bg-surface hover:border-border hover:bg-surface-soft"
                               }`}
                             >
                               <div className="min-w-0">
-                                <p className="truncate text-xs font-semibold text-[#27322c]">
+                                <p className="truncate text-xs font-semibold text-text-primary">
                                   {match.name}
                                 </p>
 
-                                <p className="mt-0.5 text-[9px] text-[#929a93]">
+                                <p className="mt-0.5 text-[9px] text-text-muted">
                                   Match score: {(match.score * 100).toFixed(0)}%
                                 </p>
                               </div>
@@ -860,7 +860,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                               <div
                                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                                   selected
-                                    ? "border-[#5f9f4a]"
+                                    ? "border-border"
                                     : "border-[#cfd7cd]"
                                 }`}
                               >
@@ -873,7 +873,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         })}
                       </div>
                     ) : (
-                      <div className="rounded-xl border border-[#eadfca] bg-[#fffaf0] p-4">
+                      <div className="rounded-xl border border-border bg-surface-soft p-4">
                         <p className="text-xs font-semibold text-[#735c2b]">
                           Worker belum ditemukan
                         </p>
@@ -887,7 +887,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         <button
                           type="button"
                           onClick={() => openNewWorkerModal(index)}
-                          className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-[9px] bg-[#315f3f] px-4 text-[10px] font-semibold text-white transition hover:bg-[#274f34] sm:w-auto"
+                          className="mt-3 inline-flex h-9 w-full items-center justify-center rounded-[9px] bg-success-soft px-4 text-[10px] font-semibold text-white transition hover:bg-success-soft sm:w-auto"
                         >
                           + Tambah Worker Baru
                         </button>
@@ -897,7 +897,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
                   {/* CONFIRM */}
 
-                  <div className="flex justify-end border-t border-[#eef1ed] px-4 py-3 sm:px-5">
+                  <div className="flex justify-end border-t border-border px-4 py-3 sm:px-5">
                     <button
                       type="button"
                       onClick={() => handleConfirmWorker(index)}
@@ -908,7 +908,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                         worker.weightKg === null ||
                         !worker.selectedWorkerId
                       }
-                      className="inline-flex h-9 w-full items-center justify-center rounded-[9px] bg-[#315f3f] px-4 text-[10px] font-semibold text-white transition hover:bg-[#274f34] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] sm:w-auto"
+                      className="inline-flex h-9 w-full items-center justify-center rounded-[9px] bg-success-soft px-4 text-[10px] font-semibold text-white transition hover:bg-success-soft disabled:cursor-not-allowed disabled:bg-surface-soft sm:w-auto"
                     >
                       {worker.confirmed ? "Worker Confirmed" : "Confirm Worker"}
                     </button>
@@ -922,13 +922,13 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
             ================================================= */}
 
             {workers.length > 0 && (
-              <div className="flex flex-col gap-4 rounded-2xl border border-[#dce8df] bg-[#f2f7f3] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface-soft p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#718078]">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-secondary">
                     STATUS REVIEW
                   </p>
 
-                  <p className="mt-1 text-xs font-semibold text-[#315f3f]">
+                  <p className="mt-1 text-xs font-semibold text-success">
                     {allConfirmed
                       ? "Semua worker sudah dikonfirmasi."
                       : `${workers.length - confirmedCount} worker masih perlu diperiksa.`}
@@ -939,7 +939,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                   type="button"
                   onClick={handleContinue}
                   disabled={!allConfirmed}
-                  className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] sm:w-auto sm:min-w-[120px]"
+                  className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-success-soft px-5 text-xs font-semibold text-white transition hover:bg-success-soft disabled:cursor-not-allowed disabled:bg-surface-soft sm:w-auto sm:min-w-[120px]"
                 >
                   Lanjutkan
                 </button>
@@ -951,17 +951,17 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
             ================================================= */}
 
             {showFinalReview && finalReview && (
-              <section className="overflow-hidden rounded-2xl border border-[#dce8df] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
-                <div className="border-b border-[#eef1ed] bg-[#f2f7f3] px-4 py-5 sm:px-5">
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#718078]">
+              <section className="overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
+                <div className="border-b border-border bg-surface-soft px-4 py-5 sm:px-5">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-secondary">
                     STEP 03 · FINAL REVIEW
                   </p>
 
-                  <h2 className="mt-1 text-sm font-semibold text-[#244c31]">
+                  <h2 className="mt-1 text-sm font-semibold text-success">
                     Data Siap Disimpan
                   </h2>
 
-                  <p className="mt-1 text-[10px] leading-relaxed text-[#718078]">
+                  <p className="mt-1 text-[10px] leading-relaxed text-text-secondary">
                     Pastikan seluruh data worker sudah benar sebelum masuk ke
                     penjualan.
                   </p>
@@ -969,35 +969,35 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
                 {/* FINAL STATS */}
 
-                <div className="grid grid-cols-2 border-b border-[#eef1ed] sm:grid-cols-4">
-                  <div className="border-b border-r border-[#eef1ed] p-4 sm:border-b-0">
-                    <p className="text-[9px] text-[#929a93]">Total Worker</p>
+                <div className="grid grid-cols-2 border-b border-border sm:grid-cols-4">
+                  <div className="border-b border-r border-border p-4 sm:border-b-0">
+                    <p className="text-[9px] text-text-muted">Total Worker</p>
 
-                    <p className="mt-1 text-base font-semibold text-[#17221b]">
+                    <p className="mt-1 text-base font-semibold text-text-primary">
                       {finalReview.workers.length}
                     </p>
                   </div>
 
-                  <div className="border-b border-[#eef1ed] p-4 sm:border-b-0 sm:border-r">
-                    <p className="text-[9px] text-[#929a93]">Total Berat</p>
+                  <div className="border-b border-border p-4 sm:border-b-0 sm:border-r">
+                    <p className="text-[9px] text-text-muted">Total Berat</p>
 
-                    <p className="mt-1 text-base font-semibold text-[#315f3f]">
+                    <p className="mt-1 text-base font-semibold text-success">
                       {finalReview.totalWeightKg.toLocaleString("id-ID")} kg
                     </p>
                   </div>
 
-                  <div className="border-r border-[#eef1ed] p-4">
-                    <p className="text-[9px] text-[#929a93]">Status</p>
+                  <div className="border-r border-border p-4">
+                    <p className="text-[9px] text-text-muted">Status</p>
 
-                    <p className="mt-1 text-xs font-semibold text-[#4d873d]">
+                    <p className="mt-1 text-xs font-semibold text-success">
                       Ready
                     </p>
                   </div>
 
                   <div className="p-4">
-                    <p className="text-[9px] text-[#929a93]">Sale</p>
+                    <p className="text-[9px] text-text-muted">Sale</p>
 
-                    <p className="mt-1 text-xs font-semibold text-[#17221b]">
+                    <p className="mt-1 text-xs font-semibold text-text-primary">
                       #{saleId}
                     </p>
                   </div>
@@ -1008,16 +1008,16 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="border-b border-[#eef1ed] bg-[#fafbf9]">
-                        <th className="px-4 py-3 text-left text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93] sm:px-5">
+                      <tr className="border-b border-border bg-surface-soft">
+                        <th className="px-4 py-3 text-left text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted sm:px-5">
                           Worker
                         </th>
 
-                        <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                        <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                           Pieces
                         </th>
 
-                        <th className="px-4 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93] sm:px-5">
+                        <th className="px-4 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted sm:px-5">
                           Berat
                         </th>
                       </tr>
@@ -1027,17 +1027,17 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                       {finalReview.workers.map((worker) => (
                         <tr
                           key={worker.workerId}
-                          className="border-b border-[#f0f2ef] last:border-b-0"
+                          className="border-b border-surface-soft last:border-b-0"
                         >
-                          <td className="px-4 py-3.5 text-xs font-semibold text-[#27322c] sm:px-5">
+                          <td className="px-4 py-3.5 text-xs font-semibold text-text-primary sm:px-5">
                             {worker.name}
                           </td>
 
-                          <td className="px-3 py-3.5 text-right text-xs text-[#687169]">
+                          <td className="px-3 py-3.5 text-right text-xs text-text-secondary">
                             {worker.pieces}
                           </td>
 
-                          <td className="px-4 py-3.5 text-right text-xs font-medium text-[#315f3f] sm:px-5">
+                          <td className="px-4 py-3.5 text-right text-xs font-medium text-success sm:px-5">
                             {worker.weightKg.toLocaleString("id-ID")} kg
                           </td>
                         </tr>
@@ -1048,12 +1048,12 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
                 {/* FINAL ACTIONS */}
 
-                <div className="flex flex-col-reverse gap-2 border-t border-[#eef1ed] p-4 sm:flex-row sm:justify-end sm:p-5">
+                <div className="flex flex-col-reverse gap-2 border-t border-border p-4 sm:flex-row sm:justify-end sm:p-5">
                   <button
                     type="button"
                     onClick={() => setShowFinalReview(false)}
                     disabled={isSaving}
-                    className="inline-flex h-10 w-full items-center justify-center rounded-[10px] border border-[#dfe5dd] px-5 text-xs font-medium text-[#687169] transition hover:bg-[#f7f9f6] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                    className="inline-flex h-10 w-full items-center justify-center rounded-[10px] border border-border px-5 text-xs font-medium text-text-secondary transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                   >
                     Kembali Review
                   </button>
@@ -1062,7 +1062,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                     type="button"
                     onClick={handleSaveToSale}
                     disabled={isSaving}
-                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] sm:w-auto"
+                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-success-soft px-5 text-xs font-semibold text-white transition hover:bg-success-soft hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-surface-soft sm:w-auto"
                   >
                     {isSaving && (
                       <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -1081,17 +1081,17 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
         ===================================================== */}
 
         {showNewWorkerModal && newWorkerIndex !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#17221b]/35 px-4 py-6 backdrop-blur-[2px]">
-            <div className="w-full max-w-[430px] overflow-hidden rounded-2xl border border-[#e0e5de] bg-white shadow-[0_20px_60px_rgba(23,34,27,0.16)]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/35 px-4 py-6 backdrop-blur-[2px]">
+            <div className="w-full max-w-[430px] overflow-hidden rounded-2xl border border-[#e0e5de] bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.16)]">
               {/* MODAL HEADER */}
 
-              <div className="flex items-start justify-between border-b border-[#eef1ed] px-5 py-4">
+              <div className="flex items-start justify-between border-b border-border px-5 py-4">
                 <div>
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted">
                     WORKER BARU
                   </p>
 
-                  <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+                  <h2 className="mt-1 text-sm font-semibold text-text-primary">
                     Tambah Worker
                   </h2>
                 </div>
@@ -1107,7 +1107,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                     setNewWorkerIndex(null);
                   }}
                   disabled={isCreatingWorker}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-lg leading-none text-[#929a93] transition hover:bg-[#f0f3ee] hover:text-[#27322c] disabled:opacity-50"
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-lg leading-none text-text-muted transition hover:bg-surface-soft hover:text-text-primary disabled:opacity-50"
                   aria-label="Tutup"
                 >
                   ×
@@ -1117,20 +1117,20 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
               {/* MODAL BODY */}
 
               <div className="px-5 py-5">
-                <p className="mb-1.5 text-[9px] font-medium text-[#687169]">
+                <p className="mb-1.5 text-[9px] font-medium text-text-secondary">
                   Nama hasil scan
                 </p>
 
-                <div className="rounded-xl border border-[#e3e8e1] bg-[#f7f8f6] px-4 py-3">
-                  <p className="text-xs font-semibold text-[#17221b]">
+                <div className="rounded-xl border border-border bg-surface-muted px-4 py-3">
+                  <p className="text-xs font-semibold text-text-primary">
                     {workers[newWorkerIndex]?.name ?? "-"}
                   </p>
                 </div>
 
-                <div className="mt-4 rounded-xl border border-[#dce8df] bg-[#f2f7f3] p-3.5">
-                  <p className="text-[10px] leading-relaxed text-[#687169]">
+                <div className="mt-4 rounded-xl border border-border bg-surface-soft p-3.5">
+                  <p className="text-[10px] leading-relaxed text-text-secondary">
                     Worker ini belum terdaftar. Klik{" "}
-                    <strong className="font-semibold text-[#315f3f]">
+                    <strong className="font-semibold text-success">
                       Tambah Worker
                     </strong>{" "}
                     untuk membuat worker baru menggunakan nama hasil scan.
@@ -1140,7 +1140,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
               {/* MODAL ACTIONS */}
 
-              <div className="flex flex-col-reverse gap-2 border-t border-[#eef1ed] px-5 py-4 sm:flex-row sm:justify-end">
+              <div className="flex flex-col-reverse gap-2 border-t border-border px-5 py-4 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => {
@@ -1152,7 +1152,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                     setNewWorkerIndex(null);
                   }}
                   disabled={isCreatingWorker}
-                  className="inline-flex h-9 w-full items-center justify-center rounded-[9px] border border-[#dfe5dd] px-4 text-[10px] font-medium text-[#687169] transition hover:bg-[#f7f9f6] disabled:opacity-50 sm:w-auto"
+                  className="inline-flex h-9 w-full items-center justify-center rounded-[9px] border border-border px-4 text-[10px] font-medium text-text-secondary transition hover:bg-surface-soft disabled:opacity-50 sm:w-auto"
                 >
                   Batal
                 </button>
@@ -1161,7 +1161,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                   type="button"
                   onClick={handleCreateNewWorker}
                   disabled={isCreatingWorker}
-                  className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[9px] bg-[#315f3f] px-4 text-[10px] font-semibold text-white transition hover:bg-[#274f34] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] sm:w-auto"
+                  className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[9px] bg-success-soft px-4 text-[10px] font-semibold text-white transition hover:bg-success-soft disabled:cursor-not-allowed disabled:bg-surface-soft sm:w-auto"
                 >
                   {isCreatingWorker && (
                     <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />

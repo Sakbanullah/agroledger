@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 
 export class CreateFarmDto {
   @IsString()
@@ -8,4 +8,13 @@ export class CreateFarmDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  @IsOptional()
+  @IsIn(['OWN', 'RELATIVE'])
+  ownershipType?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  ownerId?: number;
 }

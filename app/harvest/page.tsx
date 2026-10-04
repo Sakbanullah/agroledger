@@ -73,7 +73,7 @@ function EmptyState() {
       </div>
 
       <p className="mt-4 text-[12px] font-semibold text-text-primary">
-        Belum ada hasil panen
+        Belum ada penjualan selesai
       </p>
 
       <p className="mt-1 max-w-[300px] text-center text-[10px] leading-5 text-text-secondary">
@@ -115,7 +115,7 @@ export default function HarvestPage() {
       console.error("Gagal mengambil data harvest:", error);
 
       setError(
-        error instanceof Error ? error.message : "Gagal mengambil data panen.",
+        error instanceof Error ? error.message : "Gagal mengambil data penjualan.",
       );
     } finally {
       setLoading(false);
@@ -202,15 +202,15 @@ export default function HarvestPage() {
         <header className="mb-6 sm:mb-8">
           <div>
             <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted sm:text-[10px]">
-              Harvest
+              Penjualan Selesai
             </p>
 
             <h1 className="mt-1.5 text-[22px] font-semibold tracking-[-0.03em] text-text-primary sm:text-[24px]">
-              Panen
+              Hasil Panen Terjual
             </h1>
 
             <p className="mt-1 text-[11px] text-text-secondary sm:text-[12px]">
-              Riwayat hasil panen dari penjualan yang telah selesai
+              Rekap hasil panen terjual dari penjualan yang telah selesai
             </p>
           </div>
         </header>
@@ -230,7 +230,7 @@ export default function HarvestPage() {
 
             <p className="mt-0.5 text-[10px] leading-5 text-text-secondary">
               Hanya penjualan dengan status COMPLETED yang ditampilkan. Tidak
-              perlu mencatat panen secara manual.
+              perlu mencatat penjualan secara manual.
             </p>
           </div>
         </section>
@@ -354,11 +354,11 @@ export default function HarvestPage() {
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <h2 className="text-[13px] font-semibold text-text-primary sm:text-[14px]">
-                  Semua Panen
+                  Semua Penjualan Selesai
                 </h2>
 
                 <p className="mt-0.5 text-[10px] text-text-secondary sm:text-[11px]">
-                  Penjualan selesai yang tercatat melalui Settlement
+                  Riwayat penjualan selesai yang tercatat melalui Settlement
                 </p>
               </div>
 
@@ -375,8 +375,8 @@ export default function HarvestPage() {
                     type="text"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Cari panen..."
-                    className="h-9 w-full rounded-[9px] border border-border bg-white pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#5F9F4A] sm:w-full xl:w-[220px]"
+                    placeholder="Cari penjualan..."
+                    className="h-9 w-full rounded-[9px] border border-border bg-surface pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-border sm:w-full xl:w-[220px]"
                   />
                 </div>
 
@@ -385,7 +385,7 @@ export default function HarvestPage() {
                   <select
                     value={commodityFilter}
                     onChange={(event) => setCommodityFilter(event.target.value)}
-                    className="h-9 w-full appearance-none rounded-[9px] border border-border bg-white pl-3 pr-9 text-[11px] font-medium text-text-secondary outline-none transition focus:border-[#5F9F4A] sm:w-auto sm:min-w-[150px]"
+                    className="h-9 w-full appearance-none rounded-[9px] border border-border bg-surface pl-3 pr-9 text-[11px] font-medium text-text-secondary outline-none transition focus:border-border sm:w-auto sm:min-w-[150px]"
                   >
                     <option value="ALL">Semua Komoditas</option>
 
@@ -447,7 +447,7 @@ export default function HarvestPage() {
                       colSpan={5}
                       className="px-5 py-14 text-center text-[11px] text-text-secondary"
                     >
-                      Memuat data panen...
+                      Memuat data penjualan...
                     </td>
                   </tr>
                 ) : filteredSales.length === 0 ? (
@@ -518,7 +518,7 @@ export default function HarvestPage() {
           <div className="md:hidden">
             {loading ? (
               <div className="px-5 py-14 text-center text-[11px] text-text-secondary">
-                Memuat data panen...
+                Memuat data penjualan...
               </div>
             ) : filteredSales.length === 0 ? (
               <EmptyState />

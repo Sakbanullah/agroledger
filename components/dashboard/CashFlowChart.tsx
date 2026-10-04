@@ -57,24 +57,24 @@ export default function CashFlowChart({
   );
 
   return (
-    <section className="rounded-[10px] border border-[#E5E7E4] bg-white">
-      <div className="border-b border-[#ECEEEB] px-5 py-4">
+    <section className="rounded-[10px] border border-border bg-surface">
+      <div className="border-b border-border px-5 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A918B]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
               Cash Flow
             </p>
 
-            <h2 className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-[#17221B]">
+            <h2 className="mt-1 text-[16px] font-semibold tracking-[-0.02em] text-text-primary">
               Arus Kas
             </h2>
 
-            <p className="mt-1 text-[11px] text-[#8A918B]">
+            <p className="mt-1 text-[11px] text-text-muted">
               Pemasukan dan pengeluaran berdasarkan periode
             </p>
           </div>
 
-          <div className="flex items-center rounded-[7px] border border-[#E1E4E0] bg-[#FAFAF8] p-0.5">
+          <div className="flex items-center rounded-[7px] border border-border bg-surface-muted p-0.5">
             {(["daily", "weekly", "monthly"] as const).map((item) => (
               <button
                 key={item}
@@ -82,8 +82,8 @@ export default function CashFlowChart({
                 onClick={() => setPeriod(item)}
                 className={`rounded-[5px] px-2.5 py-1.5 text-[10px] font-medium transition ${
                   period === item
-                    ? "bg-white text-[#17221B] shadow-sm"
-                    : "text-[#8A918B] hover:text-[#59625B]"
+                    ? "bg-surface text-text-primary shadow-sm"
+                    : "text-text-muted hover:text-text-secondary"
                 }`}
               >
                 {item === "daily"
@@ -98,33 +98,33 @@ export default function CashFlowChart({
 
         <div className="mt-5 grid grid-cols-3 gap-4">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#9AA19B]">
+            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted">
               Pemasukan
             </p>
 
-            <p className="mt-1 text-[15px] font-semibold text-[#17221B]">
+            <p className="mt-1 text-[15px] font-semibold text-text-primary">
               {formatFullAmount(summary.income)}
             </p>
           </div>
 
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#9AA19B]">
+            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted">
               Pengeluaran
             </p>
 
-            <p className="mt-1 text-[15px] font-semibold text-[#17221B]">
+            <p className="mt-1 text-[15px] font-semibold text-text-primary">
               {formatFullAmount(summary.expense)}
             </p>
           </div>
 
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#9AA19B]">
+            <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted">
               Net Cash Flow
             </p>
 
             <p
               className={`mt-1 text-[15px] font-semibold ${
-                summary.net >= 0 ? "text-[#17221B]" : "text-[#A33A32]"
+                summary.net >= 0 ? "text-text-primary" : "text-[#A33A32]"
               }`}
             >
               {formatFullAmount(summary.net)}
@@ -135,13 +135,13 @@ export default function CashFlowChart({
 
       <div className="px-5 py-5">
         {data.length === 0 ? (
-          <div className="flex h-[220px] items-center justify-center rounded-[8px] border border-dashed border-[#E1E4E0]">
+          <div className="flex h-[220px] items-center justify-center rounded-[8px] border border-dashed border-border">
             <div className="text-center">
-              <p className="text-[12px] font-medium text-[#59625B]">
+              <p className="text-[12px] font-medium text-text-secondary">
                 Belum ada data arus kas
               </p>
 
-              <p className="mt-1 text-[11px] text-[#9AA19B]">
+              <p className="mt-1 text-[11px] text-text-muted">
                 Transaksi akan muncul di sini setelah tersedia.
               </p>
             </div>
@@ -149,7 +149,7 @@ export default function CashFlowChart({
         ) : (
           <div className="overflow-x-auto">
             <div className="min-w-[520px]">
-              <div className="flex h-[220px] items-end gap-2 border-b border-[#E5E7E4] px-1">
+              <div className="flex h-[220px] items-end gap-2 border-b border-border px-1">
                 {data.map((item, index) => {
                   const incomeHeight =
                     item.income > 0
@@ -169,7 +169,7 @@ export default function CashFlowChart({
                       <div className="relative flex items-end">
                         <div
                           title={`Pemasukan: ${formatFullAmount(item.income)}`}
-                          className="w-[9px] rounded-t-[3px] bg-[#17221B] transition-opacity group-hover:opacity-80"
+                          className="w-[9px] rounded-t-[3px] bg-surface transition-opacity group-hover:opacity-80"
                           style={{ height: `${incomeHeight}px` }}
                         />
                       </div>
@@ -177,7 +177,7 @@ export default function CashFlowChart({
                       <div className="relative flex items-end">
                         <div
                           title={`Pengeluaran: ${formatFullAmount(item.expense)}`}
-                          className="w-[9px] rounded-t-[3px] bg-[#C8CEC9] transition-opacity group-hover:opacity-80"
+                          className="w-[9px] rounded-t-[3px] bg-surface-soft transition-opacity group-hover:opacity-80"
                           style={{ height: `${expenseHeight}px` }}
                         />
                       </div>
@@ -190,7 +190,7 @@ export default function CashFlowChart({
                 {data.map((item, index) => (
                   <div
                     key={`${item.date}-label-${index}`}
-                    className="min-w-[28px] flex-1 text-center text-[9px] text-[#9AA19B]"
+                    className="min-w-[28px] flex-1 text-center text-[9px] text-text-muted"
                   >
                     {new Date(item.date).toLocaleDateString("id-ID", {
                       day: "2-digit",
@@ -202,15 +202,15 @@ export default function CashFlowChart({
 
               <div className="mt-4 flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-[2px] bg-[#17221B]" />
-                  <span className="text-[10px] text-[#7A827C]">
+                  <span className="h-2 w-2 rounded-[2px] bg-surface" />
+                  <span className="text-[10px] text-text-muted">
                     Pemasukan
                   </span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-[2px] bg-[#C8CEC9]" />
-                  <span className="text-[10px] text-[#7A827C]">
+                  <span className="h-2 w-2 rounded-[2px] bg-surface-soft" />
+                  <span className="text-[10px] text-text-muted">
                     Pengeluaran
                   </span>
                 </div>

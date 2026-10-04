@@ -36,6 +36,42 @@ yarn-error.log*
 # vercel
 .vercel
 
+# AI / Agent temporary reports
+/PHASE-1-REPORT.md
+/audit-report.md
+
+# Diagnostic outputs
+/lint-audit.txt
+/lint-output.txt
+/tsc-audit.txt
+/tsc-full.txt
+/tsc-output.txt
+/structure-clean.txt
+
+# Temporary verification scripts
+/seed-final-test.js
+/router-test/
+
+# local AI/agent tooling state, sessions & logs (bukan source project)
+/.opencode/
+/.claude/
+/.codex/
+/.cursor/
+/.continue/
+/.gemini/
+/.windsurf/
+/.agents/
+
+# editor & OS artifacts
+.idea/
+*.swp
+*.swo
+*~
+*.tmp
+
+# logs
+*.log
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

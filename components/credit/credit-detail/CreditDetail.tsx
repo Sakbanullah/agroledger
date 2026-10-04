@@ -156,7 +156,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
     return (
       <main className="min-h-screen bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
         <div className="flex min-h-[420px] items-center justify-center">
-          <div className="rounded-[10px] bg-[#FFF3F1] px-4 py-3 text-center text-[11px] text-[#B5473A]">
+          <div className="rounded-[10px] bg-danger-soft px-4 py-3 text-center text-[11px] text-danger">
             {error || "Worker tidak ditemukan."}
           </div>
         </div>
@@ -172,7 +172,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="mb-5 inline-flex h-8 items-center gap-1.5 rounded-[8px] px-2 text-[10px] font-medium text-text-muted transition hover:bg-[#F1F3EF] hover:text-text-primary"
+            className="mb-5 inline-flex h-8 items-center gap-1.5 rounded-[8px] px-2 text-[10px] font-medium text-text-muted transition hover:bg-surface-soft hover:text-text-primary"
           >
             <ArrowLeft size={13} />
             Kembali
@@ -180,7 +180,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
 
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex items-center gap-3.5">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-[#E6EFE2] text-[12px] font-semibold text-[#3F7635]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-surface-soft text-[12px] font-semibold text-success">
                 {getInitials(worker.name)}
               </div>
 
@@ -204,7 +204,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
                 type="button"
                 onClick={() => setShowPayment(true)}
                 disabled={!account || safeOutstanding <= 0}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border border-border bg-white px-4 text-[11px] font-medium text-text-secondary transition hover:bg-[#F7F8F5] hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border border-border bg-surface px-4 text-[11px] font-medium text-text-secondary transition hover:bg-surface-muted hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <WalletCards size={14} />
                 Bayar Kasbon
@@ -213,7 +213,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
               <button
                 type="button"
                 onClick={() => setShowAddDebt(true)}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#17221B] px-4 text-[11px] font-medium text-white transition hover:bg-[#26352B]"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[11px] font-medium text-white transition hover:bg-surface-soft"
               >
                 <Plus size={14} />
                 Tambah Kasbon
@@ -225,7 +225,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
         {/* ACCOUNT OVERVIEW */}
         <section className="mb-6 grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1fr_1fr]">
           {/* BALANCE */}
-          <div className="rounded-[14px] border border-border bg-white p-5">
+          <div className="rounded-[14px] border border-border bg-surface p-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[9px] font-medium uppercase tracking-[0.12em] text-white/55">
@@ -236,10 +236,10 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
                   {formatCurrency(safeOutstanding)}
                 </p>
 
-                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-medium text-white/75">
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-surface/10 px-2.5 py-1 text-[9px] font-medium text-white/75">
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
-                      safeOutstanding > 0 ? "bg-[#C88A42]" : "bg-[#7DA871]"
+                      safeOutstanding > 0 ? "bg-warning-soft" : "bg-[#7DA871]"
                     }`}
                   />
 
@@ -247,14 +247,14 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
                 </div>
               </div>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/10">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-surface/10">
                 <CircleDollarSign size={17} />
               </div>
             </div>
           </div>
 
           {/* TOTAL DEBT */}
-          <div className="rounded-[14px] border border-border bg-white p-5">
+          <div className="rounded-[14px] border border-border bg-surface p-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[9px] font-medium uppercase tracking-[0.1em] text-text-muted">
@@ -270,14 +270,14 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
                 </p>
               </div>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#FFF4E8] text-[#A96D2E]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-warning-soft text-warning">
                 <ArrowDownLeft size={16} />
               </div>
             </div>
           </div>
 
           {/* TOTAL PAYMENT */}
-          <div className="rounded-[14px] border border-border bg-white p-5">
+          <div className="rounded-[14px] border border-border bg-surface p-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[9px] font-medium uppercase tracking-[0.1em] text-text-muted">
@@ -293,7 +293,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
                 </p>
               </div>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#E6EFE2] text-[#3F7635]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-surface-soft text-success">
                 <ArrowUpRight size={16} />
               </div>
             </div>
@@ -301,7 +301,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
         </section>
 
         {/* TRANSACTION HISTORY */}
-        <section className="overflow-hidden rounded-[14px] border border-border bg-white">
+        <section className="overflow-hidden rounded-[14px] border border-border bg-surface">
           <div className="flex flex-col gap-2 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div>
               <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-text-muted">
@@ -313,14 +313,14 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
               </h2>
             </div>
 
-            <span className="w-fit rounded-full bg-[#F1F3EF] px-2.5 py-1 text-[9px] font-medium text-text-muted">
+            <span className="w-fit rounded-full bg-surface-soft px-2.5 py-1 text-[9px] font-medium text-text-muted">
               {transactions.length} transaksi
             </span>
           </div>
 
           {transactions.length === 0 ? (
             <div className="flex min-h-[260px] flex-col items-center justify-center px-5">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F3EF] text-text-muted">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-soft text-text-muted">
                 <ReceiptText size={18} />
               </div>
 
@@ -338,7 +338,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[700px]">
                   <thead>
-                    <tr className="border-b border-border bg-[#FAFAF8] text-left">
+                    <tr className="border-b border-border bg-surface-muted text-left">
                       <th className="px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.1em] text-text-muted">
                         Tanggal
                       </th>
@@ -364,7 +364,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
                       return (
                         <tr
                           key={transaction.id}
-                          className="border-b border-border last:border-0 hover:bg-[#FCFCFA]"
+                          className="border-b border-border last:border-0 hover:bg-surface-soft"
                         >
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2 text-[11px] text-text-secondary">
@@ -378,12 +378,12 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
 
                           <td className="px-5 py-4">
                             {isDebt ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF4E8] px-2.5 py-1 text-[10px] font-medium text-[#A96D2E]">
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-1 text-[10px] font-medium text-warning">
                                 <ArrowDownLeft size={11} />
                                 Kasbon
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF3E7] px-2.5 py-1 text-[10px] font-medium text-[#3F7635]">
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-soft px-2.5 py-1 text-[10px] font-medium text-success">
                                 <ArrowUpRight size={11} />
                                 Pembayaran
                               </span>
@@ -405,7 +405,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
                           <td className="px-5 py-4 text-right">
                             <p
                               className={`text-[12px] font-semibold ${
-                                isDebt ? "text-[#A96D2E]" : "text-[#3F7635]"
+                                isDebt ? "text-warning" : "text-success"
                               }`}
                             >
                               {isDebt ? "+" : "-"}
@@ -431,8 +431,8 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
                           <div
                             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
                               isDebt
-                                ? "bg-[#FFF4E8] text-[#A96D2E]"
-                                : "bg-[#EAF3E7] text-[#3F7635]"
+                                ? "bg-warning-soft text-warning"
+                                : "bg-surface-soft text-success"
                             }`}
                           >
                             {isDebt ? (
@@ -455,7 +455,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
 
                         <p
                           className={`shrink-0 text-[12px] font-semibold ${
-                            isDebt ? "text-[#A96D2E]" : "text-[#3F7635]"
+                            isDebt ? "text-warning" : "text-success"
                           }`}
                         >
                           {isDebt ? "+" : "-"}
@@ -463,7 +463,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
                         </p>
                       </div>
 
-                      <div className="mt-3 rounded-[8px] bg-[#FAFAF8] px-3 py-2.5">
+                      <div className="mt-3 rounded-[8px] bg-surface-muted px-3 py-2.5">
                         <p className="text-[10px] text-text-secondary">
                           {transaction.description || "Tidak ada keterangan"}
                         </p>

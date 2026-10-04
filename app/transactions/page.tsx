@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { createMoneyTransaction, getMoneyTransactions } from "@/lib/api";
 
@@ -61,12 +62,18 @@ function getCategoryLabel(category: string) {
     TRANSPORTASI: "Transportasi",
     PERAWATAN: "Perawatan",
     LAINNYA: "Lainnya",
+    HARVEST_SALE: "Penjualan Hasil Panen",
+    OWNER_SETTLEMENT: "Pembayaran Pemilik",
+    RUBBER_WORKER_SETTLEMENT: "Settlement Pekerja",
+    OPENING_BALANCE: "Saldo Awal",
   };
 
   return labels[category] ?? category;
 }
 
 function getTransactionTitle(transaction: Transaction) {
+  // keep existing title logic
+
   if (transaction.description) {
     return transaction.description;
   }
@@ -84,6 +91,7 @@ function getTransactionTitle(transaction: Transaction) {
 }
 
 export default function TransactionsPage() {
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -265,7 +273,7 @@ export default function TransactionsPage() {
           <button
             type="button"
             onClick={openForm}
-            className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-[10px] bg-[#17221B] px-4 text-[12px] font-medium text-white transition hover:bg-[#26362B] sm:w-auto"
+            className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[12px] font-medium text-white transition hover:bg-surface-soft sm:w-auto"
           >
             <Plus size={15} strokeWidth={2} />
             Tambah Transaksi
@@ -384,7 +392,7 @@ export default function TransactionsPage() {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Cari transaksi..."
-                    className="h-9 w-full rounded-[9px] border border-border bg-white pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#5F9F4A] sm:w-full xl:w-[220px]"
+                    className="h-9 w-full rounded-[9px] border border-border bg-surface pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-border sm:w-full xl:w-[220px]"
                   />
                 </div>
 
@@ -400,7 +408,7 @@ export default function TransactionsPage() {
                           : "ALL",
                     )
                   }
-                  className="flex h-9 w-full items-center justify-between gap-5 rounded-[9px] border border-border bg-white px-3 text-[11px] font-medium text-text-secondary transition hover:bg-surface-muted sm:w-auto sm:min-w-[130px]"
+                  className="flex h-9 w-full items-center justify-between gap-5 rounded-[9px] border border-border bg-surface px-3 text-[11px] font-medium text-text-secondary transition hover:bg-surface-muted sm:w-auto sm:min-w-[130px]"
                 >
                   <span>
                     {typeFilter === "ALL"
@@ -416,7 +424,7 @@ export default function TransactionsPage() {
                 {/* Date */}
                 <button
                   type="button"
-                  className="flex h-9 w-full items-center justify-between gap-2.5 rounded-[9px] border border-border bg-white px-3 text-[11px] font-medium text-text-secondary transition hover:bg-surface-muted sm:w-auto"
+                  className="flex h-9 w-full items-center justify-between gap-2.5 rounded-[9px] border border-border bg-surface px-3 text-[11px] font-medium text-text-secondary transition hover:bg-surface-muted sm:w-auto"
                 >
                   <CalendarDays size={13} strokeWidth={1.8} />
 
@@ -442,7 +450,7 @@ export default function TransactionsPage() {
                   </th>
 
                   <th className="px-4 py-3 text-left text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted sm:px-5 sm:text-[10px]">
-                    Kategori
+                    Sumber
                   </th>
 
                   <th className="px-4 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted sm:px-5 sm:text-[10px]">
@@ -484,7 +492,8 @@ export default function TransactionsPage() {
                   filteredTransactions.map((transaction) => (
                     <tr
                       key={transaction.id}
-                      className="transition hover:bg-surface-muted/60"
+                      className="cursor-pointer transition hover:bg-surface-muted/60"
+                      onClick={() => router.push(`/transactions/${transaction.id}`)}
                     >
                       {/* Date */}
                       <td className="whitespace-nowrap px-4 py-4 text-[10px] text-text-secondary sm:px-5 sm:text-[11px]">
@@ -565,7 +574,7 @@ export default function TransactionsPage() {
       ======================================================== */}
       {showForm && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#17221B]/20 p-3 backdrop-blur-[6px] sm:p-5"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-surface/20 p-3 backdrop-blur-[6px] sm:p-5"
           onMouseDown={handleOverlayClick}
         >
           <div
@@ -576,7 +585,7 @@ export default function TransactionsPage() {
             onMouseDown={(event) => event.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex shrink-0 items-start justify-between border-b border-border bg-white px-4 py-4 sm:px-6 sm:py-5">
+            <div className="flex shrink-0 items-start justify-between border-b border-border bg-surface px-4 py-4 sm:px-6 sm:py-5">
               <div className="min-w-0">
                 <p className="text-[8px] font-semibold uppercase tracking-[0.15em] text-text-muted sm:text-[9px]">
                   Money Movement
@@ -611,8 +620,8 @@ export default function TransactionsPage() {
               className="flex min-h-0 flex-1 flex-col"
             >
               {/* Body */}
-              <div className="min-h-0 flex-1 overflow-y-auto bg-[#F7F8F5] p-3 sm:p-5">
-                <div className="rounded-[14px] border border-border bg-white sm:rounded-[16px]">
+              <div className="min-h-0 flex-1 overflow-y-auto bg-surface-muted p-3 sm:p-5">
+                <div className="rounded-[14px] border border-border bg-surface sm:rounded-[16px]">
                   <div className="space-y-5 p-4 sm:space-y-6 sm:p-5">
                     {/* Type */}
                     <div>
@@ -626,8 +635,8 @@ export default function TransactionsPage() {
                           onClick={() => setType("IN")}
                           className={`flex h-10 items-center justify-center rounded-[9px] border text-[11px] font-medium transition sm:h-11 sm:text-[12px] ${
                             type === "IN"
-                              ? "border-[#5F9F4A] bg-success-soft text-[#3F7632]"
-                              : "border-border bg-white text-text-secondary hover:bg-surface-muted"
+                              ? "border-border bg-success-soft text-success"
+                              : "border-border bg-surface text-text-secondary hover:bg-surface-muted"
                           }`}
                         >
                           Pemasukan
@@ -638,8 +647,8 @@ export default function TransactionsPage() {
                           onClick={() => setType("OUT")}
                           className={`flex h-10 items-center justify-center rounded-[9px] border text-[11px] font-medium transition sm:h-11 sm:text-[12px] ${
                             type === "OUT"
-                              ? "border-[#5F9F4A] bg-success-soft text-[#3F7632]"
-                              : "border-border bg-white text-text-secondary hover:bg-surface-muted"
+                              ? "border-border bg-success-soft text-success"
+                              : "border-border bg-surface text-text-secondary hover:bg-surface-muted"
                           }`}
                         >
                           Pengeluaran
@@ -653,14 +662,14 @@ export default function TransactionsPage() {
                         htmlFor="category"
                         className="mb-2 block text-[10px] font-medium text-text-primary sm:text-[11px]"
                       >
-                        Kategori
+                        Sumber
                       </label>
 
                       <select
                         id="category"
                         value={category}
                         onChange={(event) => setCategory(event.target.value)}
-                        className="h-10 w-full rounded-[9px] border border-border bg-white px-3 text-[11px] text-text-primary outline-none transition focus:border-[#5F9F4A] focus:ring-2 focus:ring-[#EAF3E6] sm:h-11 sm:text-[12px]"
+                        className="h-10 w-full rounded-[9px] border border-border bg-surface px-3 text-[11px] text-text-primary outline-none transition focus:border-border focus:ring-2 focus:ring-success-soft sm:h-11 sm:text-[12px]"
                       >
                         {categories.map((categoryItem) => (
                           <option key={categoryItem} value={categoryItem}>
@@ -692,7 +701,7 @@ export default function TransactionsPage() {
                           value={amount}
                           onChange={(event) => setAmount(event.target.value)}
                           placeholder="0"
-                          className="h-10 w-full rounded-[9px] border border-border bg-white pl-9 pr-3 text-[12px] font-medium text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#5F9F4A] focus:ring-2 focus:ring-[#EAF3E6] sm:h-11 sm:text-[13px]"
+                          className="h-10 w-full rounded-[9px] border border-border bg-surface pl-9 pr-3 text-[12px] font-medium text-text-primary outline-none transition placeholder:text-text-muted focus:border-border focus:ring-2 focus:ring-success-soft sm:h-11 sm:text-[13px]"
                         />
                       </div>
                     </div>
@@ -714,7 +723,7 @@ export default function TransactionsPage() {
                           onChange={(event) =>
                             setTransactionDate(event.target.value)
                           }
-                          className="h-10 w-full rounded-[9px] border border-border bg-white px-3 text-[11px] text-text-primary outline-none transition focus:border-[#5F9F4A] focus:ring-2 focus:ring-[#EAF3E6] sm:h-11 sm:text-[12px]"
+                          className="h-10 w-full rounded-[9px] border border-border bg-surface px-3 text-[11px] text-text-primary outline-none transition focus:border-border focus:ring-2 focus:ring-success-soft sm:h-11 sm:text-[12px]"
                         />
 
                         <CalendarDays
@@ -740,7 +749,7 @@ export default function TransactionsPage() {
                         value={description}
                         onChange={(event) => setDescription(event.target.value)}
                         placeholder="Contoh: Penjualan karet"
-                        className="min-h-[100px] w-full resize-none rounded-[9px] border border-border bg-white px-3 py-2.5 text-[11px] leading-5 text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#5F9F4A] focus:ring-2 focus:ring-[#EAF3E6] sm:min-h-[110px] sm:text-[12px]"
+                        className="min-h-[100px] w-full resize-none rounded-[9px] border border-border bg-surface px-3 py-2.5 text-[11px] leading-5 text-text-primary outline-none transition placeholder:text-text-muted focus:border-border focus:ring-2 focus:ring-success-soft sm:min-h-[110px] sm:text-[12px]"
                       />
                     </div>
 
@@ -755,13 +764,13 @@ export default function TransactionsPage() {
               </div>
 
               {/* Modal Footer */}
-              <div className="shrink-0 border-t border-border bg-white p-3 sm:p-4 sm:px-5">
+              <div className="shrink-0 border-t border-border bg-surface p-3 sm:p-4 sm:px-5">
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     type="button"
                     onClick={closeForm}
                     disabled={saving}
-                    className="h-10 rounded-[10px] border border-border bg-white text-[11px] font-medium text-text-secondary transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50 sm:text-[12px]"
+                    className="h-10 rounded-[10px] border border-border bg-surface text-[11px] font-medium text-text-secondary transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50 sm:text-[12px]"
                   >
                     Batal
                   </button>
@@ -769,7 +778,7 @@ export default function TransactionsPage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="h-10 rounded-[10px] bg-[#17221B] text-[11px] font-medium text-white transition hover:bg-[#26362B] disabled:cursor-not-allowed disabled:opacity-60 sm:text-[12px]"
+                    className="h-10 rounded-[10px] bg-surface text-[11px] font-medium text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-60 sm:text-[12px]"
                   >
                     {saving ? "Menyimpan..." : "Simpan Transaksi"}
                   </button>

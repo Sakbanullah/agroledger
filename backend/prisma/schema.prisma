@@ -18,6 +18,13 @@ model User {
   moneyTransactions MoneyTransaction[]
 }
 
+model Setting {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Person {
   id        Int      @id @default(autoincrement())
   name      String
@@ -26,22 +33,25 @@ model Person {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  farmOwners    FarmOwner[]
-  rubberWorkers RubberSaleWorker[]
-  creditAccount CreditAccount?
-  settlements   Settlement[]
+  farmOwners       FarmOwner[]
+  rubberWorkers    RubberSaleWorker[]
+  creditAccount    CreditAccount?
+  settlements      Settlement[]
+  ownerSettlements OwnerSettlement[]
 }
 
 model Farm {
-  id        Int      @id @default(autoincrement())
-  name      String
-  location  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  name          String
+  location      String?
+  ownershipType String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  owners   FarmOwner[]
-  harvests Harvest[]
-  sales    Sale[]
+  owners            FarmOwner[]
+  harvests          Harvest[]
+  sales             Sale[]
+  moneyTransactions MoneyTransaction[]
 }
 
 model FarmOwner {
@@ -92,14 +102,26 @@ model Sale {
   buyerName     String?
   status        String   @default("PENDING")
   notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
 
-  farm          Farm               @relation(fields: [farmId], references: [id], onDelete: Restrict)
-  commodity     Commodity          @relation(fields: [commodityId], references: [id], onDelete: Restrict)
-  rubberWorkers RubberSaleWorker[]
-  settlements   Settlement[]
-  scanDocuments ScanDocument[]
+  // Snapshot of Farm.ownershipType at sale creation time.
+  // Nullable because historical sales predate this field.
+  ownershipType String?
+
+  // Commission fields are only populated for Sawit + RELATIVE sales,
+  // and only AFTER the buyer pays and the rate is agreed.
+  commissionRatePerKg Decimal? @db.Decimal(12, 2)
+  commissionAmount    Decimal? @db.Decimal(12, 2)
+  ownerShareAmount    Decimal? @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  farm             Farm               @relation(fields: [farmId], references: [id], onDelete: Restrict)
+  commodity        Commodity          @relation(fields: [commodityId], references: [id], onDelete: Restrict)
+  rubberWorkers    RubberSaleWorker[]
+  settlements      Settlement[]
+  ownerSettlements OwnerSettlement[]
+  scanDocuments    ScanDocument[]
 }
 
 model RubberSaleWorker {
@@ -197,12 +219,36 @@ model MoneyTransaction {
   description     String?
   referenceType   String?
   referenceId     Int?
+  farmId          Int?
   createdBy       Int?
   createdAt       DateTime @default(now())
 
+  farm Farm? @relation(fields: [farmId], references: [id], onDelete: SetNull)
   user User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@index([transactionDate])
   @@index([type])
   @@index([category])
+  @@index([farmId])
+}
+
+model OwnerSettlement {
+  id     Int @id @default(autoincrement())
+  saleId Int
+  ownerId Int
+
+  ownerShareAmount  Decimal @db.Decimal(12, 2)
+  settledAmount     Decimal @default(0) @db.Decimal(12, 2)
+  outstandingAmount Decimal @db.Decimal(12, 2)
+
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sale  Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  owner Person @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+
+  @@unique([saleId, ownerId])
+  @@index([saleId])
+  @@index([ownerId])
 }

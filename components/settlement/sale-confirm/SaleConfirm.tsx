@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 interface Worker {
@@ -39,6 +40,8 @@ interface SaleConfirmProps {
 }
 
 export default function SaleConfirm({ saleId }: SaleConfirmProps) {
+  const router = useRouter();
+
   const [sale, setSale] = useState<Sale | null>(null);
 
   const [pricePerKg, setPricePerKg] = useState("");
@@ -77,12 +80,17 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
     fetchSale();
   }, [saleId]);
 
+  const isSawit = sale?.commodity?.name?.toLowerCase() === "sawit";
+
   const totalWeight = useMemo(() => {
+    if (isSawit) {
+      return Number(sale?.totalWeightKg ?? 0);
+    }
     return (sale?.rubberWorkers ?? []).reduce(
       (total, worker) => total + Number(worker.weightKg),
       0,
     );
-  }, [sale]);
+  }, [sale, isSawit]);
 
   const totalSaleAmount = useMemo(() => {
     const price = Number(pricePerKg);
@@ -118,7 +126,7 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
     const price = Number(pricePerKg);
 
     if (!price || price <= 0) {
-      setConfirmError("Harga karet harus diisi.");
+      setConfirmError("Harga penjualan harus diisi.");
       return;
     }
 
@@ -182,10 +190,50 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
       setSale(confirmData);
 
       // =====================================================
-      // 3. LANJUT KE SETTLEMENT
+      // 3. NEXT STEP BERDASARKAN KOMODITAS + OWNERSHIP
+      //
+      // Backend sudah menjadi sumber validasi:
+      // - Karet          -> worker settlement (existing flow)
+      // - Sawit OWN      -> complete sale (tanpa owner settlement)
+      // - Sawit RELATIVE -> commission -> owner settlement
       // =====================================================
 
-      window.location.href = `/settlement/sale/${saleId}/settlement`;
+      const commodityName = confirmData.commodity?.name?.toLowerCase();
+      const ownershipType = (
+        confirmData.ownershipType ??
+        confirmData.farm?.ownershipType ??
+        ""
+      )
+        .toString()
+        .toUpperCase();
+
+      if (commodityName === "sawit") {
+        if (ownershipType === "RELATIVE") {
+          // Commission belum ditentukan -> user harus menyepakati rate.
+          router.push(`/settlement/sale/${saleId}/commission`);
+          return;
+        }
+
+        // Sawit OWN: commission = 0, owner share = 0 -> langsung selesai.
+        const completeResponse = await fetch(
+          `http://localhost:3001/sales/${saleId}/complete`,
+          { method: "PUT" },
+        );
+
+        if (!completeResponse.ok) {
+          const completeData = await completeResponse.json().catch(() => null);
+
+          throw new Error(
+            completeData?.message || "Gagal menyelesaikan penjualan.",
+          );
+        }
+
+        router.push(`/settlement/sale/${saleId}/check`);
+        return;
+      }
+
+      // Karet: lanjut ke settlement pekerja
+      router.push(`/settlement/sale/${saleId}/settlement`);
     } catch (err) {
       setConfirmError(
         err instanceof Error
@@ -208,7 +256,7 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
           <div className="flex flex-col items-center gap-3">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#dfe6dc] border-t-[#5f9f4a]" />
 
-            <p className="text-xs text-[#929a93]">Memuat data penjualan...</p>
+            <p className="text-xs text-text-muted">Memuat data penjualan...</p>
           </div>
         </div>
       </main>
@@ -223,17 +271,17 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
     return (
       <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
         <div className="w-full">
-          <div className="flex items-start gap-3 rounded-2xl border border-[#f0d4d4] bg-white p-5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-sm font-semibold text-[#c85c5c]">
+          <div className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger-soft text-sm font-semibold text-danger">
               !
             </div>
 
             <div>
-              <h2 className="text-sm font-semibold text-[#17221b]">
+              <h2 className="text-sm font-semibold text-text-primary">
                 Gagal memuat penjualan
               </h2>
 
-              <p className="mt-1 text-xs text-[#687169]">
+              <p className="mt-1 text-xs text-text-secondary">
                 {error ?? "Sale tidak ditemukan."}
               </p>
             </div>
@@ -256,15 +304,15 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
 
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#929a93]">
+            <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted">
               SALE #{sale.id}
             </p>
 
-            <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-[#17221b]">
+            <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-text-primary">
               Konfirmasi Penjualan
             </h1>
 
-            <p className="mt-1.5 text-xs text-[#687169]">
+            <p className="mt-1.5 text-xs text-text-secondary">
               Periksa data penjualan sebelum dikonfirmasi.
             </p>
           </div>
@@ -272,8 +320,8 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
           <span
             className={`w-fit rounded-full px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] ${
               sale.status === "COMPLETED"
-                ? "bg-[#eaf3e6] text-[#4d873d]"
-                : "bg-[#fbf3df] text-[#b48624]"
+                ? "bg-success-soft text-success"
+                : "bg-warning-soft text-warning"
             }`}
           >
             {sale.status === "COMPLETED" ? "Selesai" : "Draft"}
@@ -284,46 +332,46 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
             SALE INFORMATION
         ================================================== */}
 
-        <section className="mb-4 rounded-2xl border border-[#e3e8e1] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
-          <div className="border-b border-[#eef1ed] px-4 py-4 sm:px-5">
+        <section className="mb-4 rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
+          <div className="border-b border-border px-4 py-4 sm:px-5">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted">
                   INFORMASI PENJUALAN
                 </p>
 
-                <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+                <h2 className="mt-1 text-sm font-semibold text-text-primary">
                   {sale.commodity.name}
                 </h2>
               </div>
 
-              <p className="text-[10px] text-[#929a93]">
+              <p className="text-[10px] text-text-muted">
                 {formatDate(sale.saleDate)}
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-px bg-[#eef1ed] sm:grid-cols-3">
-            <div className="bg-white px-4 py-4 sm:px-5">
-              <p className="text-[9px] text-[#929a93]">Kebun</p>
+            <div className="bg-surface px-4 py-4 sm:px-5">
+              <p className="text-[9px] text-text-muted">Kebun</p>
 
-              <p className="mt-1 text-xs font-medium text-[#17221b]">
+              <p className="mt-1 text-xs font-medium text-text-primary">
                 {sale.farm.name}
               </p>
             </div>
 
-            <div className="bg-white px-4 py-4 sm:px-5">
-              <p className="text-[9px] text-[#929a93]">Tanggal Penjualan</p>
+            <div className="bg-surface px-4 py-4 sm:px-5">
+              <p className="text-[9px] text-text-muted">Tanggal Penjualan</p>
 
-              <p className="mt-1 text-xs font-medium text-[#17221b]">
+              <p className="mt-1 text-xs font-medium text-text-primary">
                 {formatDate(sale.saleDate)}
               </p>
             </div>
 
-            <div className="bg-white px-4 py-4 sm:px-5">
-              <p className="text-[9px] text-[#929a93]">Komoditas</p>
+            <div className="bg-surface px-4 py-4 sm:px-5">
+              <p className="text-[9px] text-text-muted">Komoditas</p>
 
-              <p className="mt-1 text-xs font-medium text-[#17221b]">
+              <p className="mt-1 text-xs font-medium text-text-primary">
                 {sale.commodity.name}
               </p>
             </div>
@@ -334,13 +382,13 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
             INPUT
         ================================================== */}
 
-        <section className="mb-4 rounded-2xl border border-[#e3e8e1] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
-          <div className="border-b border-[#eef1ed] px-4 py-4 sm:px-5">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+        <section className="mb-4 rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
+          <div className="border-b border-border px-4 py-4 sm:px-5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted">
               DATA TRANSAKSI
             </p>
 
-            <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+            <h2 className="mt-1 text-sm font-semibold text-text-primary">
               Lengkapi informasi penjualan
             </h2>
           </div>
@@ -356,7 +404,7 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
               </label>
 
               <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-[#929a93]">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-text-muted">
                   Rp
                 </span>
 
@@ -368,11 +416,11 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
                   onChange={(event) => setPricePerKg(event.target.value)}
                   placeholder="Masukkan harga"
                   disabled={isConfirming || sale.status === "COMPLETED"}
-                  className="h-10 w-full rounded-[10px] border border-[#dfe5dc] bg-white pl-9 pr-3 text-xs text-[#17221b] outline-none transition placeholder:text-[#b0b6b0] focus:border-[#8fbd82] focus:ring-2 focus:ring-[#eaf3e6] disabled:cursor-not-allowed disabled:bg-[#f7f8f6]"
+                  className="h-10 w-full rounded-[10px] border border-border bg-surface pl-9 pr-3 text-xs text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-success-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
                 />
               </div>
 
-              <p className="mt-1.5 text-[9px] text-[#929a93]">
+              <p className="mt-1.5 text-[9px] text-text-muted">
                 Harga digunakan untuk menghitung total penjualan.
               </p>
             </div>
@@ -393,10 +441,10 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
                 onChange={(event) => setBuyerName(event.target.value)}
                 placeholder="Nama pembeli"
                 disabled={isConfirming || sale.status === "COMPLETED"}
-                className="h-10 w-full rounded-[10px] border border-[#dfe5dc] bg-white px-3 text-xs text-[#17221b] outline-none transition placeholder:text-[#b0b6b0] focus:border-[#8fbd82] focus:ring-2 focus:ring-[#eaf3e6] disabled:cursor-not-allowed disabled:bg-[#f7f8f6]"
+                className="h-10 w-full rounded-[10px] border border-border bg-surface px-3 text-xs text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-success-soft disabled:cursor-not-allowed disabled:bg-surface-muted"
               />
 
-              <p className="mt-1.5 text-[9px] text-[#929a93]">
+              <p className="mt-1.5 text-[9px] text-text-muted">
                 Opsional, isi jika ingin mencatat nama pembeli.
               </p>
             </div>
@@ -407,19 +455,21 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
             WORKERS
         ================================================== */}
 
-        <section className="mb-4 rounded-2xl border border-[#e3e8e1] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
-          <div className="flex items-center justify-between gap-4 border-b border-[#eef1ed] px-4 py-4 sm:px-5">
+        <section className="mb-4 rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
+          {sale.rubberWorkers && (
+            <>
+          <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-5">
             <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted">
                 DATA WORKER
               </p>
 
-              <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+              <h2 className="mt-1 text-sm font-semibold text-text-primary">
                 Pembagian berat hasil panen
               </h2>
             </div>
 
-            <span className="rounded-full bg-[#f0f3ee] px-2.5 py-1 text-[9px] font-medium text-[#687169]">
+            <span className="rounded-full bg-surface-soft px-2.5 py-1 text-[9px] font-medium text-text-secondary">
               {sale.rubberWorkers.length} worker
             </span>
           </div>
@@ -428,20 +478,20 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="border-b border-[#eef1ed]">
-                  <th className="w-14 px-5 py-3 text-left text-[9px] font-medium uppercase tracking-[0.08em] text-[#929a93]">
+                <tr className="border-b border-border">
+                  <th className="w-14 px-5 py-3 text-left text-[9px] font-medium uppercase tracking-[0.08em] text-text-muted">
                     #
                   </th>
 
-                  <th className="px-4 py-3 text-left text-[9px] font-medium uppercase tracking-[0.08em] text-[#929a93]">
+                  <th className="px-4 py-3 text-left text-[9px] font-medium uppercase tracking-[0.08em] text-text-muted">
                     Worker
                   </th>
 
-                  <th className="px-4 py-3 text-right text-[9px] font-medium uppercase tracking-[0.08em] text-[#929a93]">
+                  <th className="px-4 py-3 text-right text-[9px] font-medium uppercase tracking-[0.08em] text-text-muted">
                     Keping
                   </th>
 
-                  <th className="px-5 py-3 text-right text-[9px] font-medium uppercase tracking-[0.08em] text-[#929a93]">
+                  <th className="px-5 py-3 text-right text-[9px] font-medium uppercase tracking-[0.08em] text-text-muted">
                     Berat
                   </th>
                 </tr>
@@ -451,23 +501,23 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
                 {sale.rubberWorkers.map((worker, index) => (
                   <tr
                     key={worker.id}
-                    className="border-b border-[#f0f2ef] last:border-b-0"
+                    className="border-b border-surface-soft last:border-b-0"
                   >
-                    <td className="px-5 py-4 text-[10px] text-[#929a93]">
+                    <td className="px-5 py-4 text-[10px] text-text-muted">
                       {String(index + 1).padStart(2, "0")}
                     </td>
 
                     <td className="px-4 py-4">
-                      <p className="text-xs font-semibold text-[#27322c]">
+                      <p className="text-xs font-semibold text-text-primary">
                         {worker.worker.name}
                       </p>
                     </td>
 
-                    <td className="px-4 py-4 text-right text-xs text-[#687169]">
+                    <td className="px-4 py-4 text-right text-xs text-text-secondary">
                       {worker.pieces}
                     </td>
 
-                    <td className="px-5 py-4 text-right text-xs font-semibold text-[#17221b]">
+                    <td className="px-5 py-4 text-right text-xs font-semibold text-text-primary">
                       {formatNumber(Number(worker.weightKg))} kg
                     </td>
                   </tr>
@@ -475,15 +525,15 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
               </tbody>
 
               <tfoot>
-                <tr className="bg-[#f7f9f6]">
+                <tr className="bg-surface-soft">
                   <td
                     colSpan={3}
-                    className="px-5 py-3 text-right text-[10px] font-medium text-[#687169]"
+                    className="px-5 py-3 text-right text-[10px] font-medium text-text-secondary"
                   >
                     Total Berat
                   </td>
 
-                  <td className="px-5 py-3 text-right text-xs font-semibold text-[#17221b]">
+                  <td className="px-5 py-3 text-right text-xs font-semibold text-text-primary">
                     {formatNumber(totalWeight)} kg
                   </td>
                 </tr>
@@ -499,37 +549,39 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
                 className="flex items-center justify-between gap-4 px-4 py-4"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f0f3ee] text-[9px] font-medium text-[#929a93]">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-soft text-[9px] font-medium text-text-muted">
                     {index + 1}
                   </span>
 
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-[#27322c]">
+                    <p className="truncate text-xs font-semibold text-text-primary">
                       {worker.worker.name}
                     </p>
 
-                    <p className="mt-0.5 text-[9px] text-[#929a93]">
+                    <p className="mt-0.5 text-[9px] text-text-muted">
                       {worker.pieces} keping
                     </p>
                   </div>
                 </div>
 
-                <p className="shrink-0 text-xs font-semibold text-[#17221b]">
+                <p className="shrink-0 text-xs font-semibold text-text-primary">
                   {formatNumber(Number(worker.weightKg))} kg
                 </p>
               </div>
             ))}
 
-            <div className="flex items-center justify-between bg-[#f7f9f6] px-4 py-3">
-              <span className="text-[10px] font-medium text-[#687169]">
+            <div className="flex items-center justify-between bg-surface-soft px-4 py-3">
+              <span className="text-[10px] font-medium text-text-secondary">
                 Total Berat
               </span>
 
-              <span className="text-xs font-semibold text-[#17221b]">
+              <span className="text-xs font-semibold text-text-primary">
                 {formatNumber(totalWeight)} kg
               </span>
             </div>
           </div>
+          </>
+          )}
         </section>
 
         {/* =================================================
@@ -537,17 +589,17 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
         ================================================== */}
 
         {confirmError && (
-          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#f0d4d4] bg-[#fffafa] p-4">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-xs font-semibold text-[#c85c5c]">
+          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-border bg-surface-soft p-4">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger-soft text-xs font-semibold text-danger">
               !
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-[#a04444]">
+              <p className="text-xs font-semibold text-danger">
                 Tidak dapat mengonfirmasi
               </p>
 
-              <p className="mt-0.5 text-[10px] text-[#a04444]">
+              <p className="mt-0.5 text-[10px] text-danger">
                 {confirmError}
               </p>
             </div>
@@ -558,20 +610,20 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
             FINAL SUMMARY
         ================================================== */}
 
-        <section className="flex flex-col gap-4 rounded-2xl border border-[#dce8df] bg-[#f2f7f3] p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <section className="flex flex-col gap-4 rounded-2xl border border-border bg-surface-soft p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div>
-            <p className="text-[10px] font-medium text-[#77827b]">
+            <p className="text-[10px] font-medium text-text-muted">
               Total Penjualan
             </p>
 
-            <p className="mt-1 text-[22px] font-semibold leading-none tracking-[-0.035em] text-[#244c31]">
+            <p className="mt-1 text-[22px] font-semibold leading-none tracking-[-0.035em] text-success">
               {pricePerKg
                 ? formatCurrency(totalSaleAmount)
                 : "Harga belum diisi"}
             </p>
 
             {pricePerKg && (
-              <p className="mt-1.5 text-[9px] text-[#77827b]">
+              <p className="mt-1.5 text-[9px] text-text-muted">
                 {formatNumber(totalWeight)} kg ×{" "}
                 {formatCurrency(Number(pricePerKg))}
                 /kg
@@ -585,7 +637,7 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
             disabled={
               isConfirming || sale.status === "COMPLETED" || totalWeight <= 0
             }
-            className="inline-flex h-11 w-full items-center justify-center rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] disabled:shadow-none sm:w-auto sm:min-w-[210px]"
+            className="inline-flex h-11 w-full items-center justify-center rounded-[10px] bg-success-soft px-5 text-xs font-semibold text-white transition hover:bg-success-soft hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-surface-soft disabled:shadow-none sm:w-auto sm:min-w-[210px]"
           >
             {isConfirming
               ? "Mengonfirmasi..."

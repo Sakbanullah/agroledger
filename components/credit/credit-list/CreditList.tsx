@@ -182,7 +182,7 @@ export default function CreditList() {
           <button
             type="button"
             onClick={() => setShowWorkerSelector(true)}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#17221B] px-4 text-[12px] font-medium text-white transition hover:bg-[#26352B] active:scale-[0.99]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[12px] font-medium text-white transition hover:bg-surface-soft active:scale-[0.99]"
           >
             <Plus size={15} />
             Tambah Kasbon
@@ -192,7 +192,7 @@ export default function CreditList() {
         {/* SUMMARY */}
         <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {/* TOTAL OUTSTANDING */}
-          <div className="rounded-[12px] border border-border bg-white p-4">
+          <div className="rounded-[12px] border border-border bg-surface p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted">
@@ -208,14 +208,14 @@ export default function CreditList() {
                 </p>
               </div>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#E6EFE2] text-[#3F7635]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-surface-soft text-success">
                 <WalletCards size={17} />
               </div>
             </div>
           </div>
 
           {/* WORKER WITH DEBT */}
-          <div className="rounded-[12px] border border-border bg-white p-4">
+          <div className="rounded-[12px] border border-border bg-surface p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted">
@@ -231,14 +231,14 @@ export default function CreditList() {
                 </p>
               </div>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#FFF3E6] text-[#A96D2E]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-warning-soft text-warning">
                 <CircleDollarSign size={17} />
               </div>
             </div>
           </div>
 
           {/* WORKER STATUS */}
-          <div className="rounded-[12px] border border-border bg-white p-4">
+          <div className="rounded-[12px] border border-border bg-surface p-4">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-text-muted">
@@ -254,7 +254,7 @@ export default function CreditList() {
                 </p>
               </div>
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#E6EFE2] text-[#3F7635]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-surface-soft text-success">
                 <Users size={17} />
               </div>
             </div>
@@ -262,7 +262,7 @@ export default function CreditList() {
         </section>
 
         {/* MAIN CARD */}
-        <section className="overflow-hidden rounded-[14px] border border-border bg-white">
+        <section className="overflow-hidden rounded-[14px] border border-border bg-surface">
           {/* CARD HEADER */}
           <div className="flex flex-col gap-4 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div>
@@ -275,7 +275,7 @@ export default function CreditList() {
                   Daftar Kasbon
                 </h2>
 
-                <span className="rounded-full bg-[#F1F3EF] px-2 py-0.5 text-[9px] font-medium text-text-muted">
+                <span className="rounded-full bg-surface-soft px-2 py-0.5 text-[9px] font-medium text-text-muted">
                   {totalWorkers} worker
                 </span>
               </div>
@@ -292,7 +292,7 @@ export default function CreditList() {
                 placeholder="Cari worker..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                className="h-9 w-full rounded-[9px] border border-border bg-[#F7F8F5] pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#9FBA96] focus:bg-white"
+                className="h-9 w-full rounded-[9px] border border-border bg-surface-muted pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:bg-surface"
               />
             </div>
           </div>
@@ -308,7 +308,7 @@ export default function CreditList() {
           ) : error ? (
             /* ERROR */
             <div className="flex min-h-[300px] items-center justify-center px-5">
-              <div className="rounded-[10px] bg-[#FFF3F1] px-4 py-3 text-center text-[11px] text-[#B5473A]">
+              <div className="rounded-[10px] bg-danger-soft px-4 py-3 text-center text-[11px] text-danger">
                 {error}
               </div>
             </div>
@@ -318,7 +318,7 @@ export default function CreditList() {
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[720px]">
                   <thead>
-                    <tr className="border-b border-border bg-[#FAFAF8] text-left">
+                    <tr className="border-b border-border bg-surface-muted text-left">
                       <th className="w-[70px] px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.1em] text-text-muted">
                         No
                       </th>
@@ -346,7 +346,7 @@ export default function CreditList() {
                       <tr>
                         <td colSpan={5}>
                           <div className="flex min-h-[240px] flex-col items-center justify-center">
-                            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F3EF] text-text-muted">
+                            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-soft text-text-muted">
                               <UserRound size={18} />
                             </div>
 
@@ -371,7 +371,7 @@ export default function CreditList() {
                         return (
                           <tr
                             key={worker.id}
-                            className="border-b border-border last:border-0 transition-colors hover:bg-[#FCFCFA]"
+                            className="border-b border-border last:border-0 transition-colors hover:bg-surface-soft"
                           >
                             <td className="px-5 py-4 text-[11px] text-text-muted">
                               {String(index + 1).padStart(2, "0")}
@@ -379,7 +379,7 @@ export default function CreditList() {
 
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6EFE2] text-[10px] font-semibold text-[#3F7635]">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-[10px] font-semibold text-success">
                                   {worker.name
                                     .split(" ")
                                     .slice(0, 2)
@@ -418,13 +418,13 @@ export default function CreditList() {
 
                             <td className="px-5 py-4">
                               {hasDebt ? (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FFF4E8] px-2.5 py-1 text-[10px] font-medium text-[#A96D2E]">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#C88A42]" />
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-warning-soft px-2.5 py-1 text-[10px] font-medium text-warning">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-warning-soft" />
                                   Ada Kasbon
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF3E7] px-2.5 py-1 text-[10px] font-medium text-[#3F7635]">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-[#5B8F50]" />
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-soft px-2.5 py-1 text-[10px] font-medium text-success">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
                                   Lunas
                                 </span>
                               )}
@@ -437,7 +437,7 @@ export default function CreditList() {
                                   onClick={() =>
                                     router.push(`/credit/${worker.id}`)
                                   }
-                                  className="inline-flex h-8 items-center gap-1.5 rounded-[8px] px-2.5 text-[10px] font-medium text-text-secondary transition hover:bg-[#F1F3EF] hover:text-text-primary"
+                                  className="inline-flex h-8 items-center gap-1.5 rounded-[8px] px-2.5 text-[10px] font-medium text-text-secondary transition hover:bg-surface-soft hover:text-text-primary"
                                 >
                                   Detail
                                   <ArrowRight size={12} />
@@ -456,7 +456,7 @@ export default function CreditList() {
               <div className="divide-y divide-border md:hidden">
                 {filteredWorkers.length === 0 ? (
                   <div className="flex min-h-[240px] flex-col items-center justify-center px-5">
-                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#F1F3EF] text-text-muted">
+                    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-soft text-text-muted">
                       <UserRound size={18} />
                     </div>
 
@@ -479,9 +479,9 @@ export default function CreditList() {
                         key={worker.id}
                         type="button"
                         onClick={() => router.push(`/credit/${worker.id}`)}
-                        className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-[#FCFCFA]"
+                        className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-surface-soft"
                       >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6EFE2] text-[10px] font-semibold text-[#3F7635]">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-[10px] font-semibold text-success">
                           {worker.name
                             .split(" ")
                             .slice(0, 2)
@@ -497,11 +497,11 @@ export default function CreditList() {
                             </p>
 
                             {hasDebt ? (
-                              <span className="shrink-0 rounded-full bg-[#FFF4E8] px-2 py-1 text-[9px] font-medium text-[#A96D2E]">
+                              <span className="shrink-0 rounded-full bg-warning-soft px-2 py-1 text-[9px] font-medium text-warning">
                                 Ada Kasbon
                               </span>
                             ) : (
-                              <span className="shrink-0 rounded-full bg-[#EAF3E7] px-2 py-1 text-[9px] font-medium text-[#3F7635]">
+                              <span className="shrink-0 rounded-full bg-surface-soft px-2 py-1 text-[9px] font-medium text-success">
                                 Lunas
                               </span>
                             )}
@@ -539,7 +539,7 @@ export default function CreditList() {
           onMouseDown={() => setShowWorkerSelector(false)}
         >
           <div
-            className="flex max-h-[min(620px,calc(100vh-32px))] w-full max-w-[460px] flex-col overflow-hidden rounded-[16px] border border-border bg-white shadow-[0_20px_60px_rgba(23,34,27,0.14)]"
+            className="flex max-h-[min(620px,calc(100vh-32px))] w-full max-w-[460px] flex-col overflow-hidden rounded-[16px] border border-border bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.14)]"
             onMouseDown={(event) => event.stopPropagation()}
           >
             {/* HEADER */}
@@ -561,7 +561,7 @@ export default function CreditList() {
               <button
                 type="button"
                 onClick={() => setShowWorkerSelector(false)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-text-muted transition hover:bg-[#F1F3EF] hover:text-text-primary"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-text-muted transition hover:bg-surface-soft hover:text-text-primary"
               >
                 <X size={16} />
               </button>
@@ -580,7 +580,7 @@ export default function CreditList() {
                   placeholder="Cari worker..."
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  className="h-9 w-full rounded-[9px] border border-border bg-[#F7F8F5] pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-[#9FBA96] focus:bg-white"
+                  className="h-9 w-full rounded-[9px] border border-border bg-surface-muted pl-9 pr-3 text-[11px] text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:bg-surface"
                 />
               </div>
             </div>
@@ -611,7 +611,7 @@ export default function CreditList() {
                         onClick={() => handleSelectWorker(worker)}
                         className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition hover:bg-[#FAFBF8]"
                       >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E6EFE2] text-[10px] font-semibold text-[#3F7635]">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-soft text-[10px] font-semibold text-success">
                           {worker.name
                             .split(" ")
                             .slice(0, 2)

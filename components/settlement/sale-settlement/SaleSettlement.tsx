@@ -536,7 +536,7 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
           <div className="flex flex-col items-center gap-3">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#dfe6dc] border-t-[#5f9f4a]" />
 
-            <p className="text-xs text-[#929a93]">Memuat data settlement...</p>
+            <p className="text-xs text-text-muted">Memuat data settlement...</p>
           </div>
         </div>
       </main>
@@ -551,17 +551,17 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
     return (
       <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
         <div className="w-full">
-          <div className="flex items-start gap-3 rounded-2xl border border-[#f0d4d4] bg-white p-5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-sm font-semibold text-[#c85c5c]">
+          <div className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger-soft text-sm font-semibold text-danger">
               !
             </div>
 
             <div>
-              <h2 className="text-sm font-semibold text-[#17221b]">
+              <h2 className="text-sm font-semibold text-text-primary">
                 Gagal memuat settlement
               </h2>
 
-              <p className="mt-1 text-xs text-[#687169]">
+              <p className="mt-1 text-xs text-text-secondary">
                 {error ?? "Data penjualan tidak ditemukan."}
               </p>
             </div>
@@ -582,15 +582,15 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#929a93]">
+            <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted">
               SALE #{sale.id}
             </p>
 
-            <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-[#17221b]">
+            <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.035em] text-text-primary">
               Settlement Penjualan
             </h1>
 
-            <p className="mt-1.5 text-xs text-[#687169]">
+            <p className="mt-1.5 text-xs text-text-secondary">
               Periksa pembagian hasil setiap worker sebelum settlement.
             </p>
           </div>
@@ -598,8 +598,8 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
           <span
             className={`w-fit rounded-full px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] ${
               sale.status === "COMPLETED"
-                ? "bg-[#eaf3e6] text-[#4d873d]"
-                : "bg-[#fbf3df] text-[#b48624]"
+                ? "bg-success-soft text-success"
+                : "bg-warning-soft text-warning"
             }`}
           >
             {sale.status === "COMPLETED" ? "Selesai" : "Draft"}
@@ -637,11 +637,11 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
           ].map((item) => (
             <div
               key={item.label}
-              className="rounded-2xl border border-[#e3e8e1] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5"
+              className="rounded-2xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5"
             >
-              <p className="text-[10px] text-[#929a93]">{item.label}</p>
+              <p className="text-[10px] text-text-muted">{item.label}</p>
 
-              <p className="mt-1.5 text-base font-semibold tracking-[-0.02em] text-[#17221b]">
+              <p className="mt-1.5 text-base font-semibold tracking-[-0.02em] text-text-primary">
                 {item.value}
               </p>
             </div>
@@ -650,26 +650,26 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
         {/* WORKER TABLE */}
 
-        <section className="mb-4 overflow-hidden rounded-2xl border border-[#e3e8e1] bg-white shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
+        <section className="mb-4 overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
           {/* SECTION HEADER */}
 
-          <div className="flex flex-col gap-3 border-b border-[#eef1ed] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#929a93]">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-muted">
                 WORKER
               </p>
 
-              <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+              <h2 className="mt-1 text-sm font-semibold text-text-primary">
                 Rincian Settlement
               </h2>
 
-              <p className="mt-1 text-[10px] text-[#929a93]">
+              <p className="mt-1 text-[10px] text-text-muted">
                 {workers.length} worker terdaftar pada penjualan ini.
               </p>
             </div>
 
             {loadingKasbon && (
-              <span className="w-fit rounded-full bg-[#f0f3ee] px-2.5 py-1 text-[9px] font-medium text-[#687169]">
+              <span className="w-fit rounded-full bg-surface-soft px-2.5 py-1 text-[9px] font-medium text-text-secondary">
                 Memuat kasbon...
               </span>
             )}
@@ -677,15 +677,15 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
           {workers.length === 0 ? (
             <div className="flex min-h-[240px] flex-col items-center justify-center px-6 text-center">
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[#faeaea] text-sm font-semibold text-[#c85c5c]">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-danger-soft text-sm font-semibold text-danger">
                 !
               </div>
 
-              <h2 className="text-sm font-semibold text-[#17221b]">
+              <h2 className="text-sm font-semibold text-text-primary">
                 Belum ada worker
               </h2>
 
-              <p className="mt-1 text-xs text-[#929a93]">
+              <p className="mt-1 text-xs text-text-muted">
                 Sale ini belum memiliki data worker.
               </p>
             </div>
@@ -696,32 +696,32 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
               <div className="hidden overflow-x-auto lg:block">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="border-b border-[#eef1ed] bg-[#fafbf9]">
-                      <th className="px-5 py-3 text-left text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                    <tr className="border-b border-border bg-surface-soft">
+                      <th className="px-5 py-3 text-left text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                         Worker
                       </th>
 
-                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                         Keping
                       </th>
 
-                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                         Berat
                       </th>
 
-                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                         Bagian Worker
                       </th>
 
-                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                         KASBON
                       </th>
 
-                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                      <th className="px-3 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                         Dibayar dari KASBON
                       </th>
 
-                      <th className="px-5 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-[#929a93]">
+                      <th className="px-5 py-3 text-right text-[9px] font-semibold uppercase tracking-[0.08em] text-text-muted">
                         Diterima
                       </th>
                     </tr>
@@ -746,31 +746,31 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                       return (
                         <tr
                           key={worker.id}
-                          className="border-b border-[#f0f2ef] last:border-b-0"
+                          className="border-b border-surface-soft last:border-b-0"
                         >
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-[#27322c]">
+                              <span className="text-xs font-semibold text-text-primary">
                                 {worker.worker.name}
                               </span>
 
                               {hasRemaining && (
-                                <span className="rounded-full bg-[#fbf3df] px-2 py-0.5 text-[8px] font-semibold text-[#b48624]">
+                                <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[8px] font-semibold text-warning">
                                   Sisa
                                 </span>
                               )}
                             </div>
                           </td>
 
-                          <td className="px-3 py-4 text-right text-xs text-[#687169]">
+                          <td className="px-3 py-4 text-right text-xs text-text-secondary">
                             {worker.pieces}
                           </td>
 
-                          <td className="px-3 py-4 text-right text-xs text-[#687169]">
+                          <td className="px-3 py-4 text-right text-xs text-text-secondary">
                             {formatNumber(weightKg)} kg
                           </td>
 
-                          <td className="px-3 py-4 text-right text-xs font-semibold text-[#17221b]">
+                          <td className="px-3 py-4 text-right text-xs font-semibold text-text-primary">
                             {formatRupiah(workerShare)}
                           </td>
 
@@ -778,15 +778,15 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                             <span
                               className={
                                 hasKasbon
-                                  ? "text-xs font-medium text-[#b48624]"
-                                  : "text-xs text-[#a7aea8]"
+                                  ? "text-xs font-medium text-warning"
+                                  : "text-xs text-text-muted"
                               }
                             >
                               {formatRupiah(kasbon)}
                             </span>
                           </td>
 
-                          <td className="px-3 py-4 text-right text-xs text-[#687169]">
+                          <td className="px-3 py-4 text-right text-xs text-text-secondary">
                             {deduction > 0 ? formatRupiah(deduction) : "-"}
                           </td>
 
@@ -794,8 +794,8 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                             <strong
                               className={
                                 netAmount > 0
-                                  ? "text-xs font-semibold text-[#315f3f]"
-                                  : "text-xs font-semibold text-[#929a93]"
+                                  ? "text-xs font-semibold text-success"
+                                  : "text-xs font-semibold text-text-muted"
                               }
                             >
                               {formatRupiah(netAmount)}
@@ -807,27 +807,27 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                   </tbody>
 
                   <tfoot>
-                    <tr className="bg-[#f7f9f6]">
+                    <tr className="bg-surface-soft">
                       <td
                         colSpan={3}
-                        className="px-5 py-3 text-left text-[10px] font-semibold text-[#687169]"
+                        className="px-5 py-3 text-left text-[10px] font-semibold text-text-secondary"
                       >
                         TOTAL
                       </td>
 
-                      <td className="px-3 py-3 text-right text-xs font-semibold text-[#17221b]">
+                      <td className="px-3 py-3 text-right text-xs font-semibold text-text-primary">
                         {formatRupiah(totalWorkerShare)}
                       </td>
 
-                      <td className="px-3 py-3 text-right text-xs font-semibold text-[#b48624]">
+                      <td className="px-3 py-3 text-right text-xs font-semibold text-warning">
                         {formatRupiah(totalKasbon)}
                       </td>
 
-                      <td className="px-3 py-3 text-right text-xs font-semibold text-[#687169]">
+                      <td className="px-3 py-3 text-right text-xs font-semibold text-text-secondary">
                         {formatRupiah(totalDeduction)}
                       </td>
 
-                      <td className="px-5 py-3 text-right text-xs font-semibold text-[#315f3f]">
+                      <td className="px-5 py-3 text-right text-xs font-semibold text-success">
                         {formatRupiah(totalNetAmount)}
                       </td>
                     </tr>
@@ -853,16 +853,16 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                     <div key={worker.id} className="p-4 sm:p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#f0f3ee] text-[9px] font-medium text-[#929a93]">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-soft text-[9px] font-medium text-text-muted">
                             {index + 1}
                           </span>
 
                           <div className="min-w-0">
-                            <p className="truncate text-xs font-semibold text-[#27322c]">
+                            <p className="truncate text-xs font-semibold text-text-primary">
                               {worker.worker.name}
                             </p>
 
-                            <p className="mt-0.5 text-[9px] text-[#929a93]">
+                            <p className="mt-0.5 text-[9px] text-text-muted">
                               {worker.pieces} keping · {formatNumber(weightKg)}{" "}
                               kg
                             </p>
@@ -870,7 +870,7 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                         </div>
 
                         {remainingKasbon > 0 && (
-                          <span className="shrink-0 rounded-full bg-[#fbf3df] px-2 py-1 text-[8px] font-semibold text-[#b48624]">
+                          <span className="shrink-0 rounded-full bg-warning-soft px-2 py-1 text-[8px] font-semibold text-warning">
                             Sisa KASBON
                           </span>
                         )}
@@ -878,21 +878,21 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
                       <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
                         <div>
-                          <p className="text-[9px] text-[#929a93]">
+                          <p className="text-[9px] text-text-muted">
                             Bagian Worker
                           </p>
 
-                          <p className="mt-0.5 text-xs font-semibold text-[#17221b]">
+                          <p className="mt-0.5 text-xs font-semibold text-text-primary">
                             {formatRupiah(workerShare)}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-[9px] text-[#929a93]">KASBON</p>
+                          <p className="text-[9px] text-text-muted">KASBON</p>
 
                           <p
                             className={`mt-0.5 text-xs font-medium ${
-                              kasbon > 0 ? "text-[#b48624]" : "text-[#929a93]"
+                              kasbon > 0 ? "text-warning" : "text-text-muted"
                             }`}
                           >
                             {formatRupiah(kasbon)}
@@ -900,23 +900,23 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                         </div>
 
                         <div>
-                          <p className="text-[9px] text-[#929a93]">
+                          <p className="text-[9px] text-text-muted">
                             Dibayar dari KASBON
                           </p>
 
-                          <p className="mt-0.5 text-xs text-[#687169]">
+                          <p className="mt-0.5 text-xs text-text-secondary">
                             {deduction > 0 ? formatRupiah(deduction) : "-"}
                           </p>
                         </div>
 
                         <div>
-                          <p className="text-[9px] text-[#929a93]">Diterima</p>
+                          <p className="text-[9px] text-text-muted">Diterima</p>
 
                           <p
                             className={`mt-0.5 text-xs font-semibold ${
                               netAmount > 0
-                                ? "text-[#315f3f]"
-                                : "text-[#929a93]"
+                                ? "text-success"
+                                : "text-text-muted"
                             }`}
                           >
                             {formatRupiah(netAmount)}
@@ -925,12 +925,12 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                       </div>
 
                       {remainingKasbon > 0 && (
-                        <div className="mt-4 flex items-center justify-between rounded-xl bg-[#fbf3df] px-3 py-2">
-                          <span className="text-[9px] font-medium text-[#8e6c21]">
+                        <div className="mt-4 flex items-center justify-between rounded-xl bg-warning-soft px-3 py-2">
+                          <span className="text-[9px] font-medium text-warning">
                             Sisa KASBON
                           </span>
 
-                          <span className="text-[10px] font-semibold text-[#8e6c21]">
+                          <span className="text-[10px] font-semibold text-warning">
                             {formatRupiah(remainingKasbon)}
                           </span>
                         </div>
@@ -941,52 +941,52 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
                 {/* MOBILE TOTAL */}
 
-                <div className="bg-[#f7f9f6] p-4 sm:p-5">
+                <div className="bg-surface-soft p-4 sm:p-5">
                   <div className="mb-3 flex items-center justify-between">
-                    <span className="text-[10px] font-semibold text-[#687169]">
+                    <span className="text-[10px] font-semibold text-text-secondary">
                       TOTAL
                     </span>
 
-                    <span className="text-xs font-semibold text-[#315f3f]">
+                    <span className="text-xs font-semibold text-success">
                       {formatRupiah(totalNetAmount)}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div>
-                      <p className="text-[9px] text-[#929a93]">Bagian Worker</p>
+                      <p className="text-[9px] text-text-muted">Bagian Worker</p>
 
-                      <p className="mt-0.5 text-[10px] font-semibold text-[#17221b]">
+                      <p className="mt-0.5 text-[10px] font-semibold text-text-primary">
                         {formatRupiah(totalWorkerShare)}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-[9px] text-[#929a93]">KASBON</p>
+                      <p className="text-[9px] text-text-muted">KASBON</p>
 
-                      <p className="mt-0.5 text-[10px] font-semibold text-[#b48624]">
+                      <p className="mt-0.5 text-[10px] font-semibold text-warning">
                         {formatRupiah(totalKasbon)}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-[9px] text-[#929a93]">
+                      <p className="text-[9px] text-text-muted">
                         Dibayar dari KASBON
                       </p>
 
-                      <p className="mt-0.5 text-[10px] font-semibold text-[#687169]">
+                      <p className="mt-0.5 text-[10px] font-semibold text-text-secondary">
                         {formatRupiah(totalDeduction)}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-[9px] text-[#929a93]">Sisa KASBON</p>
+                      <p className="text-[9px] text-text-muted">Sisa KASBON</p>
 
                       <p
                         className={`mt-0.5 text-[10px] font-semibold ${
                           totalRemainingKasbon > 0
-                            ? "text-[#b48624]"
-                            : "text-[#929a93]"
+                            ? "text-warning"
+                            : "text-text-muted"
                         }`}
                       >
                         {formatRupiah(totalRemainingKasbon)}
@@ -1001,57 +1001,57 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
         {/* SETTLEMENT SUMMARY */}
 
-        <section className="mb-4 rounded-2xl border border-[#dce8df] bg-[#f2f7f3] p-4 sm:p-5">
+        <section className="mb-4 rounded-2xl border border-border bg-surface-soft p-4 sm:p-5">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#718078]">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-secondary">
                 SETTLEMENT SUMMARY
               </p>
 
-              <h2 className="mt-1 text-sm font-semibold text-[#244c31]">
+              <h2 className="mt-1 text-sm font-semibold text-success">
                 Ringkasan Pembayaran
               </h2>
 
-              <p className="mt-1 text-[10px] text-[#718078]">
+              <p className="mt-1 text-[10px] text-text-secondary">
                 Hasil pembayaran setelah KASBON diperhitungkan.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:min-w-[650px]">
               <div>
-                <p className="text-[9px] text-[#718078]">Total KASBON</p>
+                <p className="text-[9px] text-text-secondary">Total KASBON</p>
 
-                <p className="mt-1 text-xs font-semibold text-[#8e6c21]">
+                <p className="mt-1 text-xs font-semibold text-warning">
                   {formatRupiah(totalKasbon)}
                 </p>
               </div>
 
               <div>
-                <p className="text-[9px] text-[#718078]">Dibayar dari KASBON</p>
+                <p className="text-[9px] text-text-secondary">Dibayar dari KASBON</p>
 
-                <p className="mt-1 text-xs font-semibold text-[#687169]">
+                <p className="mt-1 text-xs font-semibold text-text-secondary">
                   {formatRupiah(totalDeduction)}
                 </p>
               </div>
 
               <div>
-                <p className="text-[9px] text-[#718078]">
+                <p className="text-[9px] text-text-secondary">
                   Total Diterima Worker
                 </p>
 
-                <p className="mt-1 text-sm font-semibold text-[#315f3f]">
+                <p className="mt-1 text-sm font-semibold text-success">
                   {formatRupiah(totalNetAmount)}
                 </p>
               </div>
 
               <div>
-                <p className="text-[9px] text-[#718078]">Sisa KASBON</p>
+                <p className="text-[9px] text-text-secondary">Sisa KASBON</p>
 
                 <p
                   className={`mt-1 text-xs font-semibold ${
                     totalRemainingKasbon > 0
-                      ? "text-[#b48624]"
-                      : "text-[#718078]"
+                      ? "text-warning"
+                      : "text-text-secondary"
                   }`}
                 >
                   {formatRupiah(totalRemainingKasbon)}
@@ -1064,17 +1064,17 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
         {/* ERROR */}
 
         {confirmError && (
-          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#f0d4d4] bg-[#fffafa] p-4">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#faeaea] text-xs font-semibold text-[#c85c5c]">
+          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-border bg-surface-soft p-4">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-danger-soft text-xs font-semibold text-danger">
               !
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-[#a04444]">
+              <p className="text-xs font-semibold text-danger">
                 Tidak dapat mengonfirmasi
               </p>
 
-              <p className="mt-0.5 text-[10px] leading-relaxed text-[#a04444]">
+              <p className="mt-0.5 text-[10px] leading-relaxed text-danger">
                 {confirmError}
               </p>
             </div>
@@ -1084,17 +1084,17 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
         {/* SUCCESS */}
 
         {confirmSuccess && (
-          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#d7e8d2] bg-[#f4f9f2] p-4">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#eaf3e6] text-xs font-semibold text-[#4d873d]">
+          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-border bg-surface-soft p-4">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-xs font-semibold text-success">
               ✓
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-[#315f3f]">
+              <p className="text-xs font-semibold text-success">
                 Settlement berhasil dikonfirmasi
               </p>
 
-              <p className="mt-0.5 text-[10px] text-[#687169]">
+              <p className="mt-0.5 text-[10px] text-text-secondary">
                 Membuka halaman check...
               </p>
             </div>
@@ -1103,19 +1103,19 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
         {/* FINAL ACTION */}
 
-        <section className="flex flex-col gap-5 rounded-2xl border border-[#dce8df] bg-white p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+        <section className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#718078]">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-secondary">
               {hasSettlement ? "SETTLEMENT SELESAI" : "FINAL REVIEW"}
             </p>
 
-            <h2 className="mt-1 text-sm font-semibold text-[#17221b]">
+            <h2 className="mt-1 text-sm font-semibold text-text-primary">
               {hasSettlement
                 ? "Settlement sudah dikonfirmasi"
                 : "Settlement siap ditinjau"}
             </h2>
 
-            <p className="mt-1 text-[10px] text-[#929a93]">
+            <p className="mt-1 text-[10px] text-text-muted">
               {hasSettlement
                 ? "Check pembayaran dapat dicetak kembali kapan saja."
                 : "Periksa data worker dan kasbon sebelum settlement dikonfirmasi."}
@@ -1128,7 +1128,7 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
               onClick={() => {
                 window.location.href = `/settlement/sale/${sale.id}/check`;
               }}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] sm:w-auto sm:min-w-[170px]"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-success-soft px-5 text-xs font-semibold text-white transition hover:bg-success-soft hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] sm:w-auto sm:min-w-[170px]"
             >
               <svg
                 width="16"
@@ -1157,7 +1157,7 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                 workers.length === 0 ||
                 sale.status !== "CONFIRMED"
               }
-              className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-[#315f3f] px-5 text-xs font-semibold text-white transition hover:bg-[#274f34] hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-[#b7c2b8] disabled:shadow-none sm:w-auto sm:min-w-[210px]"
+              className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-success-soft px-5 text-xs font-semibold text-white transition hover:bg-success-soft hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-surface-soft disabled:shadow-none sm:w-auto sm:min-w-[210px]"
             >
               {isConfirming
                 ? "Memproses Settlement..."
