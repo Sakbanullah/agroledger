@@ -10,12 +10,25 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 
 import { AiService } from './ai.service';
+import { getLlmConfig } from './llm.config';
 
 @Controller('ai')
 export class AiController {
   constructor(
     private readonly aiService: AiService,
   ) {}
+
+  @Get('config')
+  getConfig() {
+    const config = getLlmConfig();
+
+    return {
+      provider: config.provider,
+      baseURL: config.baseURL,
+      model: config.model,
+      apiKey: config.apiKey ? '***' : '',
+    };
+  }
 
   @Get('test')
   testConnection() {
