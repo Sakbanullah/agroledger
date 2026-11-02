@@ -1,76 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
-
-import { GoogleGenAI } from '@google/genai';
-
-import { rubberNoteSchema } from './schemas/rubber-note.schema';
-
-import { RubberWorkersService } from '../rubber-workers/rubber-workers.service';
-
-@Injectable()
-export class AiService {
-  private readonly ai: GoogleGenAI;
-
-  constructor(
-    private readonly rubberWorkersService: RubberWorkersService,
-  ) {
-    this.ai = new GoogleGenAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    });
-  }
-
-  async testConnection() {
-    const response =
-      await this.ai.models.generateContent({
-        model: 'gemini-3.6-flash',
-        contents:
-          'Reply with exactly: AgroLedger AI connected',
-      });
-
-    return response.text;
-  }
-
-  async scanRubberNote(
-    imageBuffer: Buffer,
-    mimeType: string,
-  ) {
-    console.log('[AI] Scan request received');
-
-    console.log(
-      '[AI] Image size:',
-      imageBuffer.length,
-    );
-
-    console.log(
-      '[AI] MIME type:',
-      mimeType,
-    );
-
-    const base64Image =
-      imageBuffer.toString('base64');
-
-    console.log(
-      '[AI] Sending request to Gemini...',
-    );
-
-    const response =
-      await this.generateGeminiContent(
-        [
-          {
-            role: 'user',
-
-            parts: [
-              {
-                inlineData: {
-                  mimeType,
-                  data: base64Image,
-                },
-              },
-
-              {
-                text: `
+const RUBBER_NOTE_PROMPT = `
 You are the document extraction system for AgroLedger.
 
 Analyze the uploaded image of a handwritten rubber sale record.
@@ -98,124 +26,182 @@ Important rules:
 12. Do not create or identify database worker IDs.
 13. Do not merge different workers.
 14. Extract all identifiable worker rows.
-15. If a row exists but one of its values is unclear, still return the worker with null for the unclear value.
-16. Return only the requested structured data.
-                `,
-              },
-            ],
-          },
-        ],
-        {
-          responseMimeType: 'application/json',
-          responseSchema: rubberNoteSchema,
-        },
-      );
+15. Return only the requested structured data.
+`;
 
-    console.log(
-      '[AI] Gemini response received',
-    );
 
-    console.log(
-      '[AI] Response:',
-      response.text,
-    );
+import {
+  BadRequestException,
+  Injectable,
+} from '@nestjs/common';
 
-    const parsedResult =
-      this.parseRubberNoteResult(
-        response.text,
-      );
+import { GoogleGenAI } from '@google/genai';
+import OpenAI from 'openai';
 
-    const validatedResult =
-      this.validateRubberNoteResult(
-        parsedResult,
-      );
+import { getLlmConfig } from './llm.config';
+import { rubberNoteSchema } from './schemas/rubber-note.schema';
 
-    return this.attachWorkerMatches(
-      validatedResult,
-    );
+import { RubberWorkersService } from '../rubber-workers/rubber-workers.service';
+
+interface GenerateOptions {
+  image?: { buffer: Buffer; mimeType: string };
+  prompt?: string;
+  json?: boolean;
+  retries?: boolean;
+}
+
+@Injectable()
+export class AiService {
+  constructor(
+    private readonly rubberWorkersService: RubberWorkersService,
+  ) {}
+
+  async testConnection() {
+    const text = await this.generateText({
+      prompt: 'Reply with exactly: AgroLedger AI connected',
+      retries: false,
+    });
+
+    return text;
   }
 
-  private async generateGeminiContent(
-    contents: any,
-    config: any,
+  private async generateText(options: GenerateOptions) {
+    const config = getLlmConfig();
+
+    if (config.provider === 'gemini') {
+      return this.generateGemini(config, options);
+    }
+
+    return this.generateOpenAi(config, options);
+  }
+
+  private async generateOpenAi(
+    config: ReturnType<typeof getLlmConfig>,
+    options: GenerateOptions,
   ) {
-    const maxAttempts = 3;
+    const client = new OpenAI({
+      apiKey: config.apiKey,
+      baseURL: config.baseURL,
+    });
 
-    const delays = [
-      2000,
-      4000,
-    ];
+    const content: OpenAI.Chat.ChatCompletionContentPart[] = [];
 
-    for (
-      let attempt = 1;
-      attempt <= maxAttempts;
-      attempt++
-    ) {
+    if (options.prompt) {
+      content.push({ type: 'text', text: options.prompt });
+    }
+
+    if (options.image) {
+      content.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:${options.image.mimeType};base64,${options.image.buffer.toString('base64')}`,
+        },
+      });
+    }
+
+    const response = await client.chat.completions.create({
+      model: config.model,
+      messages: [{ role: 'user', content }],
+      // ponytail: many OpenAI-compatible gateways ignore this; prompt forces JSON too.
+      ...(options.json ? { response_format: { type: 'json_object' as const } } : {}),
+    });
+
+    return response.choices[0]?.message?.content || '';
+  }
+
+  private async generateGemini(
+    config: ReturnType<typeof getLlmConfig>,
+    options: GenerateOptions,
+  ) {
+    const client = new GoogleGenAI({ apiKey: config.apiKey });
+
+    const parts: Array<
+      | { text: string }
+      | { inlineData: { mimeType: string; data: string } }
+    > = [];
+
+    if (options.image) {
+      parts.push({
+        inlineData: {
+          mimeType: options.image.mimeType,
+          data: options.image.buffer.toString('base64'),
+        },
+      });
+    }
+
+    if (options.prompt) {
+      parts.push({ text: options.prompt });
+    }
+
+    const run = () =>
+      client.models.generateContent({
+        model: config.model,
+        contents: [{ role: 'user', parts }],
+        config: options.json
+          ? { responseMimeType: 'application/json', responseSchema: rubberNoteSchema }
+          : undefined,
+      });
+
+    const response = options.retries ? await this.withRetry(run) : await run();
+
+    return response.text || '';
+  }
+
+  private async withRetry<T>(run: () => Promise<T>): Promise<T> {
+    const delays = [2000, 4000];
+
+    for (let attempt = 1; attempt <= delays.length + 1; attempt++) {
       try {
-        console.log(
-          `[AI] Gemini attempt ${attempt}/${maxAttempts}`,
-        );
-
-        const response =
-          await this.ai.models.generateContent({
-            model: 'gemini-3.6-flash',
-            contents,
-            config,
-          });
-
-        return response;
+        return await run();
       } catch (error) {
         const status =
-          typeof error === 'object' &&
-          error !== null &&
-          'status' in error
-            ? Number(
-                (
-                  error as {
-                    status?: unknown;
-                  }
-                ).status,
-              )
+          typeof error === 'object' && error !== null && 'status' in error
+            ? Number((error as { status?: unknown }).status)
             : undefined;
 
-        console.error(
-          `[AI] Gemini attempt ${attempt} failed with status ${status}`,
-        );
+        console.error(`[AI] attempt ${attempt} failed with status ${status}`);
 
-        if (
-          status !== 503 ||
-          attempt === maxAttempts
-        ) {
+        if (status !== 503 || attempt === delays.length + 1) {
           throw error;
         }
 
-        console.log(
-          `[AI] Gemini unavailable. Retrying in ${
-            delays[attempt - 1]
-          }ms...`,
-        );
-
-        await new Promise(
-          (resolve) =>
-            setTimeout(
-              resolve,
-              delays[attempt - 1],
-            ),
-        );
+        await new Promise((resolve) => setTimeout(resolve, delays[attempt - 1]));
       }
     }
 
-    throw new BadRequestException(
-      'Gemini gagal memproses request',
+    throw new BadRequestException('LLM gagal memproses request');
+  }
+
+  async scanRubberNote(
+    imageBuffer: Buffer,
+    mimeType: string,
+  ) {
+    console.log('[AI] Scan request received');
+
+    const text = await this.generateText({
+      image: { buffer: imageBuffer, mimeType },
+      prompt: `${RUBBER_NOTE_PROMPT}
+
+Return a JSON object with this exact shape:
+{"workers":[{"name":string|null,"pieces":integer|null,"weightKg":number|null}]}`,
+      json: true,
+      retries: true,
+    });
+
+    console.log('[AI] Response:', text);
+
+    return this.attachWorkerMatches(
+      this.validateRubberNoteResult(this.parseRubberNoteResult(text)),
     );
   }
+
 
   private parseRubberNoteResult(
     responseText: string | undefined,
   ) {
     if (!responseText) {
       throw new BadRequestException(
-        'Gemini tidak mengembalikan hasil extraction',
+        'LLM tidak mengembalikan hasil extraction',
       );
     }
 
@@ -227,7 +213,7 @@ Important rules:
       );
     } catch {
       throw new BadRequestException(
-        'Hasil extraction Gemini bukan JSON yang valid',
+        'Hasil extraction LLM bukan JSON yang valid',
       );
     }
 
@@ -240,7 +226,7 @@ Important rules:
       )
     ) {
       throw new BadRequestException(
-        'Format hasil extraction Gemini tidak valid',
+        'Format hasil extraction LLM tidak valid',
       );
     }
 
@@ -265,7 +251,7 @@ Important rules:
       )
     ) {
       throw new BadRequestException(
-        'Hasil extraction Gemini tidak memiliki format workers yang valid',
+        'Hasil extraction LLM tidak memiliki format workers yang valid',
       );
     }
 

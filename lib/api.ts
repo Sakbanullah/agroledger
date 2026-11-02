@@ -467,3 +467,21 @@ export async function updateSetting(key: string, value: number) {
   }
   return response.json();
 }
+
+export async function scanRubberNote(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_URL}/ai/scan/rubber-note`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Gagal melakukan scan catatan.");
+  }
+
+  return data;
+}

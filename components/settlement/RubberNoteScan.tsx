@@ -2,6 +2,8 @@
 
 import { ChangeEvent, useEffect, useState } from "react";
 
+import { scanRubberNote } from "@/lib/api";
+
 interface RubberNoteScanProps {
   saleId: number;
 }
@@ -121,25 +123,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     setFinalReview(null);
 
     try {
-      const formData = new FormData();
-
-      formData.append("file", file);
-
-      const response = await fetch(
-        "http://localhost:3001/ai/scan/rubber-note",
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Gagal melakukan scan catatan.");
-      }
-
-      const result = data as ScanResponse;
+      const result = (await scanRubberNote(file)) as ScanResponse;
 
       const scannedWorkers = result.workers.map((worker) => ({
         name: worker.name,
