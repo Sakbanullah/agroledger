@@ -10,7 +10,6 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 
 import { AiService } from './ai.service';
-import { getLlmConfig } from './llm.config';
 
 @Controller('ai')
 export class AiController {
@@ -18,16 +17,11 @@ export class AiController {
     private readonly aiService: AiService,
   ) {}
 
+  // Replaces the old env-only config endpoint: reports which provider is in
+  // effect, and never any part of an API key.
   @Get('config')
   getConfig() {
-    const config = getLlmConfig();
-
-    return {
-      provider: config.provider,
-      baseURL: config.baseURL,
-      model: config.model,
-      apiKey: config.apiKey ? '***' : '',
-    };
+    return this.aiService.describeConfig();
   }
 
   @Get('test')

@@ -113,14 +113,37 @@ AgroLedger adalah sistem manajemen keuangan dan operasional untuk bisnis pertani
 - Dashboard menampilkan ringkasan cash‑flow multi‑farm.
 - Laporan periodik dengan filter tanggal.
 - Settings untuk mengubah tarif komisi default.
+- Settings → AI / LLM Providers untuk mengatur provider LLM sendiri (Base URL,
+  API key, model), menguji koneksi, dan memilih default tanpa mengubah kode.
 - Modul People, Farms, Transactions, Harvest, Credit/Kasbon, Rubber Workers berfungsi.
 - Tidak ada mekanisme autentikasi/otorisasi (tercatat sebagai technical debt).
 
 ## Technical debt yang diketahui
 - **Autentikasi** – endpoint API terbuka, belum ada JWT guard.
 - **Penggunaan `any`** – beberapa layanan masih memakai tipe `any` untuk prototipe cepat.
-- **AI modules** (`backend/src/ai/`) ada tetapi tidak terpakai dalam alur produksi.
+- **AI modules** (`backend/src/ai/`) dipakai untuk scan catatan karet; provider
+  LLM-nya kini dapat dikonfigurasi lewat Settings (lihat *Konfigurasi LLM*).
 - **Lingkungan** – variabel env harus di‑setup manual; tidak ada fallback default.
+
+## Konfigurasi LLM
+
+Provider LLM dikelola lewat **Settings → AI / LLM Providers**. Provider aktif
+disimpan di database dan dipakai fitur AI (scan catatan karet). Bila tidak ada
+provider aktif, aplikasi memakai konfigurasi environment seperti sebelumnya —
+tidak ada fallback diam-diam ketika provider aktif rusak.
+
+Variabel environment yang relevan:
+
+| Variabel | Fungsi |
+|---|---|
+| `LLM_ENCRYPTION_KEY` | Master key AES-256-GCM (32 byte hex/base64) untuk mengenkripsi API key di database. Wajib bila menyimpan provider yang punya API key. |
+| `LLM_ALLOW_INSECURE_URLS` | `true` untuk mengizinkan Base URL `http://` ke host lokal/privat (mis. Ollama `http://localhost:11434/v1`). |
+| `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Konfigurasi fallback lama, hanya dipakai bila tidak ada provider aktif. |
+
+Protokol yang didukung saat ini: `openai` (semua endpoint [OI]-compatible:
+9Router, OpenRouter, [OI], DeepSeek, Qwen, self-hosted) dan `gemini`.
+API key tidak pernah dikirim balik ke browser, tidak dicatat di log, dan
+disimpan dalam bentuk ciphertext.
 - **Beberapa komponen UI** masih menggunakan utilitas warna lama yang telah dimigrasi namun belum seluruhnya dibersihkan.
 
 *Dokumentasi ini disusun berdasarkan kode yang ada dan dokumen bisnis resmi.*

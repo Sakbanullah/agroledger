@@ -485,3 +485,164 @@ export async function scanRubberNote(file: File) {
 
   return data;
 }
+
+// ---------------------------------------------------------------------------
+// LLM providers
+// ---------------------------------------------------------------------------
+
+export type LlmProtocol = "openai" | "gemini";
+
+export interface LlmModelPayload {
+  id: string;
+  displayName?: string | null;
+  params?: Record<string, unknown> | null;
+}
+
+export interface LlmProviderPayload {
+  name: string;
+  protocol: LlmProtocol;
+  baseUrl: string;
+  apiKey?: string | null;
+  customHeaders?: Record<string, string> | null;
+  timeoutMs?: number;
+  enabled?: boolean;
+  models: LlmModelPayload[];
+  defaultModelId?: string | null;
+}
+
+export interface LlmProviderView {
+  id: number;
+  name: string;
+  protocol: string;
+  baseUrl: string;
+  hasApiKey: boolean;
+  customHeaders: Record<string, string> | null;
+  timeoutMs: number;
+  enabled: boolean;
+  isActive: boolean;
+  models: Array<{
+    id: string;
+    displayName: string | null;
+    params: Record<string, unknown> | null;
+    isDefault: boolean;
+  }>;
+  lastTestStatus: string | null;
+  lastTestAt: string | null;
+  lastTestMessage: string | null;
+}
+
+export interface LlmTestResult {
+  ok: boolean;
+  modelId: string | null;
+  message: string;
+}
+
+export interface AiConfigView {
+  source: "database" | "environment";
+  providerName: string | null;
+  protocol: string;
+  baseURL: string;
+  model: string;
+  hasApiKey: boolean;
+}
+
+/** Reads the backend error body rather than assuming a plain string. */
+async function readError(response: Response, fallback: string) {
+  try {
+    const data = await response.json();
+    const message = Array.isArray(data?.message)
+      ? data.message.join(", ")
+      : data?.message;
+    return new Error(message || fallback);
+  } catch {
+    return new Error(fallback);
+  }
+}
+
+async function jsonRequest(
+  url: string,
+  method: string,
+  body?: unknown,
+  fallback = "Permintaan gagal",
+) {
+  const response = await fetch(url, {
+    method,
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw await readError(response, fallback);
+  }
+
+  return response.json();
+}
+
+export async function getLlmProviders(): Promise<LlmProviderView[]> {
+  return jsonRequest(
+    `${API_URL}/llm/providers`,
+    "GET",
+    undefined,
+    "Gagal mengambil provider LLM",
+  );
+}
+
+export async function createLlmProvider(data: LlmProviderPayload) {
+  return jsonRequest(`${API_URL}/llm/providers`, "POST", data);
+}
+
+export async function updateLlmProvider(id: number, data: LlmProviderPayload) {
+  return jsonRequest(`${API_URL}/llm/providers/${id}`, "PATCH", data);
+}
+
+export async function deleteLlmProvider(
+  id: number,
+  replacementProviderId?: number | null,
+) {
+  const query = replacementProviderId
+    ? `?replacementProviderId=${replacementProviderId}`
+    : "";
+
+  return jsonRequest(
+    `${API_URL}/llm/providers/${id}${query}`,
+    "DELETE",
+    undefined,
+    "Gagal menghapus provider",
+  );
+}
+
+export async function activateLlmProvider(id: number, modelId?: string | null) {
+  return jsonRequest(`${API_URL}/llm/providers/${id}/activate`, "POST", {
+    modelId: modelId ?? null,
+  });
+}
+
+/** Tests a saved provider. Never returns key material. */
+export async function testLlmProvider(
+  id: number,
+  modelId?: string | null,
+): Promise<{ results: LlmTestResult[]; provider: LlmProviderView | null }> {
+  return jsonRequest(`${API_URL}/llm/providers/${id}/test`, "POST", {
+    modelId: modelId ?? null,
+  });
+}
+
+/** Tests the form's current values without saving anything. */
+export async function testUnsavedLlmProvider(
+  data: Pick<
+    LlmProviderPayload,
+    "protocol" | "baseUrl" | "apiKey" | "customHeaders" | "timeoutMs"
+  > & { modelIds: string[] },
+): Promise<{ results: LlmTestResult[] }> {
+  return jsonRequest(`${API_URL}/llm/providers/test`, "POST", data);
+}
+
+export async function getAiConfig(): Promise<AiConfigView> {
+  return jsonRequest(
+    `${API_URL}/ai/config`,
+    "GET",
+    undefined,
+    "Gagal mengambil konfigurasi AI",
+  );
+}
