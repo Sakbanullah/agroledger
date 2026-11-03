@@ -98,7 +98,7 @@ model Sale {
   commodityId   Int
   saleDate      DateTime
   pricePerKg    Decimal? @db.Decimal(12, 2)
-  totalWeightKg Decimal?  @db.Decimal(12, 2)
+  totalWeightKg Decimal? @db.Decimal(12, 2)
   buyerName     String?
   status        String   @default("PENDING")
   notes         String?
@@ -233,8 +233,8 @@ model MoneyTransaction {
 }
 
 model OwnerSettlement {
-  id     Int @id @default(autoincrement())
-  saleId Int
+  id      Int @id @default(autoincrement())
+  saleId  Int
   ownerId Int
 
   ownerShareAmount  Decimal @db.Decimal(12, 2)
@@ -251,4 +251,47 @@ model OwnerSettlement {
   @@unique([saleId, ownerId])
   @@index([saleId])
   @@index([ownerId])
+}
+
+model LlmProvider {
+  id        Int     @id @default(autoincrement())
+  name      String
+  protocol  String
+  baseUrl   String
+  // AES-256-GCM payload. Null means the endpoint needs no credential.
+  apiKeyEnc String? @db.Text
+
+  customHeaders Json?
+  timeoutMs     Int     @default(60000)
+  enabled       Boolean @default(true)
+  isActive      Boolean @default(false)
+
+  // Last connection test. Never set by a plain save: an untested provider
+  // must not look connected.
+  lastTestStatus  String?
+  lastTestAt      DateTime?
+  lastTestMessage String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  models LlmModel[]
+
+  @@index([isActive])
+}
+
+model LlmModel {
+  id          Int     @id @default(autoincrement())
+  providerId  Int
+  modelId     String
+  displayName String?
+  params      Json?
+  isDefault   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  provider LlmProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, modelId])
 }

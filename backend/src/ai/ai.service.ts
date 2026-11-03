@@ -35,10 +35,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 
-import { GoogleGenAI } from '@google/genai';
-import OpenAI from 'openai';
-
-import { getLlmConfig } from './llm.config';
+import { ResolveActiveLlmUseCase } from '../llm/application/use-cases/resolve-active-llm.use-case';
 import { rubberNoteSchema } from './schemas/rubber-note.schema';
 
 import { RubberWorkersService } from '../rubber-workers/rubber-workers.service';
@@ -47,6 +44,7 @@ interface GenerateOptions {
   image?: { buffer: Buffer; mimeType: string };
   prompt?: string;
   json?: boolean;
+  schema?: unknown;
   retries?: boolean;
 }
 
@@ -54,6 +52,7 @@ interface GenerateOptions {
 export class AiService {
   constructor(
     private readonly rubberWorkersService: RubberWorkersService,
+    private readonly resolveLlm: ResolveActiveLlmUseCase,
   ) {}
 
   async testConnection() {
@@ -65,86 +64,35 @@ export class AiService {
     return text;
   }
 
+  /** Which LLM the next call uses: the active provider, else environment config. */
+  async describeConfig() {
+    const resolved = await this.resolveLlm.execute();
+
+    return {
+      source: resolved.source,
+      providerName: resolved.providerName,
+      protocol: resolved.context.protocol,
+      baseURL: resolved.context.baseUrl,
+      model: resolved.modelId,
+      hasApiKey: !!resolved.context.apiKey,
+    };
+  }
+
   private async generateText(options: GenerateOptions) {
-    const config = getLlmConfig();
-
-    if (config.provider === 'gemini') {
-      return this.generateGemini(config, options);
-    }
-
-    return this.generateOpenAi(config, options);
-  }
-
-  private async generateOpenAi(
-    config: ReturnType<typeof getLlmConfig>,
-    options: GenerateOptions,
-  ) {
-    const client = new OpenAI({
-      apiKey: config.apiKey,
-      baseURL: config.baseURL,
-    });
-
-    const content: OpenAI.Chat.ChatCompletionContentPart[] = [];
-
-    if (options.prompt) {
-      content.push({ type: 'text', text: options.prompt });
-    }
-
-    if (options.image) {
-      content.push({
-        type: 'image_url',
-        image_url: {
-          url: `data:${options.image.mimeType};base64,${options.image.buffer.toString('base64')}`,
-        },
-      });
-    }
-
-    const response = await client.chat.completions.create({
-      model: config.model,
-      messages: [{ role: 'user', content }],
-      // ponytail: many OpenAI-compatible gateways ignore this; prompt forces JSON too.
-      ...(options.json ? { response_format: { type: 'json_object' as const } } : {}),
-    });
-
-    return response.choices[0]?.message?.content || '';
-  }
-
-  private async generateGemini(
-    config: ReturnType<typeof getLlmConfig>,
-    options: GenerateOptions,
-  ) {
-    const client = new GoogleGenAI({ apiKey: config.apiKey });
-
-    const parts: Array<
-      | { text: string }
-      | { inlineData: { mimeType: string; data: string } }
-    > = [];
-
-    if (options.image) {
-      parts.push({
-        inlineData: {
-          mimeType: options.image.mimeType,
-          data: options.image.buffer.toString('base64'),
-        },
-      });
-    }
-
-    if (options.prompt) {
-      parts.push({ text: options.prompt });
-    }
+    const resolved = await this.resolveLlm.execute();
 
     const run = () =>
-      client.models.generateContent({
-        model: config.model,
-        contents: [{ role: 'user', parts }],
-        config: options.json
-          ? { responseMimeType: 'application/json', responseSchema: rubberNoteSchema }
-          : undefined,
+      resolved.client.generate(resolved.context, {
+        prompt: options.prompt,
+        image: options.image,
+        json: options.json,
+        schema: options.schema,
+        model: { id: resolved.modelId, params: resolved.params },
       });
 
     const response = options.retries ? await this.withRetry(run) : await run();
 
-    return response.text || '';
+    return response.text;
   }
 
   private async withRetry<T>(run: () => Promise<T>): Promise<T> {
@@ -185,6 +133,7 @@ export class AiService {
 Return a JSON object with this exact shape:
 {"workers":[{"name":string|null,"pieces":integer|null,"weightKg":number|null}]}`,
       json: true,
+      schema: rubberNoteSchema,
       retries: true,
     });
 

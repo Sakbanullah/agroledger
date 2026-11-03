@@ -3,6 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { Loader2, Check, Settings as SettingsIcon } from "lucide-react";
 import { getSettings, updateSetting } from "@/lib/api";
+import LlmProvidersSection from "@/components/settings/LlmProvidersSection";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -168,6 +169,8 @@ export default function SettingsPage() {
             </form>
           )}
         </section>
+
+        <LlmProvidersSection />
       </div>
     </main>
   );

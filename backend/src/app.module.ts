@@ -14,6 +14,7 @@ import { OwnerSettlementsModule } from './owner-settlements/owner-settlements.mo
 import { MoneyTransactionsModule } from './money-transactions/money-transactions.module';
 import { ReportsModule } from './reports/reports.module';
 import { AiModule } from './ai/ai.module';
+import { LlmModule } from './llm/llm.module';
 import { WorkersModule } from './workers/workers.module';
 import { SettingsModule } from './settings/settings.module';
 
@@ -36,6 +37,7 @@ import { SettingsModule } from './settings/settings.module';
     MoneyTransactionsModule,
     ReportsModule,
     AiModule,
+    LlmModule,
     WorkersModule,
     SettingsModule,
   ],
