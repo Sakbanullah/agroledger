@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useEffectEvent } from "react";
 
 import { getDashboardSummary, getFarm } from "@/lib/api";
 
