@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { PeopleService } from '../people/people.service';
+import { PERSON_TYPE_WORKER } from '../people/person-type.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRubberWorkerDto } from './dto/create-rubber-worker.dto';
 import { UpdateRubberWorkerDto } from './dto/update-rubber-worker.dto';
@@ -12,12 +14,15 @@ import { SaveScannedWorkersDto } from './dto/save-scanned-workers.dto';
 
 @Injectable()
 export class RubberWorkersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly people: PeopleService,
+  ) {}
 
   async findAll() {
     return this.prisma.person.findMany({
       where: {
-        type: 'WORKER',
+        type: PERSON_TYPE_WORKER,
       },
       orderBy: {
         createdAt: 'desc',
@@ -29,7 +34,7 @@ export class RubberWorkersService {
     const worker = await this.prisma.person.findFirst({
       where: {
         id,
-        type: 'WORKER',
+        type: PERSON_TYPE_WORKER,
       },
     });
 
@@ -49,7 +54,7 @@ export class RubberWorkersService {
 
     const workers = await this.prisma.person.findMany({
       where: {
-        type: 'WORKER',
+        type: PERSON_TYPE_WORKER,
       },
       orderBy: {
         name: 'asc',
@@ -70,7 +75,7 @@ export class RubberWorkersService {
 
     const workers = await this.prisma.person.findMany({
       where: {
-        type: 'WORKER',
+        type: PERSON_TYPE_WORKER,
       },
       orderBy: {
         name: 'asc',
@@ -171,26 +176,11 @@ export class RubberWorkersService {
   async createFromCandidate(
     createWorkerCandidateDto: CreateWorkerCandidateDto,
   ) {
-    const name = createWorkerCandidateDto.name.trim();
-
-    const existingWorker = await this.prisma.person.findFirst({
-      where: {
-        type: 'WORKER',
-        name: {
-          equals: name,
-        },
-      },
-    });
-
-    if (existingWorker) {
-      throw new BadRequestException('Worker dengan nama tersebut sudah ada');
-    }
-
-    return this.prisma.person.create({
-      data: {
-        name,
-        type: 'WORKER',
-      },
+    // Delegated so scanned/candidate workers obey the Person uniqueness rule;
+    // otherwise a duplicate would silently never show up in Kasbon.
+    return this.people.create({
+      name: createWorkerCandidateDto.name,
+      type: PERSON_TYPE_WORKER,
     });
   }
   async create(createRubberWorkerDto: CreateRubberWorkerDto) {
@@ -220,7 +210,7 @@ export class RubberWorkersService {
       throw new NotFoundException('Worker tidak ditemukan');
     }
 
-    if (worker.type !== 'WORKER') {
+    if (worker.type !== PERSON_TYPE_WORKER) {
       throw new BadRequestException('Person yang dipilih bukan worker');
     }
 
@@ -329,7 +319,7 @@ export class RubberWorkersService {
           id: {
             in: workerIds,
           },
-          type: 'WORKER',
+          type: PERSON_TYPE_WORKER,
         },
       });
 

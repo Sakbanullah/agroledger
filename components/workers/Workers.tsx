@@ -211,7 +211,11 @@ export default function Workers() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Gagal menghapus worker.");
+        throw new Error(
+          Array.isArray(data.message)
+            ? data.message.join(", ")
+            : data.message || "Gagal menghapus worker.",
+        );
       }
 
       setModal(null);

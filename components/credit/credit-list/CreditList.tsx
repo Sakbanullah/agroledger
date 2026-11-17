@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AddDebt from "../add-debt/AddDebt";
+import { apiBaseUrl } from "@/lib/api";
 
 interface Worker {
   id: number;
@@ -55,6 +56,11 @@ export default function CreditList() {
     null,
   );
 
+  // Bumps after a kasbon is added so the list re-reads instead of
+  // window.location.reload(). Also re-reads when the tab regains focus: a
+  // Person added on another page is the same row in the same table.
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -62,8 +68,8 @@ export default function CreditList() {
         setError("");
 
         const [workersResponse, accountsResponse] = await Promise.all([
-          fetch("http://localhost:3001/rubber-workers"),
-          fetch("http://localhost:3001/credit/accounts"),
+          fetch(`${apiBaseUrl()}/rubber-workers`),
+          fetch(`${apiBaseUrl()}/credit/accounts`),
         ]);
 
         if (!workersResponse.ok) {
@@ -88,6 +94,22 @@ export default function CreditList() {
     };
 
     fetchData();
+  }, [reloadKey]);
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        setReloadKey((key) => key + 1);
+      }
+    };
+
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
   }, []);
 
   const creditWorkers = useMemo<CreditWorker[]>(() => {
@@ -157,7 +179,7 @@ export default function CreditList() {
 
   const handleAddDebtSuccess = () => {
     setSelectedWorker(null);
-    window.location.reload();
+    setReloadKey((key) => key + 1);
   };
 
   return (

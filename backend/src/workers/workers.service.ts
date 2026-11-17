@@ -1,19 +1,20 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
+import { PeopleService } from '../people/people.service';
+import { PERSON_TYPE_WORKER } from '../people/person-type.constants';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class WorkersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly people: PeopleService,
+  ) {}
 
   async findAll() {
     return this.prisma.person.findMany({
       where: {
-        type: 'WORKER',
+        type: PERSON_TYPE_WORKER,
       },
       orderBy: {
         createdAt: 'desc',
@@ -25,7 +26,7 @@ export class WorkersService {
     const worker = await this.prisma.person.findFirst({
       where: {
         id,
-        type: 'WORKER',
+        type: PERSON_TYPE_WORKER,
       },
     });
 
@@ -36,94 +37,28 @@ export class WorkersService {
     return worker;
   }
 
+  /** Delegates so worker names obey the same Person uniqueness rule. */
   async create(name: string, phone?: string) {
-    const existingWorker = await this.prisma.person.findFirst({
-      where: {
-        type: 'WORKER',
-        name: {
-          equals: name,
-        },
-      },
-    });
-
-    if (existingWorker) {
-      throw new BadRequestException(
-        'Worker dengan nama tersebut sudah ada',
-      );
-    }
-
-    return this.prisma.person.create({
-      data: {
-        name,
-        phone,
-        type: 'WORKER',
-      },
+    return this.people.create({
+      name,
+      phone,
+      type: PERSON_TYPE_WORKER,
     });
   }
 
   async update(id: number, name: string, phone?: string) {
-    const worker = await this.findOne(id);
+    await this.findOne(id);
 
-    const existingWorker = await this.prisma.person.findFirst({
-      where: {
-        type: 'WORKER',
-        name: {
-          equals: name,
-        },
-        NOT: {
-          id: worker.id,
-        },
-      },
-    });
-
-    if (existingWorker) {
-      throw new BadRequestException(
-        'Worker dengan nama tersebut sudah ada',
-      );
-    }
-
-    return this.prisma.person.update({
-      where: {
-        id,
-      },
-      data: {
-        name,
-        phone,
-      },
+    return this.people.update(id, {
+      name,
+      phone,
+      type: PERSON_TYPE_WORKER,
     });
   }
 
+  /** Same guard as /people/:id, restricted to workers. */
   async remove(id: number) {
     await this.findOne(id);
-
-    const rubberSaleWorker = await this.prisma.rubberSaleWorker.findFirst({
-      where: {
-        workerId: id,
-      },
-    });
-
-    if (rubberSaleWorker) {
-      throw new BadRequestException(
-        'Worker tidak dapat dihapus karena sudah memiliki riwayat penjualan karet',
-      );
-    }
-
-    const creditAccount = await this.prisma.creditAccount.findUnique({
-      where: {
-        personId: id,
-      },
-    });
-
-    if (creditAccount) {
-      throw new BadRequestException(
-        'Worker tidak dapat dihapus karena sudah memiliki akun kasbon',
-      );
-    }
-
-    return this.prisma.person.delete({
-      where: {
-        id,
-      },
-    });
+    return this.people.remove(id);
   }
 }
