@@ -144,12 +144,34 @@ export default function PeoplePage() {
   };
 
   // ----- Delete -----
-  const handleDelete = async (id: number) => {
+  const openDeleteModal = (person: Person) => {
+    setSelectedPerson(person);
+    setError("");
+    setShowDeleteModal(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeleting) return;
+    setShowDeleteModal(false);
+    setSelectedPerson(null);
+    setError("");
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPerson) return;
+
+    const id = selectedPerson.id;
+
     try {
       setIsDeleting(true);
+      setError("");
       await deletePerson(id);
       setPeople((c) => c.filter((p) => p.id !== id));
+      setShowDeleteModal(false);
+      setSelectedPerson(null);
     } catch (err) {
+      // 409 from the API carries the specific blocker reason; keep the dialog
+      // open so the user can read why this person cannot be deleted.
       setError(err instanceof Error ? err.message : "Gagal menghapus person.");
     } finally {
       setIsDeleting(false);
@@ -468,10 +490,7 @@ export default function PeoplePage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setSelectedPerson(p);
-                                  setShowDeleteModal(true);
-                                }}
+                                onClick={() => openDeleteModal(p)}
                                 className="inline-flex h-8 items-center gap-1.5 rounded-[8px] px-2.5 text-[10px] font-medium text-text-secondary transition hover:bg-danger-soft hover:text-danger"
                               >
                                 Hapus
@@ -541,10 +560,7 @@ export default function PeoplePage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => {
-                                setSelectedPerson(p);
-                                setShowDeleteModal(true);
-                              }}
+                              onClick={() => openDeleteModal(p)}
                               className="inline-flex h-7 items-center rounded-[7px] px-2 text-[10px] font-medium text-text-secondary transition hover:bg-danger-soft hover:text-danger"
                             >
                               Hapus
@@ -593,12 +609,15 @@ export default function PeoplePage() {
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold text-text-secondary">Tipe (opsional)</label>
-                    <input
-                      type="text"
+                    <select
                       value={type}
                       onChange={(e) => setType(e.target.value)}
                       className="h-10 w-full rounded-[9px] border border-border bg-surface px-3 text-sm text-text-primary focus:border-border"
-                    />
+                    >
+                      <option value="">Tanpa tipe</option>
+                      <option value="WORKER">Worker</option>
+                      <option value="RELATIVE_OWNER">Pemilik Saudara</option>
+                    </select>
                   </div>
                 </div>
                 <div className="mt-5 flex justify-end gap-2 border-t border-border pt-4">
@@ -647,12 +666,15 @@ export default function PeoplePage() {
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-semibold text-text-secondary">Tipe (opsional)</label>
-                    <input
-                      type="text"
+                    <select
                       value={type}
                       onChange={(e) => setType(e.target.value)}
                       className="h-10 w-full rounded-[9px] border border-border bg-surface px-3 text-sm text-text-primary focus:border-border"
-                    />
+                    >
+                      <option value="">Tanpa tipe</option>
+                      <option value="WORKER">Worker</option>
+                      <option value="RELATIVE_OWNER">Pemilik Saudara</option>
+                    </select>
                   </div>
                 </div>
                 <div className="mt-5 flex justify-end gap-2 border-t border-border pt-4">
@@ -664,6 +686,47 @@ export default function PeoplePage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Modal */}
+        {showDeleteModal && selectedPerson && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-[2px] px-4">
+            <div className="w-full max-w-md overflow-hidden rounded-[18px] border border-border bg-surface shadow-[0_20px_60px_rgba(0,0,0,0.14)]">
+              <div className="flex items-start justify-between border-b border-border px-5 py-4">
+                <h2 className="text-[14px] font-semibold text-text-primary">Hapus Person</h2>
+                <button type="button" onClick={closeDeleteModal} className="text-text-muted hover:text-text-primary" disabled={isDeleting}>
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-5">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] bg-danger-soft text-danger">
+                  <AlertTriangle size={17} />
+                </div>
+                <p className="text-[12px] leading-5 text-text-secondary">
+                  Apakah kamu yakin ingin menghapus{" "}
+                  <strong className="font-semibold text-text-primary">{selectedPerson.name}</strong>?
+                </p>
+                {error && (
+                  <div className="mt-3 rounded-[9px] bg-danger-soft px-3 py-2.5 text-[11px] leading-4 text-danger">
+                    {error}
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
+                <button type="button" onClick={closeDeleteModal} disabled={isDeleting} className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary">
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="inline-flex items-center gap-2 rounded-[9px] bg-danger-soft px-4 py-2 text-sm font-semibold text-white hover:bg-[#963B31] disabled:opacity-60"
+                >
+                  {isDeleting ? "Menghapus..." : "Hapus Person"}
+                </button>
+              </div>
             </div>
           </div>
         )}
