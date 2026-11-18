@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import type { Prisma } from '../generated/prisma/client';
 import { PeopleService } from '../people/people.service';
 import { PERSON_TYPE_WORKER } from '../people/person-type.constants';
 import { PrismaService } from '../prisma/prisma.service';
@@ -16,12 +17,54 @@ import {
   SaveDraftWorkersDto,
 } from './dto/save-draft-workers.dto';
 
+/**
+ * Prisma client accepted by the operations that may run either on their own
+ * transaction or inside a caller-owned one.
+ */
+type RubberWorkersClient = Prisma.TransactionClient;
+
 @Injectable()
 export class RubberWorkersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly people: PeopleService,
   ) {}
+
+  // =========================================================
+  // FINALIZE MANUAL INPUT (draft -> final, one transaction)
+  //
+  // The draft already holds this sale's worker rows, and save-scanned
+  // only accepts workers that are not registered yet. Replacing the
+  // rows inside the same transaction as the final write means a
+  // failure at any point rolls the draft back untouched, instead of
+  // relying on a compensating restore request.
+  // =========================================================
+
+  async finalizeDraftWorkers(saveScannedWorkersDto: SaveScannedWorkersDto) {
+    const { saleId } = saveScannedWorkersDto;
+
+    return this.prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUnique({
+        where: { id: saleId },
+        include: { commodity: true },
+      });
+
+      if (!sale) {
+        throw new NotFoundException('Sale tidak ditemukan');
+      }
+
+      const isKaret = sale.commodity.name === 'Karet';
+
+      // Replace the draft only when it can hold final data for this sale.
+      // Other cases keep the existing save-scanned behavior (e.g. scan
+      // flow on a Sawit sale, where the draft is never written).
+      if (sale.status === 'PENDING' && isKaret) {
+        await tx.rubberSaleWorker.deleteMany({ where: { saleId } });
+      }
+
+      return this.saveScannedWorkers(saveScannedWorkersDto, tx);
+    });
+  }
 
   async findAll() {
     return this.prisma.person.findMany({
@@ -273,8 +316,11 @@ export class RubberWorkersService {
   // draft and reported back; they are never treated as final.
   // =========================================================
 
-  async saveDraftWorkers(saveDraftWorkersDto: SaveDraftWorkersDto) {
-    return this.prisma.$transaction(async (tx) => {
+  async saveDraftWorkers(
+    saveDraftWorkersDto: SaveDraftWorkersDto,
+    client?: RubberWorkersClient,
+  ) {
+    return (client ?? this.prisma).$transaction(async (tx) => {
       const { saleId, workers } = saveDraftWorkersDto;
 
       const sale = await tx.sale.findUnique({
@@ -374,8 +420,11 @@ export class RubberWorkersService {
     });
   }
 
-  async saveScannedWorkers(saveScannedWorkersDto: SaveScannedWorkersDto) {
-    return this.prisma.$transaction(async (tx) => {
+  async saveScannedWorkers(
+    saveScannedWorkersDto: SaveScannedWorkersDto,
+    client?: RubberWorkersClient,
+  ) {
+    return (client ?? this.prisma).$transaction(async (tx) => {
       const { saleId, workers } = saveScannedWorkersDto;
 
       const sale = await tx.sale.findUnique({

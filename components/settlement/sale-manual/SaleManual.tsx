@@ -15,7 +15,11 @@ import {
   X,
 } from "lucide-react";
 
-import { createPerson, saveDraftWorkers } from "@/lib/api";
+import {
+  createPerson,
+  finalizeDraftWorkers,
+  saveDraftWorkers,
+} from "@/lib/api";
 
 interface Worker {
   id: number;
@@ -478,45 +482,18 @@ export default function SaleManual({ saleId }: SaleManualProps) {
     // No draft write may start or land after this point.
     finalizedRef.current = true;
 
-    const previousDraft = rows.map((row) => ({
-      workerId: row.workerId,
-      pieces: Number(row.pieces) || 0,
-      weightKg: Number(row.weightKg),
-    }));
-
     try {
-      // Draft rows are real RubberSaleWorker rows, and save-scanned only
-      // accepts workers that are not registered yet. Cancel the draft
-      // first so the final write cannot duplicate rows.
-      await saveDraftWorkers(saleId, []);
-
-      const response = await fetch(
-        "http://localhost:3001/rubber-workers/save-scanned",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            saleId,
-            workers: rows.map((row) => ({
-              workerId: row.workerId,
-              pieces: Number(row.pieces),
-              weightKg: Number(row.weightKg),
-            })),
-          }),
-        },
+      // One backend transaction replaces the draft rows with the final
+      // ones. If it fails, nothing changed and the draft is still there,
+      // so no compensating restore is needed.
+      await finalizeDraftWorkers(
+        saleId,
+        rows.map((row) => ({
+          workerId: row.workerId,
+          pieces: Number(row.pieces),
+          weightKg: Number(row.weightKg),
+        })),
       );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          Array.isArray(data.message)
-            ? data.message.join(", ")
-            : data.message || "Gagal menyimpan worker.",
-        );
-      }
 
       setSuccess(true);
       setDraftStatus("saved");
@@ -527,15 +504,9 @@ export default function SaleManual({ saleId }: SaleManualProps) {
     } catch (err) {
       console.error(err);
 
-      // Saving failed, so the form is still editable: resume autosave and
-      // put the checkpoint back, so leaving the page loses nothing.
+      // The transaction rolled back, so the stored draft is unchanged.
+      // Resume autosave; the in-memory form is still intact.
       finalizedRef.current = false;
-
-      try {
-        await saveDraftWorkers(saleId, previousDraft);
-      } catch {
-        // The in-memory form is intact; autosave will retry.
-      }
 
       setError(
         err instanceof Error ? err.message : "Gagal menyimpan data worker.",

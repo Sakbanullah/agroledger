@@ -51,6 +51,16 @@ export class RubberWorkersController {
     return this.rubberWorkersService.saveDraftWorkers(saveDraftWorkersDto);
   }
 
+  @Post('finalize-draft')
+  finalizeDraftWorkers(
+    @Body()
+    saveScannedWorkersDto: SaveScannedWorkersDto,
+  ) {
+    return this.rubberWorkersService.finalizeDraftWorkers(
+      saveScannedWorkersDto,
+    );
+  }
+
   @Post('save-scanned')
   saveScannedWorkers(
     @Body()

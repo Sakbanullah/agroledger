@@ -663,6 +663,22 @@ export interface DraftWorkersResult {
 }
 
 /**
+ * Replaces the manual-input draft with the final rows in one backend
+ * transaction. On failure nothing is written and the draft stays intact.
+ */
+export async function finalizeDraftWorkers(
+  saleId: number,
+  workers: { workerId: number; pieces: number; weightKg: number }[],
+) {
+  return jsonRequest(
+    `${API_URL}/rubber-workers/finalize-draft`,
+    "POST",
+    { saleId, workers },
+    "Gagal menyimpan worker",
+  );
+}
+
+/**
  * Persists the manual-input draft rows for a PENDING Karet sale.
  * `keepalive` lets the request outlive a page being closed.
  */
