@@ -11,6 +11,10 @@ import { CreateRubberWorkerDto } from './dto/create-rubber-worker.dto';
 import { UpdateRubberWorkerDto } from './dto/update-rubber-worker.dto';
 import { CreateWorkerCandidateDto } from './dto/create-worker-candidate.dto';
 import { SaveScannedWorkersDto } from './dto/save-scanned-workers.dto';
+import {
+  SaveDraftWorkerDto,
+  SaveDraftWorkersDto,
+} from './dto/save-draft-workers.dto';
 
 @Injectable()
 export class RubberWorkersService {
@@ -260,6 +264,116 @@ export class RubberWorkersService {
       },
     });
   }
+  // =========================================================
+  // SAVE DRAFT WORKERS (manual input checkpoint)
+  //
+  // Replaces the whole draft with one atomic write, so a late
+  // autosave response can never leave a partial mix. Rows that
+  // are incomplete (pieces = 0 or weight missing) are kept as
+  // draft and reported back; they are never treated as final.
+  // =========================================================
+
+  async saveDraftWorkers(saveDraftWorkersDto: SaveDraftWorkersDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const { saleId, workers } = saveDraftWorkersDto;
+
+      const sale = await tx.sale.findUnique({
+        where: {
+          id: saleId,
+        },
+        include: {
+          commodity: true,
+        },
+      });
+
+      if (!sale) {
+        throw new NotFoundException('Sale tidak ditemukan');
+      }
+
+      if (sale.status !== 'PENDING') {
+        throw new BadRequestException(
+          'Draft tidak dapat disimpan karena sale sudah dikonfirmasi',
+        );
+      }
+
+      if (sale.commodity.name !== 'Karet') {
+        throw new BadRequestException(
+          'Worker karet hanya dapat ditambahkan pada sale Karet',
+        );
+      }
+
+      const workerIds = workers.map((worker) => worker.workerId);
+
+      if (new Set(workerIds).size !== workerIds.length) {
+        throw new BadRequestException(
+          'Worker yang sama tidak boleh muncul lebih dari satu kali',
+        );
+      }
+
+      if (workerIds.length > 0) {
+        const validWorkers = await tx.person.count({
+          where: {
+            id: { in: workerIds },
+            type: PERSON_TYPE_WORKER,
+          },
+        });
+
+        if (validWorkers !== workerIds.length) {
+          throw new BadRequestException(
+            'Salah satu worker tidak ditemukan atau bukan worker',
+          );
+        }
+      }
+
+      // Replace the draft atomically.
+      await tx.rubberSaleWorker.deleteMany({
+        where: { saleId },
+      });
+
+      const incompleteWorkerIds: number[] = [];
+
+      // weightKg is NOT NULL and must be positive in the schema. A row
+      // without weight cannot be stored yet; the client keeps it in the
+      // form and retries on the next checkpoint.
+      const rows = workers.filter(
+        (worker): worker is SaveDraftWorkerDto & { weightKg: number } => {
+          if (worker.weightKg === undefined || worker.weightKg <= 0) {
+            incompleteWorkerIds.push(worker.workerId);
+            return false;
+          }
+
+          if (worker.pieces <= 0) {
+            incompleteWorkerIds.push(worker.workerId);
+          }
+
+          return true;
+        },
+      );
+
+      if (rows.length > 0) {
+        await tx.rubberSaleWorker.createMany({
+          data: rows.map((worker) => ({
+            saleId,
+            workerId: worker.workerId,
+            pieces: worker.pieces,
+            weightKg: worker.weightKg,
+          })),
+        });
+      }
+
+      return {
+        saleId,
+        savedAt: new Date().toISOString(),
+        workers: rows.map((worker) => ({
+          workerId: worker.workerId,
+          pieces: worker.pieces,
+          weightKg: Number(worker.weightKg),
+        })),
+        incompleteWorkerIds,
+      };
+    });
+  }
+
   async saveScannedWorkers(saveScannedWorkersDto: SaveScannedWorkersDto) {
     return this.prisma.$transaction(async (tx) => {
       const { saleId, workers } = saveScannedWorkersDto;

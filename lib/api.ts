@@ -1,7 +1,5 @@
 const API_URL = "http://localhost:3001";
 
-export const apiBaseUrl = () => API_URL;
-
 export async function getDashboardSummary() {
   const response = await fetch(`${API_URL}/reports/dashboard`, {
     cache: "no-store",
@@ -566,12 +564,14 @@ async function jsonRequest(
   method: string,
   body?: unknown,
   fallback = "Permintaan gagal",
+  options?: { keepalive?: boolean },
 ) {
   const response = await fetch(url, {
     method,
     headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
+    keepalive: options?.keepalive,
   });
 
   if (!response.ok) {
@@ -646,5 +646,36 @@ export async function getAiConfig(): Promise<AiConfigView> {
     "GET",
     undefined,
     "Gagal mengambil konfigurasi AI",
+  );
+}
+
+export interface DraftWorkerPayload {
+  workerId: number;
+  pieces: number;
+  weightKg?: number;
+}
+
+export interface DraftWorkersResult {
+  saleId: number;
+  savedAt: string;
+  workers: { workerId: number; pieces: number; weightKg: number }[];
+  incompleteWorkerIds: number[];
+}
+
+/**
+ * Persists the manual-input draft rows for a PENDING Karet sale.
+ * `keepalive` lets the request outlive a page being closed.
+ */
+export async function saveDraftWorkers(
+  saleId: number,
+  workers: DraftWorkerPayload[],
+  options?: { keepalive?: boolean },
+): Promise<DraftWorkersResult> {
+  return jsonRequest(
+    `${API_URL}/rubber-workers/save-draft`,
+    "POST",
+    { saleId, workers },
+    "Gagal menyimpan draft",
+    options,
   );
 }

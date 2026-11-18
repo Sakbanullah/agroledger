@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Check,
+  CloudOff,
   Loader2,
   Plus,
   Search,
@@ -13,6 +14,8 @@ import {
   Weight,
   X,
 } from "lucide-react";
+
+import { saveDraftWorkers } from "@/lib/api";
 
 interface Worker {
   id: number;
@@ -47,6 +50,21 @@ interface SaleManualProps {
   saleId: number;
 }
 
+/**
+ * Draft autosave timing.
+ * DEBOUNCE_MS groups typing into one write; the wait-for-idle loop keeps
+ * writes spaced so a slow request never queues a backlog of stale saves.
+ */
+const DRAFT_DEBOUNCE_MS = 900;
+const DRAFT_MIN_INTERVAL_MS = 2500;
+
+type DraftStatus = "idle" | "saving" | "saved" | "error";
+
+/** Client mirror of the backend's completeness rule for a final row. */
+function isRowComplete(row: WorkerRow) {
+  return Number(row.pieces) > 0 && Number(row.weightKg) > 0;
+}
+
 export default function SaleManual({ saleId }: SaleManualProps) {
   const router = useRouter();
 
@@ -61,6 +79,18 @@ export default function SaleManual({ saleId }: SaleManualProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>("idle");
+  const [restoredAt, setRestoredAt] = useState<string | null>(null);
+
+  // Autosave bookkeeping. Refs on purpose: they must not re-render the form.
+  const draftSeq = useRef(0);
+  const lastAppliedSeq = useRef(0);
+  const lastSaveAt = useRef(0);
+  const savingRef = useRef(false);
+  const finalizedRef = useRef(false);
+  const hydratedRef = useRef(false);
+  const rowsRef = useRef<WorkerRow[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -104,6 +134,40 @@ export default function SaleManual({ saleId }: SaleManualProps) {
 
         setSale(saleData);
         setWorkers(Array.isArray(workersData) ? workersData : []);
+
+        // Restore the persisted draft for this sale (per-sale by construction).
+        const savedRows = Array.isArray(saleData.rubberWorkers)
+          ? saleData.rubberWorkers
+          : [];
+
+        if (savedRows.length > 0) {
+          setRows(
+            savedRows.map(
+              (row: {
+                workerId: number;
+                pieces: number;
+                weightKg: string | number;
+              }) => ({
+                id: crypto.randomUUID(),
+                workerId: row.workerId,
+                pieces: String(row.pieces ?? ""),
+                weightKg: String(row.weightKg ?? ""),
+              }),
+            ),
+          );
+
+          setRestoredAt(
+            new Date(saleData.updatedAt).toLocaleString("id-ID", {
+              day: "2-digit",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          );
+        }
+
+        hydratedRef.current = true;
+        setDraftStatus(savedRows.length > 0 ? "saved" : "idle");
       } catch (err) {
         console.error(err);
 
@@ -192,6 +256,126 @@ export default function SaleManual({ saleId }: SaleManualProps) {
   const getWorker = (workerId: number) =>
     workers.find((worker) => worker.id === workerId);
 
+  // =========================================================
+  // DRAFT AUTOSAVE
+  //
+  // Every edit bumps draftSeq. A save only applies its response
+  // (or flips the status) when its sequence is still the newest
+  // one, so a late reply can never overwrite newer input or mark
+  // newer input as saved.
+  // =========================================================
+
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
+  const buildDraftPayload = () =>
+    rowsRef.current
+      .filter((row) => Number(row.weightKg) > 0)
+      .map((row) => ({
+        workerId: row.workerId,
+        pieces: Number(row.pieces) || 0,
+        weightKg: Number(row.weightKg),
+      }));
+
+  const persistDraft = useCallback(async () => {
+    const seq = draftSeq.current;
+    const workers = buildDraftPayload();
+
+    if (savingRef.current) {
+      return true;
+    }
+
+    savingRef.current = true;
+    lastSaveAt.current = Date.now();
+    setDraftStatus("saving");
+
+    try {
+      const result = await saveDraftWorkers(saleId, workers);
+
+      lastAppliedSeq.current = Math.max(lastAppliedSeq.current, seq);
+
+      if (lastAppliedSeq.current === draftSeq.current) {
+        setDraftStatus("saved");
+        setRestoredAt(
+          new Date(result.savedAt).toLocaleString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        );
+      }
+
+      return true;
+    } catch {
+      // Old saves never raise a status for newer input.
+      if (lastAppliedSeq.current === draftSeq.current) {
+        setDraftStatus("error");
+      }
+
+      return false;
+    } finally {
+      savingRef.current = false;
+    }
+  }, [saleId]);
+
+  useEffect(() => {
+    if (!hydratedRef.current || loading) {
+      return;
+    }
+
+    draftSeq.current += 1;
+    setDraftStatus("saving");
+
+    const timer = setTimeout(() => {
+      const waitIdle = Math.max(
+        0,
+        DRAFT_MIN_INTERVAL_MS - (Date.now() - lastSaveAt.current),
+      );
+
+      setTimeout(() => {
+        if (!finalizedRef.current && !document.hidden) {
+          void persistDraft();
+        }
+      }, waitIdle);
+    }, DRAFT_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [rows, loading, persistDraft]);
+
+  // Leaving the page: the page may be torn down immediately, so a normal
+  // request would be cancelled. Send it with keepalive instead.
+  useEffect(() => {
+    const flush = () => {
+      if (finalizedRef.current || !hydratedRef.current) {
+        return;
+      }
+
+      if (savingRef.current) {
+        return;
+      }
+
+      void saveDraftWorkers(saleId, buildDraftPayload(), { keepalive: true });
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        flush();
+      }
+    };
+
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [persistDraft, saleId]);
+
+  const hasIncompleteRows = rows.some(
+    (row) => Number(row.weightKg) > 0 && !isRowComplete(row),
+  );
+
   const handleSave = async () => {
     setError("");
     setSuccess(false);
@@ -222,7 +406,21 @@ export default function SaleManual({ saleId }: SaleManualProps) {
 
     setIsSaving(true);
 
+    // No draft write may start or land after this point.
+    finalizedRef.current = true;
+
+    const previousDraft = rows.map((row) => ({
+      workerId: row.workerId,
+      pieces: Number(row.pieces) || 0,
+      weightKg: Number(row.weightKg),
+    }));
+
     try {
+      // Draft rows are real RubberSaleWorker rows, and save-scanned only
+      // accepts workers that are not registered yet. Cancel the draft
+      // first so the final write cannot duplicate rows.
+      await saveDraftWorkers(saleId, []);
+
       const response = await fetch(
         "http://localhost:3001/rubber-workers/save-scanned",
         {
@@ -252,12 +450,23 @@ export default function SaleManual({ saleId }: SaleManualProps) {
       }
 
       setSuccess(true);
+      setDraftStatus("saved");
 
       setTimeout(() => {
         router.push(`/settlement/sale/${saleId}/confirm`);
       }, 400);
     } catch (err) {
       console.error(err);
+
+      // Saving failed, so the form is still editable: resume autosave and
+      // put the checkpoint back, so leaving the page loses nothing.
+      finalizedRef.current = false;
+
+      try {
+        await saveDraftWorkers(saleId, previousDraft);
+      } catch {
+        // The in-memory form is intact; autosave will retry.
+      }
 
       setError(
         err instanceof Error ? err.message : "Gagal menyimpan data worker.",
@@ -330,6 +539,13 @@ export default function SaleManual({ saleId }: SaleManualProps) {
               Pilih worker yang ikut dalam penjualan, lalu masukkan jumlah
               keping dan beratnya.
             </p>
+
+            {restoredAt && draftStatus !== "saving" && draftStatus !== "error" && (
+              <p className="mt-3 text-xs text-text-secondary">
+                Draft sebelumnya dipulihkan (tersimpan {restoredAt}). Isian
+                disimpan otomatis — Anda bisa keluar dan melanjutkan nanti.
+              </p>
+            )}
           </header>
 
           {sale && (
@@ -585,10 +801,55 @@ export default function SaleManual({ saleId }: SaleManualProps) {
           </section>
 
           <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="max-w-xl text-xs leading-5 text-text-muted">
-              Pastikan berat dan jumlah keping sudah sesuai catatan sebelum
-              melanjutkan.
-            </p>
+            <div>
+              <p className="max-w-xl text-xs leading-5 text-text-muted">
+                Pastikan berat dan jumlah keping sudah sesuai catatan sebelum
+                melanjutkan.
+              </p>
+
+              {rows.length > 0 && (
+                <p
+                  className={`mt-2 inline-flex items-center gap-1.5 text-xs font-medium ${
+                    draftStatus === "error"
+                      ? "text-danger"
+                      : draftStatus === "saved"
+                        ? "text-success"
+                        : "text-text-muted"
+                  }`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {draftStatus === "saving" && (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Menyimpan draft...
+                    </>
+                  )}
+
+                  {draftStatus === "saved" && restoredAt && (
+                    <>
+                      <Check className="h-3.5 w-3.5" />
+                      Draft tersimpan {restoredAt}
+                    </>
+                  )}
+
+                  {draftStatus === "error" && (
+                    <>
+                      <CloudOff className="h-3.5 w-3.5" />
+                      Gagal menyimpan draft. Isian tetap ada di halaman ini —
+                      periksa koneksi.
+                    </>
+                  )}
+                </p>
+              )}
+
+              {hasIncompleteRows && (
+                <p className="mt-1 text-xs text-warning">
+                  Sebagian worker belum lengkap. Lengkapi jumlah keping dan
+                  berat sebelum menyimpan.
+                </p>
+              )}
+            </div>
 
             <button
               type="button"

@@ -14,6 +14,7 @@ import { CreateRubberWorkerDto } from './dto/create-rubber-worker.dto';
 import { UpdateRubberWorkerDto } from './dto/update-rubber-worker.dto';
 import { CreateWorkerCandidateDto } from './dto/create-worker-candidate.dto';
 import { SaveScannedWorkersDto } from './dto/save-scanned-workers.dto';
+import { SaveDraftWorkersDto } from './dto/save-draft-workers.dto';
 @Controller('rubber-workers')
 export class RubberWorkersController {
   constructor(private readonly rubberWorkersService: RubberWorkersService) {}
@@ -40,6 +41,14 @@ export class RubberWorkersController {
     return this.rubberWorkersService.createFromCandidate(
       createWorkerCandidateDto,
     );
+  }
+
+  @Post('save-draft')
+  saveDraftWorkers(
+    @Body()
+    saveDraftWorkersDto: SaveDraftWorkersDto,
+  ) {
+    return this.rubberWorkersService.saveDraftWorkers(saveDraftWorkersDto);
   }
 
   @Post('save-scanned')
