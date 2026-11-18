@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 
-import { saveDraftWorkers } from "@/lib/api";
+import { createPerson, saveDraftWorkers } from "@/lib/api";
 
 interface Worker {
   id: number;
@@ -215,6 +215,75 @@ export default function SaleManual({ saleId }: SaleManualProps) {
     () => rows.reduce((total, row) => total + Number(row.pieces || 0), 0),
     [rows],
   );
+
+  // =========================================================
+  // ADD A NEW WORKER INLINE
+  //
+  // Reuses the existing person endpoint (type WORKER). The manual
+  // form and its draft stay untouched: only the picker closes.
+  // =========================================================
+
+  const [newWorkerOpen, setNewWorkerOpen] = useState(false);
+  const [newWorkerName, setNewWorkerName] = useState("");
+  const [newWorkerPhone, setNewWorkerPhone] = useState("");
+  const [newWorkerError, setNewWorkerError] = useState("");
+  const [creatingWorker, setCreatingWorker] = useState(false);
+  const creatingWorkerRef = useRef(false);
+
+  const openNewWorker = () => {
+    setNewWorkerName("");
+    setNewWorkerPhone("");
+    setNewWorkerError("");
+    setNewWorkerOpen(true);
+  };
+
+  const closeNewWorker = () => {
+    if (creatingWorker) {
+      return;
+    }
+
+    setNewWorkerOpen(false);
+  };
+
+  const handleCreateWorker = async () => {
+    const name = newWorkerName.trim();
+
+    if (!name) {
+      setNewWorkerError("Nama worker wajib diisi.");
+      return;
+    }
+
+    // Guards double-click and repeated Enter while a request is running.
+    if (creatingWorkerRef.current) {
+      return;
+    }
+
+    creatingWorkerRef.current = true;
+    setCreatingWorker(true);
+    setNewWorkerError("");
+
+    try {
+      const created = await createPerson({
+        name,
+        phone: newWorkerPhone.trim() || undefined,
+        type: "WORKER",
+      });
+
+      setWorkers((current) => [created, ...current]);
+      setNewWorkerOpen(false);
+      setSearch("");
+      setPickerOpen(false);
+
+      addWorker(created);
+    } catch (err) {
+      setNewWorkerError(
+        err instanceof Error ? err.message : "Gagal menambahkan worker.",
+      );
+    } finally {
+      creatingWorkerRef.current = false;
+      setCreatingWorker(false);
+    }
+  };
 
   const addWorker = (worker: Worker) => {
     setRows((currentRows) => [
@@ -934,8 +1003,17 @@ export default function SaleManual({ saleId }: SaleManualProps) {
                   </p>
 
                   <p className="mt-1 text-xs text-text-secondary">
-                    Coba gunakan nama lain.
+                    Coba gunakan nama lain, atau tambahkan worker baru.
                   </p>
+
+                  <button
+                    type="button"
+                    onClick={openNewWorker}
+                    className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-border bg-surface px-3 text-xs font-semibold text-text-primary transition hover:bg-surface-soft"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Tambah Worker
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -969,11 +1047,124 @@ export default function SaleManual({ saleId }: SaleManualProps) {
               )}
             </div>
 
-            <div className="border-t border-border bg-surface-soft px-5 py-3">
+            <div className="flex items-center justify-between gap-3 border-t border-border bg-surface-soft px-5 py-3">
               <p className="text-xs text-text-muted">
                 {availableWorkers.length} worker tersedia
               </p>
+
+              <button
+                type="button"
+                onClick={openNewWorker}
+                className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2.5 text-[11px] font-semibold text-text-primary transition hover:bg-surface"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Tambah Worker
+              </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {newWorkerOpen && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/25 p-4 backdrop-blur-[2px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeNewWorker();
+            }
+          }}
+        >
+          <div className="w-full max-w-[420px] overflow-hidden rounded-[16px] border border-border bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.14)]">
+            <div className="flex items-start justify-between border-b border-border px-5 py-4">
+              <div>
+                <h2 className="text-base font-semibold text-text-primary">
+                  Tambah Worker
+                </h2>
+
+                <p className="mt-1 text-xs text-text-secondary">
+                  Worker baru langsung tersedia dan dipilih pada isian ini.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeNewWorker}
+                disabled={creatingWorker}
+                className="flex h-8 w-8 items-center justify-center rounded-[8px] text-text-muted transition hover:bg-surface-soft hover:text-text-primary disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleCreateWorker();
+              }}
+              className="px-5 py-4"
+            >
+              <label className="mb-2 block text-xs font-medium text-text-secondary">
+                Nama Worker
+              </label>
+
+              <input
+                autoFocus
+                type="text"
+                value={newWorkerName}
+                onChange={(event) => setNewWorkerName(event.target.value)}
+                disabled={creatingWorker}
+                placeholder="Contoh: Sutris"
+                className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:opacity-60"
+              />
+
+              <label className="mb-2 mt-4 block text-xs font-medium text-text-secondary">
+                Telepon (opsional)
+              </label>
+
+              <input
+                type="text"
+                value={newWorkerPhone}
+                onChange={(event) => setNewWorkerPhone(event.target.value)}
+                disabled={creatingWorker}
+                placeholder="08xx"
+                className="h-11 w-full rounded-[10px] border border-border bg-surface px-3 text-sm text-text-primary outline-none transition placeholder:text-text-muted focus:border-agro-primary focus:ring-2 focus:ring-agro-primary-soft disabled:opacity-60"
+              />
+
+              {newWorkerError && (
+                <div className="mt-4 rounded-[10px] bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
+                  {newWorkerError}
+                </div>
+              )}
+
+              <div className="mt-5 flex justify-end gap-2 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={closeNewWorker}
+                  disabled={creatingWorker}
+                  className="px-4 py-2 text-sm text-text-secondary transition hover:text-text-primary disabled:opacity-50"
+                >
+                  Batal
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={creatingWorker}
+                  className="inline-flex items-center gap-2 rounded-[9px] bg-success-soft px-4 py-2 text-sm font-semibold text-white transition hover:bg-success-soft disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {creatingWorker ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Simpan & Pilih
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
