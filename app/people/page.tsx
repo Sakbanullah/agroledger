@@ -72,7 +72,7 @@ export default function PeoplePage() {
   const openAddModal = () => {
     setName("");
     setPhone("");
-    setType("");
+    setType("WORKER");
     setError("");
     setShowAddModal(true);
   };
