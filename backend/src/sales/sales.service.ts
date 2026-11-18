@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -313,6 +314,11 @@ export class SalesService {
         where: {
           id,
         },
+        include: {
+          settlements: { select: { id: true } },
+          ownerSettlements: { select: { id: true } },
+          scanDocuments: { select: { id: true } },
+        },
       });
 
       if (!sale) {
@@ -330,7 +336,46 @@ export class SalesService {
       }
 
       // ==========================================
+      // REFUSE IF ACCOUNTING RECORDS EXIST
+      //
+      // The database cascade would silently remove these
+      // rows. Deletion is only allowed for a clean draft.
+      // ==========================================
+
+      if (sale.settlements.length > 0) {
+        throw new ConflictException(
+          'Penjualan tidak dapat dihapus karena sudah memiliki settlement worker',
+        );
+      }
+
+      if (sale.ownerSettlements.length > 0) {
+        throw new ConflictException(
+          'Penjualan tidak dapat dihapus karena sudah memiliki settlement pemilik',
+        );
+      }
+
+      if (sale.scanDocuments.length > 0) {
+        throw new ConflictException(
+          'Penjualan tidak dapat dihapus karena sudah memiliki dokumen scan',
+        );
+      }
+
+      const moneyEntries = await tx.moneyTransaction.count({
+        where: {
+          referenceType: 'SALE',
+          referenceId: id,
+        },
+      });
+
+      if (moneyEntries > 0) {
+        throw new ConflictException(
+          'Penjualan tidak dapat dihapus karena sudah tercatat pada transaksi keuangan',
+        );
+      }
+
+      // ==========================================
       // DELETE RUBBER SALE WORKERS
+      // (draft input only, not a financial record)
       // ==========================================
 
       await tx.rubberSaleWorker.deleteMany({

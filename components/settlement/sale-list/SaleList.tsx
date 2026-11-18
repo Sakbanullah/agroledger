@@ -39,6 +39,8 @@ export default function SaleList() {
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  const [deleteTarget, setDeleteTarget] = useState<Sale | null>(null);
+
   const [deleteError, setDeleteError] = useState("");
 
   // =========================================================
@@ -154,20 +156,29 @@ export default function SaleList() {
   // DELETE DRAFT SALE
   // =========================================================
 
-  const handleDeleteSale = async (event: React.MouseEvent, sale: Sale) => {
+  const openDeleteDialog = (event: React.MouseEvent, sale: Sale) => {
     event.stopPropagation();
 
     if (sale.status !== "PENDING") {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Hapus draft penjualan ${sale.commodity.name} tanggal ${formatDate(
-        sale.saleDate,
-      )}?\n\nData penjualan draft ini akan dihapus dan tidak dapat dikembalikan.`,
-    );
+    setDeleteError("");
+    setDeleteTarget(sale);
+  };
 
-    if (!confirmed) {
+  const closeDeleteDialog = () => {
+    if (deletingId !== null) {
+      return;
+    }
+
+    setDeleteTarget(null);
+  };
+
+  const handleDeleteSale = async () => {
+    const sale = deleteTarget;
+
+    if (!sale) {
       return;
     }
 
@@ -188,6 +199,8 @@ export default function SaleList() {
       setSales((currentSales) =>
         currentSales.filter((item) => item.id !== sale.id),
       );
+
+      setDeleteTarget(null);
     } catch (err) {
       console.error(err);
 
@@ -603,7 +616,7 @@ export default function SaleList() {
                       <button
                         type="button"
                         disabled={isDeleting}
-                        onClick={(event) => handleDeleteSale(event, sale)}
+                        onClick={(event) => openDeleteDialog(event, sale)}
                         className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-medium text-danger transition hover:bg-[#faeeee] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {isDeleting ? (
@@ -626,6 +639,94 @@ export default function SaleList() {
           </div>
         )}
       </div>
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/25 p-4 backdrop-blur-[2px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeDeleteDialog();
+            }
+          }}
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-[16px] border border-border bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.14)]">
+            <div className="border-b border-border px-5 py-4">
+              <h2 className="text-base font-semibold text-text-primary">
+                Hapus Draft Penjualan
+              </h2>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <p className="text-xs text-text-secondary">
+                Data berikut akan dihapus permanen dan tidak dapat
+                dikembalikan.
+              </p>
+
+              <dl className="grid grid-cols-[96px_1fr] gap-y-2 rounded-[10px] border border-border bg-surface-soft px-4 py-3 text-xs">
+                <dt className="text-text-muted">Sale</dt>
+                <dd className="font-semibold text-text-primary">
+                  #{deleteTarget.id}
+                </dd>
+
+                <dt className="text-text-muted">Komoditas</dt>
+                <dd className="text-text-primary">
+                  {deleteTarget.commodity.name}
+                </dd>
+
+                <dt className="text-text-muted">Tanggal</dt>
+                <dd className="text-text-primary">
+                  {formatDate(deleteTarget.saleDate)}
+                </dd>
+
+                <dt className="text-text-muted">Kebun</dt>
+                <dd className="text-text-primary">{deleteTarget.farm.name}</dd>
+
+                <dt className="text-text-muted">Status</dt>
+                <dd className="text-text-primary">Draft (PENDING)</dd>
+              </dl>
+
+              <p className="text-[11px] leading-5 text-text-muted">
+                Input worker yang sudah diisi pada draft ini ikut terhapus.
+                Penjualan yang sudah memiliki transaksi keuangan atau
+                settlement akan ditolak oleh sistem.
+              </p>
+
+              {deleteError && (
+                <div className="rounded-[10px] bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
+                  {deleteError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
+              <button
+                type="button"
+                onClick={closeDeleteDialog}
+                disabled={deletingId !== null}
+                className="rounded-[9px] px-4 py-2 text-sm text-text-secondary transition hover:text-text-primary disabled:opacity-50"
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteSale}
+                disabled={deletingId !== null}
+                className="inline-flex items-center gap-2 rounded-[9px] bg-danger px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+              >
+                {deletingId !== null ? (
+                  <>
+                    <span className="h-3 w-3 animate-spin rounded-full border border-white/40 border-t-white" />
+                    Menghapus...
+                  </>
+                ) : (
+                  "Hapus Draft"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
