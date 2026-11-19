@@ -76,7 +76,7 @@ async function run() {
   await expectRejection(
     'confirmed sale',
     { status: 'CONFIRMED' },
-    'sudah dikonfirmasi',
+    'settlement worker',
   );
 
   await expectRejection(

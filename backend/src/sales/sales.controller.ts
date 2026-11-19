@@ -116,7 +116,19 @@ export class SalesController {
   }
 
   // ==========================================
-  // DELETE DRAFT SALE
+  // CANCEL SALE (COMPLETED -> CANCELLED)
+  // ==========================================
+
+  @Post(':id/cancel')
+  cancel(
+    @Param('id') id: string,
+  ) {
+    return this.salesService.cancelSale(Number(id));
+  }
+
+  // ==========================================
+  // DELETE SALE
+  // PENDING / CANCELLED only
   // ==========================================
 
   @Delete(':id')

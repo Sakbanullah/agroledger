@@ -122,6 +122,29 @@ model Sale {
   settlements      Settlement[]
   ownerSettlements OwnerSettlement[]
   scanDocuments    ScanDocument[]
+  // The cancellation record for this sale, if it was cancelled.
+  cancellation      SaleCancellation?  @relation("CancelledSale")
+}
+
+// Audit record of a cancelled sale. It survives the sale, so its money rows
+// (referenceType "SALE_CANCELLATION") keep meaning after the sale is deleted.
+model SaleCancellation {
+  id           Int      @id @default(autoincrement())
+  // Nullable on purpose: the record survives the sale's deletion, so the
+  // money rows it owns never point at a missing row.
+  saleId       Int?     @unique
+  commodity    String
+  farmName     String
+  saleDate     DateTime
+  totalWeightKg Decimal? @db.Decimal(12, 2)
+  pricePerKg   Decimal? @db.Decimal(12, 2)
+  status       String   @default("CANCELLED")
+
+  cancelledAt DateTime @default(now())
+
+  sale Sale? @relation("CancelledSale", fields: [saleId], references: [id], onDelete: SetNull)
+
+  @@index([saleId])
 }
 
 model RubberSaleWorker {

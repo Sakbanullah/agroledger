@@ -27,7 +27,7 @@ interface Sale {
   };
 }
 
-type Filter = "ALL" | "PENDING" | "CONFIRMED" | "COMPLETED";
+type Filter = "ALL" | "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
 
 export default function SaleList() {
   const router = useRouter();
@@ -42,6 +42,12 @@ export default function SaleList() {
   const [deleteTarget, setDeleteTarget] = useState<Sale | null>(null);
 
   const [deleteError, setDeleteError] = useState("");
+
+  const [cancelTarget, setCancelTarget] = useState<Sale | null>(null);
+
+  const [cancelError, setCancelError] = useState("");
+
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   // =========================================================
   // FETCH SALES
@@ -153,13 +159,82 @@ export default function SaleList() {
   };
 
   // =========================================================
-  // DELETE DRAFT SALE
+  // DELETE SALE (Draft / Dibatalkan) AND CANCEL (Selesai)
   // =========================================================
+
+  const openCancelDialog = (event: React.MouseEvent, sale: Sale) => {
+    event.stopPropagation();
+
+    if (sale.status !== "COMPLETED") {
+      return;
+    }
+
+    setCancelError("");
+    setCancelTarget(sale);
+  };
+
+  const closeCancelDialog = () => {
+    if (cancellingId !== null) {
+      return;
+    }
+
+    setCancelTarget(null);
+  };
+
+  const handleCancelSale = async () => {
+    const sale = cancelTarget;
+
+    if (!sale) {
+      return;
+    }
+
+    try {
+      setCancellingId(sale.id);
+      setCancelError("");
+
+      const response = await fetch(
+        `http://localhost:3001/sales/${sale.id}/cancel`,
+        { method: "POST" },
+      );
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message || "Gagal membatalkan transaksi penjualan.",
+        );
+      }
+
+      // Only after the backend confirms the reversal does the card switch
+      // to the delete action.
+      setSales((currentSales) =>
+        currentSales.map((item) =>
+          item.id === sale.id ? { ...item, status: "CANCELLED" } : item,
+        ),
+      );
+
+      setCancelTarget(null);
+    } catch (err) {
+      console.error(err);
+
+      setCancelError(
+        err instanceof Error
+          ? err.message
+          : "Gagal membatalkan transaksi penjualan.",
+      );
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   const openDeleteDialog = (event: React.MouseEvent, sale: Sale) => {
     event.stopPropagation();
 
-    if (sale.status !== "PENDING") {
+    if (
+      sale.status !== "PENDING" &&
+      sale.status !== "CONFIRMED" &&
+      sale.status !== "CANCELLED"
+    ) {
       return;
     }
 
@@ -193,7 +268,7 @@ export default function SaleList() {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(data?.message || "Gagal menghapus draft penjualan.");
+        throw new Error(data?.message || "Gagal menghapus penjualan.");
       }
 
       setSales((currentSales) =>
@@ -205,7 +280,7 @@ export default function SaleList() {
       console.error(err);
 
       setDeleteError(
-        err instanceof Error ? err.message : "Gagal menghapus draft penjualan.",
+        err instanceof Error ? err.message : "Gagal menghapus penjualan.",
       );
     } finally {
       setDeletingId(null);
@@ -228,6 +303,10 @@ export default function SaleList() {
     (sale) => sale.status === "COMPLETED",
   ).length;
 
+  const cancelledSales = sales.filter(
+    (sale) => sale.status === "CANCELLED",
+  ).length;
+
   // =========================================================
   // STATUS UI
   // =========================================================
@@ -245,10 +324,18 @@ export default function SaleList() {
       return "Selesai";
     }
 
+    if (status === "CANCELLED") {
+      return "Dibatalkan";
+    }
+
     return status;
   };
 
   const getStatusClass = (status: string) => {
+    if (status === "CANCELLED") {
+      return "bg-danger-soft text-danger";
+    }
+
     if (status === "COMPLETED") {
       return "bg-success-soft text-success";
     }
@@ -481,6 +568,23 @@ export default function SaleList() {
             >
               Selesai
             </button>
+
+            <button
+              type="button"
+              onClick={() => setFilter("CANCELLED")}
+              className={`rounded-lg px-3 py-1.5 text-[10px] font-medium transition ${
+                filter === "CANCELLED"
+                  ? "bg-surface text-text-primary shadow-sm"
+                  : "text-text-secondary hover:text-text-primary"
+              }`}
+            >
+              Dibatalkan
+              {cancelledSales > 0 && (
+                <span className="ml-1.5 rounded-full bg-danger-soft px-1.5 py-0.5 text-[8px] text-danger">
+                  {cancelledSales}
+                </span>
+              )}
+            </button>
           </div>
 
           <span className="text-[10px] text-text-muted">
@@ -511,7 +615,9 @@ export default function SaleList() {
 
               const isConfirmed = sale.status === "CONFIRMED";
 
-              const isCompleted = sale.status === "COMPLETED";
+              const isCompletedSale = sale.status === "COMPLETED";
+
+              const isCancelled = sale.status === "CANCELLED";
 
               const isDeleting = deletingId === sale.id;
 
@@ -609,9 +715,9 @@ export default function SaleList() {
                     </div>
                   </button>
 
-                  {/* DELETE DRAFT */}
+                  {/* STATUS ACTION */}
 
-                  {isPending && (
+                  {(isPending || isCancelled) && (
                     <div className="border-t border-border px-4 py-3 sm:px-5">
                       <button
                         type="button"
@@ -627,7 +733,53 @@ export default function SaleList() {
                         ) : (
                           <>
                             <span className="text-xs">🗑</span>
-                            Hapus Draft
+                            {isPending ? "Hapus Draft" : "Hapus"}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {isConfirmed && (
+                    <div className="border-t border-border px-4 py-3 sm:px-5">
+                      <button
+                        type="button"
+                        disabled={deletingId === sale.id}
+                        onClick={(event) => openDeleteDialog(event, sale)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-medium text-danger transition hover:bg-[#faeeee] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {deletingId === sale.id ? (
+                          <>
+                            <span className="h-3 w-3 animate-spin rounded-full border border-[#e5bebe] border-t-[#b65c5c]" />
+                            Menghapus...
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs">🗑</span>
+                            Hapus Penjualan
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {isCompletedSale && (
+                    <div className="border-t border-border px-4 py-3 sm:px-5">
+                      <button
+                        type="button"
+                        disabled={cancellingId === sale.id}
+                        onClick={(event) => openCancelDialog(event, sale)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-medium text-danger transition hover:bg-[#faeeee] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {cancellingId === sale.id ? (
+                          <>
+                            <span className="h-3 w-3 animate-spin rounded-full border border-[#e5bebe] border-t-[#b65c5c]" />
+                            Membatalkan...
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-xs">↩</span>
+                            Batalkan Transaksi
                           </>
                         )}
                       </button>
@@ -652,7 +804,9 @@ export default function SaleList() {
           <div className="w-full max-w-md overflow-hidden rounded-[16px] border border-border bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.14)]">
             <div className="border-b border-border px-5 py-4">
               <h2 className="text-base font-semibold text-text-primary">
-                Hapus Draft Penjualan
+                {deleteTarget.status === "PENDING"
+                  ? "Hapus Draft Penjualan"
+                  : "Hapus Penjualan"}
               </h2>
             </div>
 
@@ -682,14 +836,26 @@ export default function SaleList() {
                 <dd className="text-text-primary">{deleteTarget.farm.name}</dd>
 
                 <dt className="text-text-muted">Status</dt>
-                <dd className="text-text-primary">Draft (PENDING)</dd>
+                <dd className="text-text-primary">
+                  {getStatusLabel(deleteTarget.status)}
+                </dd>
               </dl>
 
-              <p className="text-[11px] leading-5 text-text-muted">
-                Input worker yang sudah diisi pada draft ini ikut terhapus.
-                Penjualan yang sudah memiliki transaksi keuangan atau
-                settlement akan ditolak oleh sistem.
-              </p>
+              <div className="space-y-1 text-[11px] leading-5 text-text-muted">
+                <p>Yang ikut terhapus: input worker penjualan ini.</p>
+
+                {deleteTarget.status === "CANCELLED" ? (
+                  <p>
+                    Yang dipertahankan: catatan pembatalan beserta riwayat
+                    transaksi keuangannya, untuk audit.
+                  </p>
+                ) : (
+                  <p>
+                    Penjualan yang masih memiliki settlement atau transaksi
+                    keuangan akan ditolak oleh sistem dengan alasannya.
+                  </p>
+                )}
+              </div>
 
               {deleteError && (
                 <div className="rounded-[10px] bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
@@ -719,8 +885,101 @@ export default function SaleList() {
                     <span className="h-3 w-3 animate-spin rounded-full border border-white/40 border-t-white" />
                     Menghapus...
                   </>
-                ) : (
+                ) : deleteTarget.status === "PENDING" ? (
                   "Hapus Draft"
+                ) : (
+                  "Hapus Penjualan"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelTarget && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/25 p-4 backdrop-blur-[2px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeCancelDialog();
+            }
+          }}
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-[16px] border border-border bg-surface shadow-[0_20px_60px_rgba(23,34,27,0.14)]">
+            <div className="border-b border-border px-5 py-4">
+              <h2 className="text-base font-semibold text-text-primary">
+                Batalkan Transaksi Penjualan
+              </h2>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              <dl className="grid grid-cols-[96px_1fr] gap-y-2 rounded-[10px] border border-border bg-surface-soft px-4 py-3 text-xs">
+                <dt className="text-text-muted">Sale</dt>
+                <dd className="font-semibold text-text-primary">
+                  #{cancelTarget.id}
+                </dd>
+
+                <dt className="text-text-muted">Komoditas</dt>
+                <dd className="text-text-primary">
+                  {cancelTarget.commodity.name}
+                </dd>
+
+                <dt className="text-text-muted">Tanggal</dt>
+                <dd className="text-text-primary">
+                  {formatDate(cancelTarget.saleDate)}
+                </dd>
+
+                <dt className="text-text-muted">Kebun</dt>
+                <dd className="text-text-primary">{cancelTarget.farm.name}</dd>
+              </dl>
+
+              <div className="space-y-1.5 text-[11px] leading-5 text-text-secondary">
+                <p>
+                  Pembatalan membalik dampak keuangan transaksi ini: uang
+                  masuk penjualan dicatat sebagai uang keluar, dan uang yang
+                  sudah dibayarkan ke worker dikembalikan ke kas.
+                </p>
+                <p>
+                  Pembatalan <strong>tidak sama</strong> dengan penghapusan.
+                  Penjualan berstatus Dibatalkan tetap ada dan baru bisa
+                  dihapus setelahnya.
+                </p>
+                <p className="text-text-muted">
+                  Riwayat transaksi asli tidak diubah; pembatalan dicatat
+                  sebagai transaksi pembalik terpisah.
+                </p>
+              </div>
+
+              {cancelError && (
+                <div className="rounded-[10px] bg-danger-soft px-3 py-2 text-xs font-medium text-danger">
+                  {cancelError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
+              <button
+                type="button"
+                onClick={closeCancelDialog}
+                disabled={cancellingId !== null}
+                className="rounded-[9px] px-4 py-2 text-sm text-text-secondary transition hover:text-text-primary disabled:opacity-50"
+              >
+                Tidak
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCancelSale}
+                disabled={cancellingId !== null}
+                className="inline-flex items-center gap-2 rounded-[9px] bg-danger px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+              >
+                {cancellingId !== null ? (
+                  <>
+                    <span className="h-3 w-3 animate-spin rounded-full border border-white/40 border-t-white" />
+                    Membatalkan...
+                  </>
+                ) : (
+                  "Ya, Batalkan Transaksi"
                 )}
               </button>
             </div>

@@ -11,6 +11,11 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { ConfirmSaleDto } from './dto/confirm-sale.dto';
 import { UpdateSalePriceDto } from './dto/update-sale-price.dto';
 import { SetCommissionDto } from './dto/set-commission.dto';
+import {
+  SALE_STATUS,
+  cancellationBlocker,
+  deletionBlocker,
+} from './sale-status';
 
 @Injectable()
 export class SalesService {
@@ -318,6 +323,7 @@ export class SalesService {
           settlements: { select: { id: true } },
           ownerSettlements: { select: { id: true } },
           scanDocuments: { select: { id: true } },
+          cancellation: { select: { id: true } },
         },
       });
 
@@ -326,33 +332,12 @@ export class SalesService {
       }
 
       // ==========================================
-      // ONLY PENDING CAN BE DELETED
-      // ==========================================
-
-      if (sale.status !== 'PENDING') {
-        throw new BadRequestException(
-          'Sale yang sudah dikonfirmasi tidak dapat dihapus',
-        );
-      }
-
-      // ==========================================
-      // REFUSE IF ACCOUNTING RECORDS EXIST
+      // STATUS AND DEPENDENCY RULE
       //
-      // The database cascade would silently remove these
-      // rows. Deletion is only allowed for a clean draft.
+      // PENDING drafts and CANCELLED sales may be deleted; a COMPLETED
+      // sale must be cancelled first. Deleting cascades settlements and
+      // scan documents, so those must already be neutralized.
       // ==========================================
-
-      if (sale.settlements.length > 0) {
-        throw new ConflictException(
-          'Penjualan tidak dapat dihapus karena sudah memiliki settlement worker',
-        );
-      }
-
-      if (sale.ownerSettlements.length > 0) {
-        throw new ConflictException(
-          'Penjualan tidak dapat dihapus karena sudah memiliki settlement pemilik',
-        );
-      }
 
       if (sale.scanDocuments.length > 0) {
         throw new ConflictException(
@@ -367,10 +352,61 @@ export class SalesService {
         },
       });
 
-      if (moneyEntries > 0) {
-        throw new ConflictException(
-          'Penjualan tidak dapat dihapus karena sudah tercatat pada transaksi keuangan',
-        );
+      const blocker = deletionBlocker({
+        status: sale.status,
+        settlements: sale.settlements,
+        ownerSettlements: sale.ownerSettlements,
+        moneyEntries,
+      });
+
+      if (blocker) {
+        throw new ConflictException(blocker);
+      }
+
+      // ==========================================
+      // CANCELLED: KEEP THE FINANCIAL AUDIT TRAIL
+      //
+      // - settlements are neutralized and marked (amounts zeroed), so the
+      //   reports that read Settlement rows stay correct once the cascade
+      //   removes them;
+      // - money rows are repointed to the cancellation record, so they
+      //   survive the delete and no sale id is left dangling.
+      // ==========================================
+
+      if (sale.status === SALE_STATUS.CANCELLED) {
+        const cancellationRecordId = sale.cancellation?.id ?? null;
+
+        if (sale.settlements.length > 0) {
+          await tx.settlement.updateMany({
+            where: { saleId: id },
+            data: {
+              status: 'CANCELLED',
+              grossShare: 0,
+              kasbonAmount: 0,
+              deductionAmount: 0,
+              netAmount: 0,
+            },
+          });
+
+          await tx.moneyTransaction.updateMany({
+            where: {
+              referenceType: 'SETTLEMENT',
+              referenceId: { in: sale.settlements.map((row) => row.id) },
+            },
+            data: {
+              referenceType: 'SALE_CANCELLATION',
+              referenceId: cancellationRecordId,
+            },
+          });
+        }
+
+        await tx.moneyTransaction.updateMany({
+          where: { referenceType: 'SALE', referenceId: id },
+          data: {
+            referenceType: 'SALE_CANCELLATION',
+            referenceId: cancellationRecordId,
+          },
+        });
       }
 
       // ==========================================
@@ -399,10 +435,177 @@ export class SalesService {
       // ==========================================
 
       return {
-        message: 'Draft penjualan berhasil dihapus',
+        message: 'Penjualan berhasil dihapus',
         saleId: id,
       };
     });
+  }
+
+  // ==========================================
+  // CANCEL SALE (Selesai -> Dibatalkan)
+  //
+  // Reverses the sale's cash effect with new, opposite money rows
+  // instead of editing or deleting history:
+  //   - buyer income (HARVEST_SALE IN)      -> SALE_CANCELLATION OUT
+  //   - worker settlement cash (OUT)        -> SALE_CANCELLATION IN
+  //   - kasbon payments made for this sale  -> DEBT rows
+  // A SaleCancellation record keeps the sale identity for audit.
+  // ==========================================
+
+  async cancelSale(id: number) {
+    return this.prisma.$transaction(
+      async (tx) => {
+        const sale = await tx.sale.findUnique({
+          where: { id },
+          include: {
+            farm: { select: { name: true } },
+            commodity: { select: { name: true } },
+            settlements: { select: { id: true } },
+            ownerSettlements: { select: { id: true, settledAmount: true } },
+          },
+        });
+
+        if (!sale) {
+          throw new NotFoundException('Sale tidak ditemukan');
+        }
+
+        const blocker = cancellationBlocker({
+          status: sale.status,
+          ownerSettlements: sale.ownerSettlements,
+        });
+
+        if (blocker) {
+          throw new ConflictException(blocker);
+        }
+
+        // Claim the transition atomically: a repeated or concurrent
+        // cancellation matches zero rows and writes no second reversal.
+        const claimed = await tx.sale.updateMany({
+          where: { id, status: SALE_STATUS.COMPLETED },
+          data: { status: SALE_STATUS.CANCELLED },
+        });
+
+        if (claimed.count !== 1) {
+          throw new ConflictException(
+            'Transaksi ini sudah dibatalkan sebelumnya',
+          );
+        }
+
+        // Audit record: keeps the sale identity and money together even
+        // after the sale itself is deleted.
+        const cancellation = await tx.saleCancellation.create({
+          data: {
+            saleId: id,
+            commodity: sale.commodity.name,
+            farmName: sale.farm.name,
+            saleDate: sale.saleDate,
+            totalWeightKg: sale.totalWeightKg,
+            pricePerKg: sale.pricePerKg,
+            status: 'CANCELLED',
+          },
+        });
+
+        const now = new Date();
+        const reversalRows: {
+          type: string;
+          category: string;
+          amount: number;
+          transactionDate: Date;
+          description: string;
+          referenceType: string;
+          referenceId: number;
+          farmId: number | null;
+        }[] = [];
+
+        const queueReversal = (entry: {
+          type: string;
+          amount: unknown;
+          description: string | null;
+          category: string;
+          farmId: number | null;
+        }) => {
+          const amount = Number(entry.amount);
+
+          if (amount <= 0) {
+            return;
+          }
+
+          reversalRows.push({
+            type: entry.type === 'IN' ? 'OUT' : 'IN',
+            category: 'SALE_CANCELLATION',
+            amount,
+            transactionDate: now,
+            description: `Pembatalan penjualan Sale #${id} [${entry.category}]: ${entry.description ?? entry.category}`,
+            referenceType: 'SALE_CANCELLATION',
+            referenceId: cancellation.id,
+            farmId: entry.farmId,
+          });
+        };
+
+        // 1. Buyer income recorded for this sale.
+        const saleMoney = await tx.moneyTransaction.findMany({
+          where: { referenceType: 'SALE', referenceId: id },
+        });
+
+        saleMoney.forEach(queueReversal);
+
+        // 2. Cash paid to rubber workers for this sale.
+        const settlementMoney = await tx.moneyTransaction.findMany({
+          where: {
+            category: 'RUBBER_WORKER_SETTLEMENT',
+            referenceType: 'SETTLEMENT',
+            referenceId: { in: sale.settlements.map((row) => row.id) },
+          },
+        });
+
+        settlementMoney.forEach(queueReversal);
+
+        // 3. Kasbon deducted during this sale's settlement must return to
+        // the worker's credit account, otherwise the debt disappears.
+        for (const settlement of sale.settlements) {
+          const payments = await tx.creditTransaction.findMany({
+            where: { reference: `SETTLEMENT-${settlement.id}` },
+          });
+
+          for (const payment of payments) {
+            const amount = Number(payment.amount);
+
+            if (amount <= 0) {
+              continue;
+            }
+
+            await tx.creditTransaction.create({
+              data: {
+                creditAccountId: payment.creditAccountId,
+                type: 'DEBT',
+                amount,
+                transactionDate: now,
+                description: `Pembatalan potongan kasbon Sale #${id}`,
+                reference: `CANCELLATION-${settlement.id}`,
+              },
+            });
+          }
+        }
+
+        if (reversalRows.length > 0) {
+          await tx.moneyTransaction.createMany({ data: reversalRows });
+        }
+
+        return {
+          message: 'Transaksi berhasil dibatalkan',
+          saleId: id,
+          cancellationId: cancellation.id,
+          reversedTransactions: reversalRows.length,
+          sale: await tx.sale.findUnique({
+            where: { id },
+            include: { farm: true, commodity: true },
+          }),
+        };
+      },
+      {
+        isolationLevel: 'ReadCommitted',
+      },
+    );
   }
 
   // ==========================================
