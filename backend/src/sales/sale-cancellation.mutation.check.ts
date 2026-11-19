@@ -59,20 +59,30 @@ async function run() {
       );
       assert.equal(await tx.sale.count({ where: { id: sale.id } }), 1);
       assert.equal(
-        await tx.moneyTransaction.count({ where: { referenceId: sale.id } }),
+        await tx.moneyTransaction.count({
+          where: { referenceType: 'SALE', referenceId: sale.id },
+        }),
         1,
       );
       console.log('PASS backend refuses deleting a COMPLETED sale');
 
-      await service.cancelSale(sale.id);
+      const cancellation = await service.cancelSale(sale.id);
+      const cancellationId = cancellation.cancellationId;
 
       // A second cancellation cannot double the reversal.
       await assert.rejects(
         () => service.cancelSale(sale.id),
         /sudah dibatalkan sebelumnya/,
       );
+      // Scoped to this sale: the dev database may hold earlier cancellations.
       assert.equal(
-        await tx.moneyTransaction.count({ where: { category: 'SALE_CANCELLATION' } }),
+        await tx.moneyTransaction.count({
+          where: {
+            category: 'SALE_CANCELLATION',
+            referenceType: 'SALE_CANCELLATION',
+            referenceId: cancellationId,
+          },
+        }),
         1,
       );
       console.log('PASS backend refuses a second cancellation');
