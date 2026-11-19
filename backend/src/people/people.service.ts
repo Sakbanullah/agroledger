@@ -22,6 +22,23 @@ const PERSON_TYPE_LABELS: Record<string, string> = {
   [PERSON_TYPE_RELATIVE_OWNER]: 'Pemilik Saudara',
 };
 
+/** Same rule as the kasbon menu: DEBT adds, PAYMENT subtracts. */
+function outstandingOf(
+  transactions: { type: string; amount: unknown }[],
+): number {
+  return transactions.reduce((total, transaction) => {
+    if (transaction.type === 'DEBT') return total + Number(transaction.amount);
+    if (transaction.type === 'PAYMENT') {
+      return total - Number(transaction.amount);
+    }
+    return total;
+  }, 0);
+}
+
+function formatRupiah(value: number): string {
+  return `Rp${new Intl.NumberFormat('id-ID').format(value)}`;
+}
+
 @Injectable()
 export class PeopleService {
   constructor(private readonly prisma: PrismaService) {}
@@ -115,11 +132,17 @@ export class PeopleService {
     if (person.rubberWorkers.length > 0) blockers.push('penjualan karet');
     if (person.settlements.length > 0) blockers.push('settlement worker');
     if (person.ownerSettlements.length > 0) blockers.push('settlement pemilik');
-    if (person.creditAccount) {
+
+    // Kasbon aktif (debt minus payment > 0) is a real debt, so the person
+    // must stay. A settled account is history only and is removed together
+    // with the person below.
+    const outstandingKasbon = person.creditAccount
+      ? outstandingOf(person.creditAccount.transactions)
+      : 0;
+
+    if (outstandingKasbon > 0) {
       blockers.push(
-        person.creditAccount.transactions.length > 0
-          ? 'transaksi kasbon'
-          : 'akun kasbon (hapus lewat menu Kasbon)',
+        `kasbon belum lunas (${formatRupiah(outstandingKasbon)})`,
       );
     }
 
@@ -129,8 +152,29 @@ export class PeopleService {
       );
     }
 
-    return this.prisma.person.delete({
-      where: { id },
+    const creditAccount = person.creditAccount;
+
+    if (!creditAccount) {
+      return this.prisma.person.delete({
+        where: { id },
+      });
+    }
+
+    // CreditTransaction and CreditAccount reference the person with
+    // ON DELETE RESTRICT, so the account chain goes first, in one
+    // transaction with the person.
+    return this.prisma.$transaction(async (tx) => {
+      await tx.creditTransaction.deleteMany({
+        where: { creditAccountId: creditAccount.id },
+      });
+
+      await tx.creditAccount.delete({
+        where: { id: creditAccount.id },
+      });
+
+      return tx.person.delete({
+        where: { id },
+      });
     });
   }
 
