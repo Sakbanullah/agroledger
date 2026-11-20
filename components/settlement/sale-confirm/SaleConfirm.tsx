@@ -80,7 +80,12 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
     fetchSale();
   }, [saleId]);
 
-  const isSawit = sale?.commodity?.name?.toLowerCase() === "sawit";
+  // Same rule as the backend (reports.calculator isSawitCommodity): a
+  // commodity whose name contains "sawit" never uses workers.
+  const isSawit = (sale?.commodity?.name ?? "")
+    .trim()
+    .toLowerCase()
+    .includes("sawit");
 
   const totalWeight = useMemo(() => {
     if (isSawit) {
@@ -198,7 +203,10 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
       // - Sawit RELATIVE -> commission -> owner settlement
       // =====================================================
 
-      const commodityName = confirmData.commodity?.name?.toLowerCase();
+      const isSawitCommodity = (confirmData.commodity?.name ?? "")
+        .trim()
+        .toLowerCase()
+        .includes("sawit");
       const ownershipType = (
         confirmData.ownershipType ??
         confirmData.farm?.ownershipType ??
@@ -207,7 +215,7 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
         .toString()
         .toUpperCase();
 
-      if (commodityName === "sawit") {
+      if (isSawitCommodity) {
         if (ownershipType === "RELATIVE") {
           // Commission belum ditentukan -> user harus menyepakati rate.
           router.push(`/settlement/sale/${saleId}/commission`);
@@ -228,7 +236,8 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
           );
         }
 
-        router.push(`/settlement/sale/${saleId}/check`);
+        // Sawit has no worker check. Back to the list with the result.
+        router.push(`/settlement?saved=${saleId}&status=completed`);
         return;
       }
 
@@ -400,7 +409,7 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
                 htmlFor="pricePerKg"
                 className="mb-1.5 block text-[10px] font-medium text-[#4c574f]"
               >
-                Harga Karet / Kg
+                {isSawit ? "Harga Sawit / Kg" : "Harga Karet / Kg"}
               </label>
 
               <div className="relative">
@@ -456,7 +465,7 @@ export default function SaleConfirm({ saleId }: SaleConfirmProps) {
         ================================================== */}
 
         <section className="mb-4 rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgba(23,34,27,0.02)]">
-          {sale.rubberWorkers && (
+          {!isSawit && sale.rubberWorkers && (
             <>
           <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-5">
             <div>

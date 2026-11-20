@@ -423,6 +423,74 @@ async function run() {
       assert.equal(await tx.sale.count({ where: { id: noSettlement.id } }), 1);
       pass('8. refused deletion leaves the sale and its data intact');
 
+      // ---------------- 9c. owner settlement on a cancelled sale ---
+      // The owner share was already paid before cancelling, then the sale
+      // is cancelled and deleted: owner rows are neutralized and the
+      // owner's payment survives on the cancellation record.
+      const ownerSale = await makeSale('COMPLETED');
+      const ownerSettlementRow = await tx.ownerSettlement.create({
+        data: {
+          saleId: ownerSale.id,
+          ownerId: owner.id,
+          ownerShareAmount: 1000,
+          settledAmount: 0,
+          outstandingAmount: 1000,
+          status: 'PENDING',
+        },
+      });
+      const ownerPayment = await tx.moneyTransaction.create({
+        data: {
+          type: 'OUT',
+          category: 'OWNER_SETTLEMENT',
+          amount: 1000,
+          transactionDate: new Date(),
+          referenceType: 'OWNER_SETTLEMENT',
+          referenceId: ownerSettlementRow.id,
+          farmId: farm.id,
+        },
+      });
+
+      // Owner share unpaid: cancellation is allowed (nothing paid yet).
+      const cancelledOwnerSale = await service.cancelSale(ownerSale.id);
+
+      // Deleting must now succeed despite the owner settlement row.
+      await service.deleteDraftSale(ownerSale.id);
+
+      assert.equal(await tx.sale.count({ where: { id: ownerSale.id } }), 0);
+      assert.equal(
+        await tx.ownerSettlement.count({ where: { saleId: ownerSale.id } }),
+        0,
+      );
+      const ownerPaymentAfter = await tx.moneyTransaction.findUnique({
+        where: { id: ownerPayment.id },
+      });
+      assert.equal(ownerPaymentAfter?.referenceType, 'SALE_CANCELLATION');
+      assert.equal(ownerPaymentAfter?.referenceId, cancelledOwnerSale.cancellationId);
+      assert.equal(Number(ownerPaymentAfter?.amount), 1000);
+      pass('9c. owner settle cancelled sale deletes; owner payment kept');
+
+      // Unpaid owner share still blocks deleting a non-cancelled sale.
+      const pendingOwnerSale = await makeSale('CONFIRMED');
+      await tx.ownerSettlement.create({
+        data: {
+          saleId: pendingOwnerSale.id,
+          ownerId: owner.id,
+          ownerShareAmount: 500,
+          settledAmount: 0,
+          outstandingAmount: 500,
+          status: 'PENDING',
+        },
+      });
+      await assert.rejects(
+        () => service.deleteDraftSale(pendingOwnerSale.id),
+        /settlement worker|settlement pemilik/,
+      );
+      assert.equal(
+        await tx.sale.count({ where: { id: pendingOwnerSale.id } }),
+        1,
+      );
+      pass('9d. owner settlement still blocks deleting a non-cancelled sale');
+
       throw new Error('rollback-scenario');
     }).catch((error) => {
       if ((error as Error).message !== 'rollback-scenario') {

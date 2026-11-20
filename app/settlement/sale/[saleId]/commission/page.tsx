@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 interface Sale {
@@ -15,7 +15,6 @@ interface Sale {
 
 export default function CommissionPage() {
   const { saleId } = useParams() as { saleId: string };
-  const router = useRouter();
   const id = Number(saleId);
 
   const [sale, setSale] = useState<Sale | null>(null);
@@ -25,6 +24,12 @@ export default function CommissionPage() {
   const [commissionRate, setCommissionRate] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  // Set once the backend confirms: the sale is COMPLETED after this save.
+  const [saved, setSaved] = useState<{
+    rate: number;
+    commission: number;
+    ownerShare: number;
+  } | null>(null);
 
   useEffect(() => {
     const fetchSale = async () => {
@@ -75,8 +80,13 @@ export default function CommissionPage() {
         throw new Error(data.message || "Gagal menyimpan komisi.");
       }
 
-      // Komisi tersimpan + OwnerSettlement dibuat di backend.
-      router.push("/owner-settlement");
+      // Komisi tersimpan, OwnerSettlement dibuat, dan penjualan Sawit
+      // langsung selesai (tidak ada settlement worker untuk Sawit).
+      const ownerShare = Number(data.ownerShareAmount ?? 0);
+      const commission = Number(data.commissionAmount ?? 0);
+
+      setSaved({ rate, commission, ownerShare });
+      setSale(data);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Terjadi kesalahan.");
     } finally {
@@ -127,6 +137,59 @@ export default function CommissionPage() {
           <ArrowLeft size={14} /> Kembali ke konfirmasi
         </Link>
 
+        {saved ? (
+          <section className="mt-4 rounded-2xl border border-border bg-surface p-5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-success">
+              PENJUALAN SELESAI
+            </p>
+            <h1 className="mt-1 text-lg font-semibold text-text-primary">
+              Penjualan #{sale.id} sudah selesai
+            </h1>
+            <p className="mt-1 text-xs text-text-secondary">
+              Sawit tidak memakai worker, jadi tidak ada layar settlement atau
+              check. Komisi berikut sudah masuk kas kebun sendiri.
+            </p>
+
+            <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-xl border border-border bg-surface-soft px-4 py-3 text-xs">
+              <dt className="text-text-muted">Rate komisi</dt>
+              <dd className="font-semibold text-text-primary">
+                Rp{new Intl.NumberFormat("id-ID").format(saved.rate)}/kg
+              </dd>
+
+              <dt className="text-text-muted">Komisi</dt>
+              <dd className="font-semibold text-success">
+                Rp{new Intl.NumberFormat("id-ID").format(saved.commission)}
+              </dd>
+
+              <dt className="text-text-muted">Bagian pemilik</dt>
+              <dd className="text-text-primary">
+                Rp{new Intl.NumberFormat("id-ID").format(saved.ownerShare)}
+              </dd>
+            </dl>
+
+            <p className="mt-2 text-[10px] text-text-muted">
+              Bagian pemilik masih tercatat sebagai kewajiban yang harus
+              dibayarkan lewat Pembayaran Pemilik.
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href="/owner-settlement"
+                className="inline-flex h-10 items-center rounded-[10px] border border-border bg-surface px-4 text-xs font-medium text-text-primary transition hover:bg-surface-soft"
+              >
+                Pembayaran Pemilik
+              </Link>
+
+              <Link
+                href="/settlement"
+                className="inline-flex h-10 items-center rounded-[10px] bg-surface px-4 text-xs font-medium text-white transition hover:bg-surface-soft"
+              >
+                Kembali ke Penjualan
+              </Link>
+            </div>
+          </section>
+        ) : (
+        <>
         <header className="mt-4 rounded-2xl border border-border bg-surface p-5">
           <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted">
             KOMISI SAWIT · MILIK SAUDARA
@@ -184,9 +247,11 @@ export default function CommissionPage() {
             className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-5 text-xs font-medium text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
-            Simpan & Lanjut
+            Simpan & Selesaikan
           </button>
         </section>
+        </>
+        )}
       </div>
     </main>
   );

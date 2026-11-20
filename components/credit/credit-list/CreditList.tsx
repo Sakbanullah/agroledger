@@ -204,7 +204,7 @@ export default function CreditList() {
           <button
             type="button"
             onClick={() => setShowWorkerSelector(true)}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[12px] font-medium text-white transition hover:bg-surface-soft active:scale-[0.99]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-primary-action px-4 text-[12px] font-medium text-primary-action-fg transition hover:bg-primary-action-hover active:scale-[0.99]"
           >
             <Plus size={15} />
             Tambah Kasbon

@@ -1,5 +1,7 @@
 const API_URL = "http://localhost:3001";
 
+export const apiBaseUrl = () => API_URL;
+
 export async function getDashboardSummary() {
   const response = await fetch(`${API_URL}/reports/dashboard`, {
     cache: "no-store",

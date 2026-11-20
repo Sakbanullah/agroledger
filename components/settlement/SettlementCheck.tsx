@@ -76,16 +76,24 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
           `http://localhost:3001/settlements/sale/${saleId}/check`,
         );
 
-        if (!response.ok) {
-          throw new Error("Gagal mengambil data check");
-        }
+        const data = await response.json().catch(() => null);
 
-        const data = await response.json();
+        if (!response.ok) {
+          // The API explains why a sale has no check (e.g. Sawit has no
+          // worker settlements); show that instead of a generic error.
+          throw new Error(
+            (Array.isArray(data?.message)
+              ? data.message.join(", ")
+              : data?.message) || "Gagal mengambil data check",
+          );
+        }
 
         setChecks(data);
       } catch (err) {
         console.error(err);
-        setError("Gagal mengambil data check");
+        setError(
+          err instanceof Error ? err.message : "Gagal mengambil data check",
+        );
       } finally {
         setLoading(false);
       }

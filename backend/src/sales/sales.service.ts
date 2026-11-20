@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { isSawitCommodity } from '../reports/reports.calculator';
 import { SettingsService } from '../settings/settings.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { ConfirmSaleDto } from './dto/confirm-sale.dto';
@@ -407,6 +408,31 @@ export class SalesService {
             referenceId: cancellationRecordId,
           },
         });
+
+        // Owner share rows cascade with the sale. Mark and zero them first
+        // so report sums that read OwnerSettlement stay correct, and keep
+        // the owner's payments attached to the cancellation record.
+        await tx.ownerSettlement.updateMany({
+          where: { saleId: id },
+          data: {
+            status: 'CANCELLED',
+            settledAmount: 0,
+            outstandingAmount: 0,
+          },
+        });
+
+        await tx.moneyTransaction.updateMany({
+          where: {
+            referenceType: 'OWNER_SETTLEMENT',
+            referenceId: {
+              in: sale.ownerSettlements.map((row) => row.id),
+            },
+          },
+          data: {
+            referenceType: 'SALE_CANCELLATION',
+            referenceId: cancellationRecordId,
+          },
+        });
       }
 
       // ==========================================
@@ -657,7 +683,7 @@ export class SalesService {
       // VALIDATE COMMODITY
       // ==========================================
 
-      if (sale.commodity.name !== 'Sawit') {
+      if (!isSawitCommodity(sale.commodity.name)) {
         throw new BadRequestException(
           'Commission hanya berlaku untuk Sawit, bukan Karet',
         );
@@ -767,18 +793,29 @@ export class SalesService {
 
       // ==========================================
       // UPDATE SALE WITH COMMISSION
+      // Sawit has no worker settlement step, so agreeing the
+      // commission is the last step of the sale: CONFIRMED -> COMPLETED.
+      // The owner share stays payable and is tracked separately.
       // ==========================================
 
-      await tx.sale.update({
+      const completed = await tx.sale.updateMany({
         where: {
           id,
+          status: 'CONFIRMED',
         },
         data: {
           commissionRatePerKg: appliedRate,
           commissionAmount: commissionAmount,
           ownerShareAmount: ownerShareAmount,
+          status: 'COMPLETED',
         },
       });
+
+      if (completed.count !== 1) {
+        throw new BadRequestException(
+          'Sale sudah diselesaikan oleh proses lain',
+        );
+      }
 
       // ==========================================
       // CREATE OWNER SETTLEMENT

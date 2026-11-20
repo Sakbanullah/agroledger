@@ -13,6 +13,7 @@ interface Sale {
   buyerName: string | null;
   status: string;
   notes: string | null;
+  ownershipType: string | null;
 
   farm: {
     id: number;
@@ -48,6 +49,20 @@ export default function SaleList() {
   const [cancelError, setCancelError] = useState("");
 
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+
+  // Set by flows that finish a sale away from the list (e.g. Sawit).
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const savedId = params.get("saved");
+
+    if (savedId) {
+      setNotice(`Penjualan #${savedId} sudah selesai.`);
+      // Drop the query so a refresh does not repeat the message.
+      router.replace("/settlement");
+    }
+  }, [router]);
 
   // =========================================================
   // FETCH SALES
@@ -136,24 +151,44 @@ export default function SaleList() {
   // OPEN SALE
   // =========================================================
 
+  // Sawit never uses workers, so it never has a settlement or check step.
+  // Same rule as the backend isSawitCommodity.
+  const isSawit = (name: string) =>
+    (name ?? "").trim().toLowerCase().includes("sawit");
+
   const handleOpenSale = (sale: Sale) => {
+    const sawit = isSawit(sale.commodity.name);
+
     // Draft
     if (sale.status === "PENDING") {
       router.push(`/settlement/sale/${sale.id}/confirm`);
       return;
     }
 
-    // Sale sudah dikonfirmasi,
-    // lanjut ke settlement worker
     if (sale.status === "CONFIRMED") {
+      // Sawit RELATIVE still needs the commission agreed; Sawit OWN just
+      // finishes from the confirm screen.
+      if (sawit && sale.ownershipType === "RELATIVE") {
+        router.push(`/settlement/sale/${sale.id}/commission`);
+        return;
+      }
+
+      if (sawit) {
+        router.push(`/settlement/sale/${sale.id}/confirm`);
+        return;
+      }
+
       router.push(`/settlement/sale/${sale.id}/settlement`);
       return;
     }
 
-    // Sale sudah COMPLETED,
-    // check sudah tersedia
     if (sale.status === "COMPLETED") {
-      router.push(`/settlement/sale/${sale.id}/check`);
+      // Check exists only for Karet's worker settlements.
+      router.push(
+        sawit
+          ? `/settlement/sale/${sale.id}/confirm`
+          : `/settlement/sale/${sale.id}/check`,
+      );
       return;
     }
   };
@@ -347,17 +382,19 @@ export default function SaleList() {
     return "bg-warning-soft text-warning";
   };
 
-  const getActionLabel = (status: string) => {
+  const getActionLabel = (status: string, commodityName: string) => {
+    const sawit = isSawit(commodityName);
+
     if (status === "PENDING") {
       return "Lanjutkan →";
     }
 
     if (status === "CONFIRMED") {
-      return "Lanjutkan Settlement →";
+      return sawit ? "Lanjutkan →" : "Lanjutkan Settlement →";
     }
 
     if (status === "COMPLETED") {
-      return "Lihat Check →";
+      return sawit ? "Lihat Detail →" : "Lihat Check →";
     }
 
     return "Buka →";
@@ -450,6 +487,23 @@ export default function SaleList() {
             </button>
           </div>
         </header>
+
+        {/* NOTICE */}
+
+        {notice && (
+          <div className="mb-4 flex items-start justify-between gap-3 rounded-2xl border border-border bg-success-soft p-4">
+            <p className="text-xs font-semibold text-success">{notice}</p>
+
+            <button
+              type="button"
+              onClick={() => setNotice("")}
+              className="shrink-0 text-xs text-success/70 transition hover:text-success"
+              aria-label="Tutup notifikasi"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* DELETE ERROR */}
 
@@ -709,7 +763,7 @@ export default function SaleList() {
                         </div>
 
                         <span className="text-[10px] font-semibold text-success transition group-hover:translate-x-0.5">
-                          {getActionLabel(sale.status)}
+                          {getActionLabel(sale.status, sale.commodity.name)}
                         </span>
                       </div>
                     </div>

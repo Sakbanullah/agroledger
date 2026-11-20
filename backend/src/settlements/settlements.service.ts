@@ -709,6 +709,9 @@ export class SettlementsService {
       where: {
         id: saleId,
       },
+      include: {
+        commodity: { select: { name: true } },
+      },
     });
 
     if (!sale) {
@@ -718,6 +721,14 @@ export class SettlementsService {
     if (sale.status !== 'COMPLETED') {
       throw new BadRequestException(
         'Check belum tersedia. Settlement belum selesai.',
+      );
+    }
+
+    // Only Karet has worker settlements. Sawit finishes without workers,
+    // so it has no check to print.
+    if (sale.commodity.name !== 'Karet') {
+      throw new BadRequestException(
+        `Check hanya tersedia untuk penjualan Karet. ${sale.commodity.name} tidak memakai worker.`,
       );
     }
 

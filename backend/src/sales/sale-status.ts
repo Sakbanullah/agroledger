@@ -77,7 +77,12 @@ export function deletionBlocker(input: {
     return 'Penjualan tidak dapat dihapus karena settlement worker sudah dibuat';
   }
 
-  if (input.ownerSettlements.length > 0) {
+  // Same for the owner share: a cancelled sale neutralizes (and marks)
+  // those rows before the cascade.
+  if (
+    input.ownerSettlements.length > 0 &&
+    input.status !== SALE_STATUS.CANCELLED
+  ) {
     return 'Penjualan tidak dapat dihapus karena masih memiliki settlement pemilik';
   }
 

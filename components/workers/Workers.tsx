@@ -256,7 +256,7 @@ export default function Workers() {
           <button
             type="button"
             onClick={openCreateModal}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[12px] font-medium text-white transition hover:bg-surface-soft active:scale-[0.99]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-primary-action px-4 text-[12px] font-medium text-primary-action-fg transition hover:bg-primary-action-hover active:scale-[0.99]"
           >
             <Plus size={15} />
             Tambah Worker
@@ -618,7 +618,7 @@ export default function Workers() {
                 type="button"
                 onClick={modal === "create" ? handleCreate : handleUpdate}
                 disabled={submitting}
-                className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-surface px-4 text-[11px] font-medium text-white hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-primary-action px-4 text-[11px] font-medium text-primary-action-fg hover:bg-primary-action-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting && <Loader2 size={13} className="animate-spin" />}
                 {submitting
@@ -689,7 +689,7 @@ export default function Workers() {
                 type="button"
                 onClick={handleDelete}
                 disabled={submitting}
-                className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-danger-soft px-4 text-[11px] font-medium text-white hover:bg-[#963B31] disabled:opacity-60"
+                className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-danger-soft px-4 text-[11px] font-medium text-danger hover:bg-danger hover:text-white disabled:opacity-60"
               >
                 {submitting && <Loader2 size={13} className="animate-spin" />}
                 {submitting ? "Menghapus..." : "Hapus Worker"}
