@@ -4,6 +4,7 @@ import {
   LlmRequest,
   LlmResponse,
 } from '../domain/llm-provider';
+import { ModelOption } from '../domain/model-list';
 import { LlmProtocol } from '../domain/llm-protocol';
 
 export interface LlmHttpRequest {
@@ -30,6 +31,13 @@ export interface LlmClient {
     context: LlmExecutionContext,
     request: LlmRequest,
   ): Promise<LlmResponse>;
+
+  /**
+   * Models the endpoint advertises. Returns null when the provider has no
+   * discovery endpoint, so the caller can explain that instead of showing an
+   * empty list as "no models".
+   */
+  listModels(context: LlmExecutionContext): Promise<ModelOption[]>;
 }
 
 export interface ProviderTestResult {

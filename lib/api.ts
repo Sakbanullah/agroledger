@@ -539,6 +539,17 @@ export interface LlmTestResult {
   message: string;
 }
 
+export interface LlmModelOption {
+  id: string;
+  displayName: string | null;
+}
+
+/** What the provider advertises. `error` is set when discovery failed. */
+export interface LlmModelList {
+  models: LlmModelOption[];
+  error: string | null;
+}
+
 export interface AiConfigView {
   source: "database" | "environment";
   providerName: string | null;
@@ -640,6 +651,32 @@ export async function testUnsavedLlmProvider(
   > & { modelIds: string[] },
 ): Promise<{ results: LlmTestResult[] }> {
   return jsonRequest(`${API_URL}/llm/providers/test`, "POST", data);
+}
+
+/** Discovers models for a form configuration. The key never comes back. */
+export async function fetchLlmModels(data: {
+  protocol: LlmProtocol;
+  baseUrl: string;
+  apiKey?: string | null;
+  customHeaders?: Record<string, string> | null;
+  timeoutMs?: number;
+}): Promise<LlmModelList> {
+  return jsonRequest(
+    `${API_URL}/llm/providers/models`,
+    "POST",
+    data,
+    "Gagal mengambil daftar model",
+  );
+}
+
+/** Discovers models for a saved provider, using its stored key server-side. */
+export async function fetchSavedLlmModels(id: number): Promise<LlmModelList> {
+  return jsonRequest(
+    `${API_URL}/llm/providers/${id}/models`,
+    "POST",
+    {},
+    "Gagal mengambil daftar model",
+  );
 }
 
 export async function getAiConfig(): Promise<AiConfigView> {

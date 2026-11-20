@@ -90,6 +90,28 @@ export class TestUnsavedProviderDto {
   modelIds: string[];
 }
 
+/** Asks the backend what models a provider serves. Nothing is persisted. */
+export class ListModelsDto {
+  @IsIn(LLM_PROTOCOLS as unknown as string[])
+  protocol: string;
+
+  @IsString()
+  baseUrl: string;
+
+  @IsOptional()
+  @IsString()
+  apiKey?: string | null;
+
+  @IsOptional()
+  @IsObject()
+  customHeaders?: Record<string, string> | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1000)
+  timeoutMs?: number;
+}
+
 export class TestSavedProviderDto {
   @IsOptional()
   @IsString()

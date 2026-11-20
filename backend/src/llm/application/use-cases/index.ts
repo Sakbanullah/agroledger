@@ -1,3 +1,4 @@
+export { ListModelsUseCase } from './list-models.use-case';
 export { ListProvidersUseCase } from './list-providers.use-case';
 export { CreateProviderUseCase } from './create-provider.use-case';
 export { UpdateProviderUseCase } from './update-provider.use-case';

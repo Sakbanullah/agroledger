@@ -5,6 +5,7 @@ import { LLM_ALLOW_INSECURE, LLM_CLIENTS } from './application/tokens';
 import { ActivateProviderUseCase } from './application/use-cases/activate-provider.use-case';
 import { CreateProviderUseCase } from './application/use-cases/create-provider.use-case';
 import { DeleteProviderUseCase } from './application/use-cases/delete-provider.use-case';
+import { ListModelsUseCase } from './application/use-cases/list-models.use-case';
 import { ListProvidersUseCase } from './application/use-cases/list-providers.use-case';
 import { ResolveActiveLlmUseCase } from './application/use-cases/resolve-active-llm.use-case';
 import { TestProviderUseCase } from './application/use-cases/test-provider.use-case';
@@ -46,6 +47,7 @@ import { LlmProvidersController } from './interface/llm-providers.controller';
     { provide: SecretCipher, useExisting: AesGcmSecretCipher },
     { provide: LlmProviderRepository, useExisting: PrismaLlmProviderRepository },
     TestProviderUseCase,
+    ListModelsUseCase,
     ListProvidersUseCase,
     CreateProviderUseCase,
     UpdateProviderUseCase,

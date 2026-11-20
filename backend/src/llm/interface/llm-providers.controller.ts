@@ -18,6 +18,7 @@ import {
   ListProvidersUseCase,
   toView,
 } from '../application/use-cases/list-providers.use-case';
+import { ListModelsUseCase } from '../application/use-cases/list-models.use-case';
 import { TestProviderUseCase } from '../application/use-cases/test-provider.use-case';
 import { UpdateProviderUseCase } from '../application/use-cases/update-provider.use-case';
 import { LlmProviderView } from '../application/models';
@@ -30,6 +31,7 @@ import { LLM_CLIENTS } from '../application/tokens';
 import {
   ActivateLlmProviderDto,
   CreateLlmProviderDto,
+  ListModelsDto,
   TestSavedProviderDto,
   TestUnsavedProviderDto,
 } from './dto/llm-provider.dto';
@@ -43,6 +45,7 @@ export class LlmProvidersController {
     private readonly deleteProvider: DeleteProviderUseCase,
     private readonly activateProvider: ActivateProviderUseCase,
     private readonly testProvider: TestProviderUseCase,
+    private readonly listModelsUseCase: ListModelsUseCase,
     private readonly repository: LlmProviderRepository,
     @Inject(LLM_CLIENTS)
     private readonly clients: Record<LlmProtocol, LlmClient>,
@@ -112,6 +115,42 @@ export class LlmProvidersController {
     const reloaded = await this.repository.findById(Number(id));
 
     return { results, provider: reloaded ? toView(reloaded) : null };
+  }
+
+  /**
+   * Lists models for an unsaved form configuration. The key arrives in the
+   * request and is never echoed back.
+   */
+  @Post('models')
+  listModels(@Body() dto: ListModelsDto) {
+    if (!isLlmProtocol(dto.protocol)) {
+      throw new BadRequestException(
+        `Protocol tidak dikenal: ${dto.protocol}. Gunakan "openai" atau "gemini".`,
+      );
+    }
+
+    const context: LlmExecutionContext = {
+      protocol: dto.protocol,
+      baseUrl: dto.baseUrl,
+      apiKey: dto.apiKey ?? null,
+      headers: dto.customHeaders ?? {},
+      timeoutMs: dto.timeoutMs ?? 30000,
+      allowInsecure: allowInsecureFromEnv(process.env.LLM_ALLOW_INSECURE_URLS),
+    };
+
+    return this.listModelsUseCase.execute(context, this.clients[dto.protocol]);
+  }
+
+  /** Lists models for a saved provider, using the stored key server-side. */
+  @Post(':id/models')
+  async listSavedModels(@Param('id') id: string) {
+    const provider = await this.repository.findById(Number(id));
+
+    if (!provider) throw new NotFoundException('Provider tidak ditemukan');
+
+    const context = this.savedContext(provider);
+
+    return this.listModelsUseCase.execute(context, this.clients[context.protocol]);
   }
 
   /** Tests an unsaved configuration from the form. Persists nothing. */

@@ -9,31 +9,27 @@ import {
   Pencil,
   Plug,
   Plus,
+  RefreshCw,
   Star,
   Trash2,
 } from "lucide-react";
+import ModelPicker from "./ModelPicker";
 import {
   activateLlmProvider,
   createLlmProvider,
   deleteLlmProvider,
+  fetchLlmModels,
+  fetchSavedLlmModels,
   getLlmProviders,
   testLlmProvider,
   testUnsavedLlmProvider,
   updateLlmProvider,
+  type LlmModelOption,
   type LlmProtocol,
   type LlmProviderPayload,
   type LlmProviderView,
   type LlmTestResult,
 } from "@/lib/api";
-
-const PROTOCOLS: Array<{ value: LlmProtocol; label: string; hint: string }> = [
-  {
-    value: "openai",
-    label: "OpenAI-compatible",
-    hint: "9Router, OpenRouter, OpenAI, DeepSeek, Qwen, endpoint self-hosted",
-  },
-  { value: "gemini", label: "Google Gemini", hint: "API native Gemini" },
-];
 
 const PRESETS: Array<{ label: string; protocol: LlmProtocol; baseUrl: string }> = [
   { label: "9Router", protocol: "openai", baseUrl: "https://api.9router.ai/v1" },
@@ -112,6 +108,13 @@ export default function LlmProvidersSection() {
   const [testing, setTesting] = useState(false);
   const [testResults, setTestResults] = useState<LlmTestResult[] | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+
+  const [modelOptions, setModelOptions] = useState<LlmModelOption[]>([]);
+  const [modelFetch, setModelFetch] = useState<{
+    loading: boolean;
+    error: string;
+    done: boolean;
+  }>({ loading: false, error: "", done: false });
 
   const load = async () => {
     try {
@@ -203,6 +206,7 @@ export default function LlmProvidersSection() {
 
       setForm(null);
       setTestResults(null);
+      resetModelFetch();
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan provider.");
@@ -306,6 +310,45 @@ export default function LlmProvidersSection() {
     }
   };
 
+  /** Fetch the provider's model list. Never clears models already in the form. */
+  const handleFetchModels = async () => {
+    if (!form) return;
+
+    if (!form.baseUrl.trim()) {
+      setModelFetch({ loading: false, done: true, error: "Isi Base URL dulu." });
+      return;
+    }
+
+    try {
+      setModelFetch({ loading: true, error: "", done: false });
+
+      const result =
+        form.id && form.hasStoredKey && !form.keyTouched
+          ? await fetchSavedLlmModels(form.id)
+          : await fetchLlmModels({
+              protocol: form.protocol,
+              baseUrl: form.baseUrl.trim(),
+              apiKey: form.apiKey.trim() || null,
+              customHeaders: null,
+              timeoutMs: form.timeoutMs,
+            });
+
+      setModelOptions(result.models);
+      setModelFetch({ loading: false, done: true, error: result.error ?? "" });
+    } catch (err) {
+      setModelFetch({
+        loading: false,
+        done: true,
+        error: err instanceof Error ? err.message : "Gagal mengambil daftar model.",
+      });
+    }
+  };
+
+  const resetModelFetch = () => {
+    setModelOptions([]);
+    setModelFetch({ loading: false, error: "", done: false });
+  };
+
   const applyPreset = (label: string) => {
     const preset = PRESETS.find((p) => p.label === label);
     if (!preset || !form) return;
@@ -313,7 +356,7 @@ export default function LlmProvidersSection() {
   };
 
   return (
-    <section className="mt-6 overflow-hidden rounded-[14px] border border-border bg-surface">
+    <section className="mt-6 rounded-[14px] border border-border bg-surface">
       <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div>
           <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-text-muted">
@@ -333,6 +376,7 @@ export default function LlmProvidersSection() {
           onClick={() => {
             setForm(emptyForm());
             setTestResults(null);
+            resetModelFetch();
             setError("");
             setSuccess("");
           }}
@@ -415,6 +459,7 @@ export default function LlmProvidersSection() {
                     onClick={() => {
                       setForm(toForm(provider));
                       setTestResults(null);
+                      resetModelFetch();
                       setError("");
                       setSuccess("");
                     }}
@@ -478,32 +523,6 @@ export default function LlmProvidersSection() {
             </div>
 
             <div>
-              <label className={labelClass}>Protokol</label>
-              <div className="relative">
-                <select
-                  value={form.protocol}
-                  onChange={(e) =>
-                    update({ protocol: e.target.value as LlmProtocol })
-                  }
-                  className={`${inputClass} appearance-none pr-8`}
-                >
-                  {PROTOCOLS.map((protocol) => (
-                    <option key={protocol.value} value={protocol.value}>
-                      {protocol.label}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={14}
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-muted"
-                />
-              </div>
-              <p className="mt-1 text-[10px] text-text-muted">
-                {PROTOCOLS.find((p) => p.value === form.protocol)?.hint}
-              </p>
-            </div>
-
-            <div>
               <label className={labelClass}>Base URL</label>
               <input
                 value={form.baseUrl}
@@ -563,19 +582,78 @@ export default function LlmProvidersSection() {
               </button>
             </div>
 
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={modelFetch.loading}
+                onClick={handleFetchModels}
+                className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-border px-2.5 text-[11px] font-medium text-text-primary transition hover:bg-surface-soft disabled:opacity-60"
+              >
+                {modelFetch.loading ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={12} />
+                )}
+                {modelFetch.loading ? "Mengambil..." : "Ambil daftar model"}
+              </button>
+
+              <span className="text-[10px] text-text-muted">
+                {modelOptions.length > 0
+                  ? `${modelOptions.length} model tersedia`
+                  : "Atau ketik Model ID sendiri bila provider tidak mendukung /models"}
+              </span>
+            </div>
+
+            {modelFetch.error && (
+              <div className="mt-2 flex items-start gap-2 rounded-[9px] bg-danger-soft px-3 py-2 text-[11px] text-danger">
+                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                <span className="flex-1">{modelFetch.error}</span>
+                <button
+                  type="button"
+                  onClick={handleFetchModels}
+                  className="shrink-0 font-semibold underline"
+                >
+                  Coba lagi
+                </button>
+              </div>
+            )}
+
+            {modelFetch.done &&
+              !modelFetch.error &&
+              modelOptions.length === 0 && (
+                <p className="mt-2 text-[11px] text-text-secondary">
+                  Provider ini tidak mengembalikan model. Isi Model ID secara manual.
+                </p>
+              )}
+
             <div className="mt-2 space-y-2">
               {form.models.map((model, index) => (
                 <div key={index} className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    value={model.id}
-                    onChange={(e) => {
-                      const models = [...form.models];
-                      models[index] = { ...model, id: e.target.value };
-                      update({ models });
-                    }}
-                    placeholder="Model ID (mis. gpt-5.5)"
-                    className={inputClass}
-                  />
+                  <div className="relative flex-1">
+                    {modelOptions.length > 0 ? (
+                      <ModelPicker
+                        value={model.id}
+                        options={modelOptions}
+                        placeholder="Pilih model"
+                        onChange={(id) => {
+                          const models = [...form.models];
+                          models[index] = { ...model, id };
+                          update({ models });
+                        }}
+                      />
+                    ) : (
+                      <input
+                        value={model.id}
+                        onChange={(e) => {
+                          const models = [...form.models];
+                          models[index] = { ...model, id: e.target.value };
+                          update({ models });
+                        }}
+                        placeholder="Model ID (mis. gpt-5.5)"
+                        className={inputClass}
+                      />
+                    )}
+                  </div>
 
                   <input
                     value={model.displayName}
@@ -679,6 +757,7 @@ export default function LlmProvidersSection() {
                 onClick={() => {
                   setForm(null);
                   setTestResults(null);
+                  resetModelFetch();
                   setError("");
                 }}
                 className="inline-flex h-10 items-center rounded-[10px] border border-border px-4 text-[12px] text-text-secondary transition hover:bg-surface-soft"
