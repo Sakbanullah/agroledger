@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { LlmExecutionContext, LlmRequest, LlmResponse } from '../../domain/llm-provider';
 import { GuardedTransport, LlmClient } from '../../application/ports';
+import { ModelOption, parseModelList } from '../../domain/model-list';
+import { readChatText } from '../../domain/chat-body';
 import { redact } from '../../application/use-cases/test-provider.use-case';
 
 /**
@@ -64,11 +66,50 @@ export class OpenAiCompatibleAdapter implements LlmClient {
       throw new LlmHttpError(response.status, response.text, context.apiKey);
     }
 
-    const parsed = safeJson(response.text) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
+    const text = readChatText(response.text);
 
-    return { text: parsed?.choices?.[0]?.message?.content ?? '' };
+    // 9Router answers 200 with an error frame in the body instead of a failing
+    // status; an empty message would surface as a useless error.
+    if (typeof text !== 'string' || text.trim() === '') {
+      throw new BadRequestException(
+        `Endpoint mengembalikan balasan kosong${describeUpstreamError(response.text, context.apiKey)}`,
+      );
+    }
+
+    return { text };
+  }
+
+  async listModels(context: LlmExecutionContext): Promise<ModelOption[]> {
+    const response = await this.transport.send({
+      url: joinUrl(context.baseUrl, 'models'),
+      method: 'GET',
+      headers: {
+        ...(context.apiKey
+          ? { authorization: `Bearer ${context.apiKey}` }
+          : {}),
+        ...context.headers,
+      },
+      timeoutMs: context.timeoutMs,
+      allowInsecure: context.allowInsecure,
+    });
+
+    if (response.status === 404) {
+      throw new LlmDiscoveryUnsupportedError();
+    }
+
+    if (response.status < 200 || response.status >= 300) {
+      throw new LlmHttpError(response.status, response.text, context.apiKey);
+    }
+
+    const parsed = parseModelList(safeJson(response.text));
+
+    if (!parsed.ok) {
+      throw new BadRequestException(
+        'Provider membalas format yang tidak dikenali untuk /models. Periksa Base URL atau isi Model ID secara manual.',
+      );
+    }
+
+    return parsed.models;
   }
 }
 
@@ -81,6 +122,30 @@ export function safeJson(text: string): unknown {
     return JSON.parse(text);
   } catch {
     return null;
+  }
+}
+
+/** Pulls the first `{error:{message}}` out of a body that may be SSE-framed. */
+function describeUpstreamError(body: string, apiKey: string | null): string {
+  const line = body
+    .split('\n')
+    .map((part) => part.replace(/^data:\s*/, '').trim())
+    .find((part) => part.startsWith('{'));
+
+  const message = (safeJson(line ?? '') as { error?: { message?: unknown } })
+    ?.error?.message;
+
+  return typeof message === 'string' && message
+    ? `: ${redact(message, apiKey).slice(0, 300)}`
+    : '';
+}
+
+/** The endpoint has no /models route at all. */
+export class LlmDiscoveryUnsupportedError extends BadRequestException {
+  constructor() {
+    super(
+      'Provider tidak memiliki endpoint /models (HTTP 404). Isi Model ID secara manual.',
+    );
   }
 }
 

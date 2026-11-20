@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { LlmExecutionContext, LlmRequest, LlmResponse } from '../../domain/llm-provider';
+import { BadRequestException } from '@nestjs/common';
 import { GuardedTransport, LlmClient } from '../../application/ports';
-import {
-  joinUrl,
-  LlmHttpError,
-  safeJson,
-} from './openai-compatible.adapter';
+import { ModelOption, parseModelList } from '../../domain/model-list';
+import { joinUrl, LlmHttpError, safeJson } from './openai-compatible.adapter';
 
 /**
  * Gemini speaks its own protocol (parts / inlineData / generateContent), so it
@@ -44,7 +42,7 @@ export class GeminiAdapter implements LlmClient {
       ...(topP !== undefined ? { topP } : {}),
       ...(request.json ? { responseMimeType: 'application/json' } : {}),
       ...(request.json && request.schema
-        ? { responseSchema: request.schema }
+        ? { responseSchema: toResponseSchema(request.schema) }
         : {}),
     };
 
@@ -85,4 +83,66 @@ export class GeminiAdapter implements LlmClient {
 
     return { text };
   }
+
+  /** Gemini lists with `GET /models?key=...`; the key goes in a header instead. */
+  async listModels(context: LlmExecutionContext): Promise<ModelOption[]> {
+    const response = await this.transport.send({
+      url: joinUrl(context.baseUrl, 'models'),
+      method: 'GET',
+      headers: {
+        ...(context.apiKey ? { 'x-goog-api-key': context.apiKey } : {}),
+        ...context.headers,
+      },
+      timeoutMs: context.timeoutMs,
+      allowInsecure: context.allowInsecure,
+    });
+
+    if (response.status < 200 || response.status >= 300) {
+      throw new LlmHttpError(response.status, response.text, context.apiKey);
+    }
+
+    const parsed = parseModelList(safeJson(response.text));
+
+    if (!parsed.ok) {
+      throw new BadRequestException(
+        'Format respons /models tidak dikenali. Periksa Base URL atau isi Model ID secara manual.',
+      );
+    }
+
+    return parsed.models;
+  }
+}
+
+/**
+ * Gemini's proto Schema has no `nullable`. JSON-schema `type: ['x','null']`
+ * (used by the extraction schemas) is rewritten as `x` + `nullable: true`;
+ * passing the list through is rejected with HTTP 400.
+ */
+function toResponseSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(toResponseSchema);
+  if (typeof schema !== 'object' || schema === null) return schema;
+
+  const source = schema as Record<string, unknown>;
+  const { type, ...rest } = source;
+
+  const nullable = Array.isArray(type) && type.includes('null');
+  const plainType = Array.isArray(type)
+    ? type.find((entry) => entry !== 'null')
+    : type;
+
+  return {
+    ...rest,
+    ...(plainType === undefined ? {} : { type: plainType }),
+    ...(nullable ? { nullable: true } : {}),
+    ...(rest.properties
+      ? {
+          properties: Object.fromEntries(
+            Object.entries(rest.properties as Record<string, unknown>).map(
+              ([key, value]) => [key, toResponseSchema(value)],
+            ),
+          ),
+        }
+      : {}),
+    ...(rest.items ? { items: toResponseSchema(rest.items) } : {}),
+  };
 }
