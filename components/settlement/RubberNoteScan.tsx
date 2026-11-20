@@ -616,7 +616,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
             <div>
               <label
                 htmlFor="rubber-note-file"
-                className="group flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface-soft px-6 text-center transition hover:border-[#9db695] hover:bg-surface-soft"
+                className="group flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface-soft px-6 text-center transition hover:border-[#9db695] hover:bg-surface-soft sm:min-h-[240px] sm:max-h-[340px]"
               >
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-success-soft text-success">
                   <svg
@@ -657,15 +657,17 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
             {/* PREVIEW */}
 
-            <div className="min-h-[220px] overflow-hidden rounded-2xl border border-border bg-surface-muted">
+            <div className="flex min-h-[200px] items-center justify-center overflow-hidden rounded-2xl border border-border bg-surface-muted sm:min-h-[240px] sm:max-h-[340px]">
               {previewUrl ? (
+                // Capped height so a portrait photo cannot stretch the page;
+                // object-contain keeps the whole note visible at its own ratio.
                 <img
                   src={previewUrl}
                   alt="Preview catatan karet"
-                  className="h-full min-h-[220px] w-full object-contain"
+                  className="h-auto max-h-[260px] w-auto max-w-full object-contain p-2 sm:max-h-[340px]"
                 />
               ) : (
-                <div className="flex min-h-[220px] items-center justify-center px-6 text-center">
+                <div className="flex min-h-[200px] items-center justify-center px-6 text-center">
                   <div>
                     <div className="mx-auto mb-2 text-xl text-[#b4bcb5]">◇</div>
 
