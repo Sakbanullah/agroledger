@@ -1,149 +1,233 @@
 # AgroLedger
 
-## Deskripsi singkat
-AgroLedger adalah sistem manajemen keuangan dan operasional untuk bisnis pertanian yang menangani dua komoditas utama: sawit (Sawit) dan karet (Karet). Sistem mencatat penjualan, komisi, settlement pemilik relatif, settlement pekerja, kredit/kasbon, hasil panen, serta menampilkan dashboard cash‑flow yang terintegrasi.
+Aplikasi manajemen keuangan dan operasional untuk usaha perkebunan sawit dan karet. AgroLedger mencatat penjualan, menghitung komisi dan bagian pemilik kebun, mencatat settlement, kasbon/kredit, hasil panen, serta menampilkan ringkasan arus kas dari beberapa kebun sekaligus.
 
-## Fitur utama
-- **Multi‑farm**: mendukung banyak kebun, masing‑masing memiliki kepemilikan OWN atau RELATIVE dan komoditas Sawit/Karet.
-- **Workflow penjualan**: status PENDING → CONFIRMED → COMPLETED, mencatat berat, harga, dan opsi override komisi.
-- **Komisi**: berlaku hanya untuk penjualan Sawit dari kebun RELATIVE; default Rp200 / kg, dapat di‑override per transaksi.
-- **Owner settlement**: melacak kewajiban kepada pemilik relatif dan mencatat pembayaran tanpa mengubah data penjualan.
-- **Cash‑flow dashboard**: memisahkan Gross Sale, Own Income, Commission, Owner Share (Outstanding & Paid), Cash Received, Cash Paid.
-- **Laporan periodik**: filter tanggal dengan UI responsif.
-- **Pengaturan (Settings)**: mengubah tarif komisi default dan konfigurasi lain.
-- **Manajemen orang & kebun**: CRUD untuk People, Farms.
-- **Kasbon / Credit**: akun kredit, transaksi kredit.
-- **Harvest**: pencatatan hasil panen per kebun.
-- **Responsive UI**: layout adaptif 320 px‑1440 px+, tema gelap/terang dengan toggle persisten.
+## Latar Belakang
 
-## Alur bisnis utama
-1. **Pencatatan penjualan** – pengguna memasukkan farm, komoditas, berat, harga; untuk kebun RELATIVE (Sawit) sistem menghitung komisi.
-2. **Penerimaan cash** – pembeli membayar full Gross Sale; uang masuk ke cash pool pengguna.
-3. **Penetapan komisi** – hanya untuk Sawit + RELATIVE; komisi menjadi *Own Income* dan tidak mengurangi cash‑in.
-4. **Perhitungan owner share** – `Owner Share = Gross Sale – Commission`; menjadi liabilitas sampai settlement.
-5. **Owner settlement** – pembayaran kepada pemilik relatif mengurangi liabilitas, mencatat cash‑out.
-6. **Karet** – penjualan Karet tidak melibatkan komisi dan mengikuti workflow terpisah.
+Penghitungan hasil penjualan perkebunan dilakukan berulang setiap minggu: mencatat berat dan harga dari catatan tulisan tangan, menghitung bagian pemilik dan pekerja, lalu mengarsipkan transaksi. Dikerjakan manual, proses itu memakan waktu dan riwayatnya sulit ditelusuri kembali.
 
-## Tech stack
-- **Frontend**: Next.js 16 (App Router) + React 19 + Tailwind CSS v4 (semantic token) + TypeScript.
-- **Backend**: NestJS 12 + Prisma ORM + MariaDB + TypeScript.
-- **Database**: MariaDB, skema dikelola oleh Prisma (`backend/prisma/schema.prisma`).
-- **Testing**: Jest (unit & e2e) untuk backend, TypeScript compile‑time checks, ESLint.
+AgroLedger dibuat untuk mempercepat pekerjaan tersebut dengan memindahkannya ke sistem digital: pencatatan transaksi, perhitungan penjualan, dan pengarsipan riwayat agar lebih terstruktur. Bagian yang paling banyak menghabiskan waktu — membaca catatan karet dan mencocokkannya ke daftar pekerja — dapat dibantu lewat ekstraksi otomatis dari foto catatan, dengan hasil tetap diperiksa dan dikonfirmasi pengguna.
 
-## Gambaran arsitektur (singkat)
-- **Presentation layer** – folder `app/` (halaman) dan `components/` (komponen UI) yang menggunakan API client terpusat `lib/api.ts`.
-- **Application layer** – modul NestJS di `backend/src/` (misalnya `sales`, `owner-settlements`, `credits`).
-- **Domain layer** – layanan (`*.service.ts`) yang menegakkan aturan bisnis (komisi, settlement, cash‑flow) sebagaimana dijelaskan di `docs/BUSINESS-RULES.md` & `docs/CASHFLOW-RULES.md`.
-- **Infrastructure layer** – Prisma client (`backend/src/prisma/prisma.service.ts`) dan MariaDB.
+## Fitur Utama
 
-## Modul utama (backend)
-- `sales` – penjualan, konfirmasi, penyelesaian.
-- `settlements` – settlement untuk kebun OWN.
-- `owner-settlements` – settlement pemilik relatif.
-- `credits` – akun kredit & transaksi.
-- `rubber‑workers` – input pekerja karet, perhitungan.
-- `harvests` – pencatatan hasil panen.
-- `people` – manajemen orang.
-- `farms` – definisi kebun, kepemilikan, komoditas.
-- `reports` – endpoint laporan periodik.
-- `settings` – konfigurasi global (misalnya tarif komisi default).
+- **Multi-kebun** — satu akun mengelola banyak kebun, masing-masing dengan komoditas (Sawit/Karet) dan jenis kepemilikan (`OWN` – milik sendiri, `RELATIVE` – milik saudara).
+- **Workflow penjualan** — `PENDING` → `CONFIRMED` → `COMPLETED`. Draft dapat dihapus; penjualan yang sudah dikonfirmasi dibatasi perubahannya; pembatalan dan penghapusan penjualan tercatat.
+- **Komisi sawit** — hanya untuk Sawit dari kebun `RELATIVE`. Tarif default Rp200/kg diatur di Settings, dapat di-_override_ per transaksi. Tarif dan nilai komisi yang berlaku disimpan per penjualan sehingga perubahan tarif tidak mengubah riwayat.
+- **Settlement pemilik** (`owner-settlements`) — mencatat kewajiban kepada pemilik kebun relatif dan pembayarannya tanpa mengubah data penjualan.
+- **Settlement pekerja karet** — input manual maupun hasil scan foto catatan; satu pekerja dapat ditimbang lebih dari sekali (lihat *Catatan pekerja karet*); potongan kasbon dihitung dari saldo kredit pekerja.
+- **Kredit / kasbon** — akun kredit per orang beserta transaksi hutang dan pembayaran.
+- **Transaksi keuangan** — pencatatan uang masuk/keluar di luar penjualan (operasional, warung, pertanian, transportasi, perawatan, lainnya).
+- **Dashboard** — ringkasan lintas kebun: nilai penjualan, bagian pemilik, komisi, kas diterima, kas keluar, dan grafik arus kas harian.
+- **Laporan** — laporan periodik dengan filter tanggal.
+- **Panen** (`harvests`) — pencatatan hasil panen per kebun.
+- **People** — data orang yang terlibat (pemilik, pekerja, dsb.).
+- **AI / LLM Providers** — provider LLM dikonfigurasi dari Settings (Base URL, API key, model, timeout) untuk fitur scan catatan karet. Model dapat dipilih dari daftar yang disediakan endpoint provider.
+- **Tema dan UI responsif** — light/dark mode yang tersimpan, layout menyesuaikan ukuran layar.
 
-## Aturan finansial / cash‑flow penting
-- **Komisi** hanya berlaku untuk *Sawit + RELATIVE*.
-- **Tarif default**: Rp200 / kg (dapat di‑override per transaksi).
-- **Perhitungan**: `Commission = Weight × AppliedRate`.
-- **Owner Share**: `Owner Share = Gross Sale – Commission`.
-- **Komisi** tidak mengurangi cash‑in buyer; cash‑in terjadi satu kali pada penerimaan pembayaran.
-- **Konfirmasi penjualan** menghasilkan satu entri *Cash IN* (gross sale).
-- **Owner settlement** menghasilkan *Cash OUT*; tidak mengubah data penjualan.
-- **Karet** tidak memiliki komisi dalam semua skenario.
+### Catatan pekerja karet
 
-## Struktur project (ringkas)
+Satu pekerja bisa memiliki keping terlalu banyak untuk ditimbang sekali. Sistem menyimpan satu baris per pekerja per penjualan dengan daftar timbangan (tabel `RubberSaleWorkerWeighing`); keping dan berat pada baris pekerja adalah jumlah seluruh timbangan. Di alur scan, baris dengan pekerja yang sama dapat digabung sebagai timbang ulang.
+
+## Teknologi yang Digunakan
+
+### Frontend
+
+| Teknologi | Versi | Fungsi |
+|---|---|---|
+| Next.js (App Router) | 16.3.4 | Routing halaman dan server rendering |
+| React | 19.2.8 | Komponen antarmuka |
+| TypeScript | 5.x | Type safety di sisi klien |
+| Tailwind CSS | 4.x | Styling berbasis utility dan semantic token di `app/globals.css` |
+| lucide-react | 1.x | Ikon |
+| ESLint (`eslint-config-next`) | 9.x | Lint |
+
+Komponen frontend berupa _client components_ yang memanggil backend langsung lewat `fetch`; seluruh panggilan API terpusat di `lib/api.ts`.
+
+### Backend
+
+| Teknologi | Versi | Fungsi |
+|---|---|---|
+| NestJS | 12.x | Modul, controller, service, dependency injection |
+| Prisma ORM | 7.x | Skema, migrasi, dan query database (`@prisma/adapter-mariadb`) |
+| MariaDB / MySQL | — | Database relasional |
+| class-validator / class-transformer | 0.15 / 0.5 | Validasi DTO dengan `ValidationPipe` global |
+| Node.js `http`/`https` | — | Transport HTTP khusus modul LLM (pengganti `fetch`) |
+| `@google/genai`, `openai` | — | Dependensi saat modul AI masih memakai konfigurasi environment |
+| Jest | 30.x | Unit test dan integration test |
+| oxlint | 1.x | Lint backend |
+
+## Arsitektur Sistem
+
 ```
-├─ app/                 # Halaman Next.js
-├─ components/          # Komponen UI React
-├─ lib/                 # API client
-├─ backend/             # Source NestJS
-│   ├─ src/            # Modul, controller, service, DTO
-│   └─ prisma/         # Skema Prisma & migrasi (di‑ignore)
-├─ docs/                # Dokumen bisnis & cashflow
-├─ public/              # Aset statis
-├─ .gitignore
-├─ package.json         # Frontend deps & scripts
-├─ backend/package.json # Backend deps & scripts
-└─ README.md           # Dokumentasi ini
+Browser (Next.js 16, App Router)
+        │  fetch JSON / multipart
+        ▼
+NestJS API (http://localhost:3001)
+        │  Prisma Client + MariaDB adapter
+        ▼
+MariaDB (database "agroledger")
+
+NestJS API ──► Provider LLM eksternal (OpenAI-compatible gateway atau Google Gemini)
 ```
 
-## Cara menjalankan secara lokal
-1. **Prasyarat**: Node.js 20+, npm 8+, MariaDB.
-2. **Install dependensi**:
-   ```bash
-   npm install               # frontend
-   cd backend && npm install  # backend
-   ```
-3. **Variabel environment** (buat file `.env` di root, jangan commit):
-   - `DATABASE_URL` – koneksi Prisma, contoh `mysql://user:pass@localhost:3306/agroledger`.
-   - `NEXT_PUBLIC_API_URL` – URL API backend, default `http://localhost:3001`.
-   - `NEXT_PUBLIC_THEME` – `light` atau `dark` (opsional).
-4. **Setup database**:
-   ```bash
-   npx prisma generate               # buat client @prisma/client
-   npx prisma migrate dev --name init  # terapkan migrasi
-   ```
-5. **Jalankan layanan** (dua terminal):
-   - Backend: `npm run dev` (di dalam folder `backend`, berjalan di port 3001).
-   - Frontend: `npm run dev` (di root, berjalan di port 3000).
-6. Buka `http://localhost:3000` di browser.
+- **Frontend** — halaman di `app/`, komponen di `components/`, akses API di `lib/api.ts`. Tidak ada API route Next.js; backend NestJS berjalan terpisah dan melakukan CORS hanya untuk `http://localhost:3000`.
+- **Backend** — satu modul NestJS per domain (`backend/src/<domain>/`), berisi controller, service, dan DTO. Validasi request memakai `ValidationPipe` dengan `whitelist` dan `forbidNonWhitelisted`.
+- **Database** — skema didefinisikan di `backend/prisma/schema.prisma`; riwayat perubahan lewat migrasi di `backend/prisma/migrations/`.
+- **Modul LLM** (`backend/src/llm/`) — disusun dengan pemisahan layer: `domain` (aturan murni, mis. parsing daftar model dan isi balasan), `application` (use case, port), `infrastructure` (adapter OpenAI-compatible/Gemini, transport dengan pengecekan alamat, enkripsi AES-256-GCM untuk API key), dan `interface` (controller, DTO).
+- **Integrasi eksternal** — hanya provider LLM, dipakai fitur scan catatan karet. Base URL dan kredensial disimpan di database; API key dienkripsi dan tidak pernah dikirim balik ke browser.
 
-## Perintah pengembangan
-- **Frontend**: `npm run dev`, `npm run build`, `npm run start`, `npm run lint`.
-- **Backend**: `npm run dev` (watch mode), `npm run start`, `npm run lint`, `npm run test`, `npm run test:watch`.
-- **Prisma**: `npx prisma generate`, `npx prisma migrate dev`.
+### Alur bisnis utama
 
-## Status testing / verifikasi
-- Semua unit test (`*.spec.ts`) dan test e2e di `backend/test/` lulus (`npm test`).
-- Kompilasi TypeScript berhasil (`npx tsc --noEmit`).
-- ESLint menghasilkan beberapa peringatan `any`, tetapi tidak menghentikan build.
+1. Penjualan dicatat (farm, komoditas, berat, harga) sebagai `PENDING`.
+2. Konfirmasi penjualan menghasilkan uang masuk sebesar nilai penjualan dan menetapkan komisi untuk Sawit + kebun `RELATIVE`.
+3. Bagian pemilik = nilai penjualan − komisi, dicatat sebagai kewajiban sampai diselesaikan lewat owner settlement.
+4. Settlement pekerja karet dihitung dari berat pekerja yang tersimpan dan memperhitungkan kasbon.
+5. Dashboard merangkum seluruh kebun; komisi masuk ke kas kebun sendiri, bukan potongan dari penjualan pemilik.
 
-## Status MVP saat ini
-- Dark mode dengan toggle persisten.
-- Migrasi semua utilitas warna ke semantic Tailwind token.
-- UI responsif untuk semua breakpoints.
-- Workflow penjualan lengkap dengan komisi, override, dan settlement pemilik.
-- Dashboard menampilkan ringkasan cash‑flow multi‑farm.
-- Laporan periodik dengan filter tanggal.
-- Settings untuk mengubah tarif komisi default.
-- Settings → AI / LLM Providers untuk mengatur provider LLM sendiri (Base URL,
-  API key, model), menguji koneksi, dan memilih default tanpa mengubah kode.
-- Modul People, Farms, Transactions, Harvest, Credit/Kasbon, Rubber Workers berfungsi.
-- Tidak ada mekanisme autentikasi/otorisasi (tercatat sebagai technical debt).
+Aturan rinci tersedia di `docs/BUSINESS-RULES.md` dan `docs/CASHFLOW-RULES.md`.
 
-## Technical debt yang diketahui
-- **Autentikasi** – endpoint API terbuka, belum ada JWT guard.
-- **Penggunaan `any`** – beberapa layanan masih memakai tipe `any` untuk prototipe cepat.
-- **AI modules** (`backend/src/ai/`) dipakai untuk scan catatan karet; provider
-  LLM-nya kini dapat dikonfigurasi lewat Settings (lihat *Konfigurasi LLM*).
-- **Lingkungan** – variabel env harus di‑setup manual; tidak ada fallback default.
+## Struktur Proyek
 
-## Konfigurasi LLM
+```
+.
+├─ app/                      # Halaman Next.js (transactions, people, farm, settlement,
+│                            #   harvest, credit, workers, reports, owner-settlement, settings)
+├─ components/               # Komponen UI (dashboard, settlement, farm, credit, settings, ui)
+├─ lib/api.ts                # Klien API terpusat ke backend
+├─ public/                   # Aset statis
+├─ docs/                     # Dokumen aturan bisnis, cash flow, dan arsitektur
+│   ├─ BUSINESS-RULES.md
+│   ├─ CASHFLOW-RULES.md
+│   └─ clean-architecture.md
+├─ backend/
+│   ├─ src/
+│   │   ├─ ai/               # Fitur AI (scan catatan karet)
+│   │   ├─ llm/              # Konfigurasi provider LLM (domain/application/infrastructure/interface)
+│   │   ├─ sales/            # Penjualan, konfirmasi, pembatalan
+│   │   ├─ settlements/      # Settlement pekerja karet
+│   │   ├─ owner-settlements/# Settlement pemilik kebun relatif
+│   │   ├─ rubber-workers/   # Input pekerja karet, fuzzy match, finalisasi draft
+│   │   ├─ credit/           # Kredit / kasbon
+│   │   ├─ money-transactions/, harvests/, farms/, commodities/
+│   │   ├─ people/, workers/, reports/, settings/, health/
+│   │   ├─ prisma/           # PrismaService
+│   │   └─ generated/        # Prisma Client (hasil generate)
+│   └─ prisma/               # schema.prisma dan migrasi
+├─ package.json              # Dependensi dan script frontend
+└─ README.md
+```
 
-Provider LLM dikelola lewat **Settings → AI / LLM Providers**. Provider aktif
-disimpan di database dan dipakai fitur AI (scan catatan karet). Bila tidak ada
-provider aktif, aplikasi memakai konfigurasi environment seperti sebelumnya —
-tidak ada fallback diam-diam ketika provider aktif rusak.
+## Persyaratan Sistem
 
-Variabel environment yang relevan:
+- **Node.js** 20 atau lebih baru (dikembangkan dengan Node.js 24)
+- **npm** (atau package manager lain yang kompatibel)
+- **MariaDB** atau **MySQL** yang berjalan di `localhost:3306`
 
-| Variabel | Fungsi |
-|---|---|
-| `LLM_ENCRYPTION_KEY` | Master key AES-256-GCM (32 byte hex/base64) untuk mengenkripsi API key di database. Wajib bila menyimpan provider yang punya API key. |
-| `LLM_ALLOW_INSECURE_URLS` | `true` untuk mengizinkan Base URL `http://` ke host lokal/privat (mis. Ollama `http://localhost:11434/v1`). |
-| `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Konfigurasi fallback lama, hanya dipakai bila tidak ada provider aktif. |
+## Instalasi dan Konfigurasi
 
-Protokol yang didukung saat ini: `openai` (semua endpoint [OI]-compatible:
-9Router, OpenRouter, [OI], DeepSeek, Qwen, self-hosted) dan `gemini`.
-API key tidak pernah dikirim balik ke browser, tidak dicatat di log, dan
-disimpan dalam bentuk ciphertext.
-- **Beberapa komponen UI** masih menggunakan utilitas warna lama yang telah dimigrasi namun belum seluruhnya dibersihkan.
+```bash
+# 1. Dependensi frontend (root)
+npm install
 
-*Dokumentasi ini disusun berdasarkan kode yang ada dan dokumen bisnis resmi.*
+# 2. Dependensi backend
+cd backend
+npm install
+```
+
+## Konfigurasi Environment
+
+Saat ini konfigurasi dibaca dari source dan file `.env` di folder `backend/` (diabaikan oleh Git). Jangan commit file tersebut.
+
+### `backend/.env`
+
+| Variabel | Wajib | Fungsi |
+|---|---|---|
+| `DATABASE_URL` | Ya | Koneksi database untuk Prisma CLI, mis. `mysql://root:@localhost:3306/agroledger`. Klien Prisma saat aplikasi berjalan memakai koneksi yang didefinisikan di `backend/src/prisma/prisma.service.ts`. |
+| `LLM_ENCRYPTION_KEY` | Untuk provider LLM dengan API key | Kunci AES-256-GCM berukuran 32 byte (hex 64 karakter atau base64). Tanpa kunci ini provider yang memiliki API key tidak dapat disimpan. |
+| `LLM_ALLOW_INSECURE_URLS` | Opsional | `true` untuk mengizinkan Base URL `http://` ke host lokal/privat selain loopback (mis. server LLM di jaringan lokal). |
+| `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Opsional | Konfigurasi fallback, hanya dipakai bila tidak ada provider aktif di Settings. `LLM_PROVIDER` bernilai `openai` atau `gemini`. |
+| `OPENAI_API_KEY`, `GEMINI_API_KEY` | Opsional | Dipakai sebagai `LLM_API_KEY` untuk provider fallback yang sesuai. |
+
+Contoh:
+
+```dotenv
+DATABASE_URL="mysql://root:@localhost:3306/agroledger"
+LLM_ENCRYPTION_KEY="<32 byte dalam hex atau base64>"
+```
+
+### Frontend
+
+Alamat API backend ditetapkan di `lib/api.ts` (`http://localhost:3001`). Backend hanya mengizinkan CORS dari `http://localhost:3000`.
+
+## Pengaturan Database
+
+Jalankan migrasi dari folder `backend/`:
+
+```bash
+cd backend
+
+# Membuat database `agroledger` bila belum ada, menerapkan migrasi,
+# lalu men-generate Prisma Client ke src/generated/prisma
+npx prisma migrate dev
+
+# Alternatif: hanya generate client setelah paket di-install ulang
+npx prisma generate
+```
+
+## Menjalankan Aplikasi
+
+Jalankan backend dan frontend di dua terminal:
+
+```bash
+# Terminal 1 – backend (watch mode, port 3001)
+cd backend
+npm run start:dev
+
+# Terminal 2 – frontend (port 3000)
+npm install
+npm run dev
+```
+
+Buka `http://localhost:3000`.
+
+### Perintah lain
+
+| Lokasi | Perintah | Fungsi |
+|---|---|---|
+| root | `npm run build` | Build production frontend |
+| root | `npm run start` | Menjalankan hasil build frontend |
+| root | `npm run lint` | ESLint |
+| backend | `npm run build` | Build backend dengan Nest CLI |
+| backend | `npm run lint` | oxlint |
+| backend | `npm run test` | Jest |
+| backend | `npx prisma migrate dev` | Terapkan migrasi database |
+
+## Pengujian
+
+- Unit test domain yang tidak bergantung framework dijalankan dengan Jest, mis. `backend/src/llm/domain/*.spec.ts`, `backend/src/reports/reports.calculator.spec.ts`, dan `backend/src/people/person-name.rules.spec.ts`:
+
+  ```bash
+  cd backend
+  npx jest src/llm src/reports src/people
+  ```
+
+- Integration test menyentuh database MySQL nyata dan mengembalikan semua perubahan (transaksi yang di-rollback). Jalankan dengan ts-node:
+
+  ```bash
+  cd backend
+  npx ts-node --transpile-only src/rubber-workers/weighings.integration.spec.ts
+  npx ts-node --transpile-only src/rubber-workers/finalize-draft.integration.spec.ts
+  ```
+
+  Catatan: pada setup TypeScript saat ini, jalankan dengan `TS_NODE_COMPILER_OPTIONS='{"rootDir":"."}'` bila ts-node melaporkan error `TS5011`.
+
+## Keterbatasan yang Diketahui
+
+- **Autentikasi belum tersedia** — endpoint backend terbuka dan belum memakai JWT guard.
+- Sebagian unit test yang meng-_import_ paket NestJS belum dapat dijalankan oleh Jest pada konfigurasi ESM saat ini; paket yang dimaksud gagal dimuat sebelum assertion dijalankan.
+- `tsc --noEmit` pada backend masih melaporkan error tipe pada beberapa file test; build aplikasi (`nest build`) tetap berhasil.
+- Skema Prisma mengandung model `LlmProvider`, sedangkan koneksi Prisma saat aplikasi berjalan memakai `@prisma/adapter-mariadb`.
+
+## Dokumentasi Visual
+
+Belum ada screenshot yang disertakan di repository.
