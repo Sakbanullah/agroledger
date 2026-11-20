@@ -2,7 +2,11 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { lookup } from 'node:dns/promises';
 import { request as httpsRequest } from 'node:https';
 import { request as httpRequest } from 'node:http';
-import { isBlockedAddress } from '../domain/base-url.rules';
+import {
+  insecureHttpMessage,
+  isBlockedAddress,
+  isLoopbackHost,
+} from '../domain/base-url.rules';
 import {
   GuardedTransport,
   LlmHttpRequest,
@@ -14,28 +18,52 @@ export class GuardedTransportService implements GuardedTransport {
   private readonly logger = new Logger(GuardedTransportService.name);
 
   async send(request: LlmHttpRequest): Promise<LlmHttpResponse> {
-    const url = new URL(request.url);
+    const url = this.parse(request.url);
 
-    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-      throw new BadRequestException('Skema URL tidak diizinkan');
-    }
+    // Resolve first, then judge each resolved address: a hostname that looks
+    // innocent but points at link-local metadata is rejected here, and a
+    // blocked target is reported as blocked rather than as a missing opt-in.
+    const addresses = await this.resolve(url.hostname);
 
-    if (url.protocol === 'http:' && !request.allowInsecure) {
-      throw new BadRequestException(
-        'Endpoint http memerlukan LLM_ALLOW_INSECURE_URLS=true',
-      );
-    }
+    const allowed = addresses.filter((address) => !isBlockedAddress(address));
 
-    // Resolve first, then judge the resolved address: a hostname that looks
-    // innocent but points at link-local metadata is rejected here.
-    const address = await this.resolve(url.hostname);
-
-    if (isBlockedAddress(address)) {
+    if (allowed.length === 0) {
       throw new BadRequestException(
         `Host ${url.hostname} mengarah ke alamat yang diblokir`,
       );
     }
 
+    // Same rule as the form validator: loopback is fine, everything else
+    // needs the explicit opt-in.
+    if (
+      url.protocol === 'http:' &&
+      !isLoopbackHost(url.hostname) &&
+      !request.allowInsecure
+    ) {
+      throw new BadRequestException(insecureHttpMessage(url.hostname));
+    }
+
+    // A dual-stack host (localhost -> ::1 and 127.0.0.1) often has only one
+    // side listening; a refusal on the first is not a refusal by the provider.
+    let lastRefusal: unknown = null;
+
+    for (const address of allowed) {
+      try {
+        return await this.dispatch(request, url, address);
+      } catch (error) {
+        if (!isConnectionRefused(error)) throw error;
+        lastRefusal = error;
+      }
+    }
+
+    throw lastRefusal;
+  }
+
+  private dispatch(
+    request: LlmHttpRequest,
+    url: URL,
+    address: string,
+  ): Promise<LlmHttpResponse> {
     const body = request.body;
 
     return new Promise<LlmHttpResponse>((resolve, reject) => {
@@ -108,11 +136,14 @@ export class GuardedTransportService implements GuardedTransport {
               ? 'host tidak ditemukan'
               : error.message;
 
-        reject(
-          new BadRequestException(
-            `Gagal menghubungi endpoint (${reason})`,
-          ),
-        );
+        const failure = new BadRequestException(
+          `Gagal menghubungi endpoint (${reason})`,
+        ) as BadRequestException & { code?: string };
+
+        // Keep the socket code so the caller can try the next address.
+        failure.code = error.code;
+
+        reject(failure);
       });
 
       if (body) req.write(body);
@@ -120,12 +151,29 @@ export class GuardedTransportService implements GuardedTransport {
     });
   }
 
-  private async resolve(hostname: string): Promise<string> {
-    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return hostname;
+  private parse(rawUrl: string): URL {
+    let url: URL;
 
     try {
-      const result = await lookup(hostname);
-      return result.address;
+      url = new URL(rawUrl);
+    } catch {
+      throw new BadRequestException('URL tidak valid');
+    }
+
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+      throw new BadRequestException('Skema URL tidak diizinkan');
+    }
+
+    return url;
+  }
+
+  private async resolve(hostname: string): Promise<string[]> {
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return [hostname];
+
+    try {
+      const results = await lookup(hostname, { all: true });
+
+      return results.map((result) => result.address);
     } catch {
       this.logger.warn(`Gagal me-resolve host LLM: ${hostname}`);
       throw new BadRequestException(
@@ -133,4 +181,12 @@ export class GuardedTransportService implements GuardedTransport {
       );
     }
   }
+}
+
+function isConnectionRefused(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { code?: string }).code === 'ECONNREFUSED'
+  );
 }

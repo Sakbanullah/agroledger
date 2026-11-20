@@ -22,6 +22,21 @@ export function isBlockedAddress(address: string): boolean {
   return BLOCKED_V4_PREFIXES.some((prefix) => normalized.startsWith(prefix));
 }
 
+/**
+ * Loopback is safe to reach over plain http: the request never leaves the
+ * machine. Private LAN hosts are more dangerous (they reach other services),
+ * so they stay behind the explicit opt-in.
+ */
+export function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase().replace(/^\[|\]$/g, '');
+
+  if (host === 'localhost' || host.endsWith('.localhost')) return true;
+  if (host === '::1') return true;
+  if (/^127(\.\d{1,3}){3}$/.test(host)) return true;
+
+  return false;
+}
+
 export function isLoopbackOrPrivateHost(hostname: string): boolean {
   const host = hostname.trim().toLowerCase().replace(/^\[|\]$/g, '');
 
@@ -71,6 +86,12 @@ export function validateBaseUrlSyntax(
     return 'Base URL tidak valid';
   }
 
+  // Order matters: a blocked target is blocked regardless of scheme, so it must
+  // be reported as blocked rather than as a missing opt-in.
+  if (isBlockedAddress(url.hostname)) {
+    return `Host ${url.hostname} tidak diizinkan sebagai Base URL`;
+  }
+
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
     return 'Base URL harus menggunakan http atau https';
   }
@@ -79,17 +100,15 @@ export function validateBaseUrlSyntax(
     return 'Base URL tidak boleh memuat kredensial';
   }
 
-  if (isBlockedAddress(url.hostname)) {
-    return `Host ${url.hostname} tidak diizinkan sebagai Base URL`;
-  }
-
   if (url.protocol === 'http:') {
+    if (isLoopbackHost(url.hostname)) return null;
+
     if (!isLoopbackOrPrivateHost(url.hostname)) {
-      return 'Base URL http hanya diizinkan untuk host lokal/privat';
+      return 'Base URL http hanya diizinkan untuk host loopback atau privat';
     }
 
     if (!options.allowInsecure) {
-      return 'Endpoint http memerlukan LLM_ALLOW_INSECURE_URLS=true';
+      return INSECURE_HTTP_HINT;
     }
   }
 
@@ -98,4 +117,12 @@ export function validateBaseUrlSyntax(
 
 export function allowInsecureFromEnv(value: string | undefined): boolean {
   return value === 'true';
+}
+
+/** The exact hint an operator needs, including which file is actually loaded. */
+export const INSECURE_HTTP_HINT =
+  'LLM_ALLOW_INSECURE_URLS=true belum aktif di proses backend. Set di backend/.env lalu restart.';
+
+export function insecureHttpMessage(hostname: string): string {
+  return `${INSECURE_HTTP_HINT} (host ${hostname})`;
 }
