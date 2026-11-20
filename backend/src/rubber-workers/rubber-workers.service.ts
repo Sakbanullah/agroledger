@@ -23,6 +23,22 @@ import {
  */
 type RubberWorkersClient = Prisma.TransactionClient;
 
+/**
+ * A worker whose pieces were too many may be weighed several times. The row
+ * keeps the sum so every existing reader (settlement, reports) is unchanged.
+ */
+function sumWeighings(
+  weighings: Array<{ pieces: number; weightKg: number }>,
+): { pieces: number; weightKg: number } {
+  return weighings.reduce(
+    (total, weighing) => ({
+      pieces: total.pieces + weighing.pieces,
+      weightKg: total.weightKg + Number(weighing.weightKg),
+    }),
+    { pieces: 0, weightKg: 0 },
+  );
+}
+
 @Injectable()
 export class RubberWorkersService {
   constructor(
@@ -300,10 +316,19 @@ export class RubberWorkersService {
         workerId: createRubberWorkerDto.workerId,
         pieces: createRubberWorkerDto.pieces,
         weightKg: createRubberWorkerDto.weightKg,
+        weighings: {
+          create: [
+            {
+              pieces: createRubberWorkerDto.pieces,
+              weightKg: createRubberWorkerDto.weightKg,
+            },
+          ],
+        },
       },
       include: {
         worker: true,
         sale: true,
+        weighings: true,
       },
     });
   }
@@ -396,14 +421,19 @@ export class RubberWorkersService {
         },
       );
 
-      if (rows.length > 0) {
-        await tx.rubberSaleWorker.createMany({
-          data: rows.map((worker) => ({
+      // One create per row (not createMany) so the draft row also carries its
+      // single weighing and the two stay consistent.
+      for (const worker of rows) {
+        await tx.rubberSaleWorker.create({
+          data: {
             saleId,
             workerId: worker.workerId,
             pieces: worker.pieces,
             weightKg: worker.weightKg,
-          })),
+            weighings: {
+              create: [{ pieces: worker.pieces, weightKg: worker.weightKg }],
+            },
+          },
         });
       }
 
@@ -492,8 +522,10 @@ export class RubberWorkersService {
         );
       }
 
-      const totalWeight = workers.reduce(
-        (total, worker) => total + Number(worker.weightKg),
+      const totals = workers.map((worker) => sumWeighings(worker.weighings));
+
+      const totalWeight = totals.reduce(
+        (total, worker) => total + worker.weightKg,
         0,
       );
 
@@ -502,16 +534,23 @@ export class RubberWorkersService {
       }
 
       const createdWorkers = await Promise.all(
-        workers.map((worker) =>
+        workers.map((worker, index) =>
           tx.rubberSaleWorker.create({
             data: {
               saleId,
               workerId: worker.workerId,
-              pieces: worker.pieces,
-              weightKg: worker.weightKg,
+              pieces: totals[index].pieces,
+              weightKg: totals[index].weightKg,
+              weighings: {
+                create: worker.weighings.map((weighing) => ({
+                  pieces: weighing.pieces,
+                  weightKg: weighing.weightKg,
+                })),
+              },
             },
             include: {
               worker: true,
+              weighings: true,
             },
           }),
         ),
@@ -530,6 +569,7 @@ export class RubberWorkersService {
           rubberWorkers: {
             include: {
               worker: true,
+              weighings: true,
             },
           },
         },
@@ -550,6 +590,7 @@ export class RubberWorkersService {
       },
       include: {
         sale: true,
+        weighings: true,
       },
     });
 
@@ -573,6 +614,18 @@ export class RubberWorkersService {
     if (confirmedSettlement) {
       throw new BadRequestException(
         'Worker tidak dapat diubah karena sale sudah memiliki settlement yang dikonfirmasi',
+      );
+    }
+
+    // A plain edit carries one pieces/weight pair, so a worker weighed more
+    // than once has no single value to overwrite.
+    if (
+      rubberWorker.weighings.length > 1 &&
+      (updateRubberWorkerDto.pieces !== undefined ||
+        updateRubberWorkerDto.weightKg !== undefined)
+    ) {
+      throw new BadRequestException(
+        'Worker dengan lebih dari satu timbangan tidak dapat diubah langsung',
       );
     }
 
@@ -613,10 +666,27 @@ export class RubberWorkersService {
         ...(updateRubberWorkerDto.weightKg !== undefined && {
           weightKg: updateRubberWorkerDto.weightKg,
         }),
+
+        // The single weighing mirrors the edited row.
+        ...((updateRubberWorkerDto.pieces !== undefined ||
+          updateRubberWorkerDto.weightKg !== undefined) && {
+          weighings: {
+            deleteMany: {},
+            create: [
+              {
+                pieces:
+                  updateRubberWorkerDto.pieces ?? rubberWorker.pieces,
+                weightKg:
+                  updateRubberWorkerDto.weightKg ?? rubberWorker.weightKg,
+              },
+            ],
+          },
+        }),
       },
       include: {
         worker: true,
         sale: true,
+        weighings: true,
       },
     });
   }

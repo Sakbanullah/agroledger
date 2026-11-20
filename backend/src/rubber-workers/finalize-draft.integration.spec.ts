@@ -139,9 +139,9 @@ async function run() {
       const finalInput = {
         saleId: saleA.id,
         workers: [
-          { workerId: workerA, pieces: 10, weightKg: 44 },
+          { workerId: workerA, weighings: [{ pieces: 10, weightKg: 44 }] },
           // Marker row: the trigger rejects it, aborting the transaction.
-          { workerId: workerC, pieces: FAILED_PIECES, weightKg: 10 },
+          { workerId: workerC, weighings: [{ pieces: FAILED_PIECES, weightKg: 10 }] },
         ],
       };
 
@@ -150,7 +150,7 @@ async function run() {
         () =>
           service.finalizeDraftWorkers({
             ...finalInput,
-            workers: [{ workerId: 999999999, pieces: 1, weightKg: 2 }],
+            workers: [{ workerId: 999999999, weighings: [{ pieces: 1, weightKg: 2 }] }],
           }),
         /tidak ditemukan atau bukan worker/,
       );
@@ -193,7 +193,9 @@ async function run() {
       const good = {
         ...finalInput,
         workers: finalInput.workers.map((worker) =>
-          worker.workerId === workerC ? { ...worker, pieces: 4 } : worker,
+          worker.workerId === workerC
+            ? { ...worker, weighings: [{ pieces: 4, weightKg: 10 }] }
+            : worker,
         ),
       };
 

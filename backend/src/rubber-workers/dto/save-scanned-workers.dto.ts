@@ -1,4 +1,5 @@
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsInt,
@@ -9,11 +10,8 @@ import {
 
 import { Type } from 'class-transformer';
 
-export class SaveScannedWorkerDto {
-  @IsInt()
-  @IsPositive()
-  workerId: number;
-
+/** One scale load: a worker whose pieces were too many may have several. */
+export class SaveScannedWeighingDto {
   @IsInt()
   @IsPositive()
   pieces: number;
@@ -21,6 +19,20 @@ export class SaveScannedWorkerDto {
   @IsNumber()
   @IsPositive()
   weightKg: number;
+}
+
+export class SaveScannedWorkerDto {
+  @IsInt()
+  @IsPositive()
+  workerId: number;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  // ponytail: ceiling of 20 weighings per worker; raise if a real note needs more.
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => SaveScannedWeighingDto)
+  weighings: SaveScannedWeighingDto[];
 }
 
 export class SaveScannedWorkersDto {

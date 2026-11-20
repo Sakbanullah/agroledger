@@ -16,10 +16,17 @@ interface WorkerMatch {
   score: number;
 }
 
+interface ScannedWeighing {
+  pieces: number | null;
+  weightKg: number | null;
+}
+
 interface ScannedWorker {
   name: string | null;
   pieces: number | null;
   weightKg: number | null;
+  /** Extra scale loads merged in from duplicate scan rows (too many pieces). */
+  reweighs: ScannedWeighing[];
   matches: WorkerMatch[];
   selectedWorkerId: number | null;
   confirmed: boolean;
@@ -39,6 +46,34 @@ interface ConfirmedWorkerPayload {
   name: string;
   pieces: number;
   weightKg: number;
+  weighings: Array<{ pieces: number; weightKg: number }>;
+}
+
+/** First load is the row's own pieces/weight minus the merged ones. */
+function toWeighings(worker: {
+  pieces: number | null;
+  weightKg: number | null;
+  reweighs: ScannedWeighing[];
+}) {
+  const mergedPieces = worker.reweighs.reduce(
+    (total, weigh) => total + (weigh.pieces ?? 0),
+    0,
+  );
+  const mergedWeight = worker.reweighs.reduce(
+    (total, weigh) => total + (weigh.weightKg ?? 0),
+    0,
+  );
+
+  return [
+    {
+      pieces: (worker.pieces ?? 0) - mergedPieces,
+      weightKg: (worker.weightKg ?? 0) - mergedWeight,
+    },
+    ...worker.reweighs.map((weigh) => ({
+      pieces: weigh.pieces ?? 0,
+      weightKg: weigh.weightKg ?? 0,
+    })),
+  ];
 }
 
 interface FinalReview {
@@ -129,6 +164,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
         name: worker.name,
         pieces: worker.pieces,
         weightKg: worker.weightKg,
+        reweighs: [],
         matches: worker.matches,
         selectedWorkerId: null,
         confirmed: false,
@@ -226,6 +262,62 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
         };
       }),
     );
+  };
+
+  // =========================================================
+  // MERGE REWEIGH (same person weighed twice)
+  // =========================================================
+
+  /** Index of the earlier row already holding the same worker, if any. */
+  const reweighTargetOf = (index: number) => {
+    const worker = workers[index];
+
+    if (!worker?.selectedWorkerId) {
+      return null;
+    }
+
+    const target = workers.findIndex(
+      (other, otherIndex) =>
+        otherIndex < index &&
+        other.selectedWorkerId === worker.selectedWorkerId,
+    );
+
+    return target === -1 ? null : target;
+  };
+
+  /** Moves a duplicate row into the first row as an extra weighing. */
+  const handleMergeReweigh = (sourceIndex: number) => {
+    const targetIndex = reweighTargetOf(sourceIndex);
+
+    if (targetIndex === null) {
+      return;
+    }
+
+    setWorkers((current) => {
+      const source = current[sourceIndex];
+      const target = current[targetIndex];
+
+      if (!source || !target) {
+        return current;
+      }
+
+      const merged = current.map((worker, index) =>
+        index === targetIndex
+          ? {
+              ...worker,
+              pieces: (target.pieces ?? 0) + (source.pieces ?? 0),
+              weightKg: (target.weightKg ?? 0) + (source.weightKg ?? 0),
+              reweighs: [
+                ...target.reweighs,
+                { pieces: source.pieces, weightKg: source.weightKg },
+              ],
+              confirmed: false,
+            }
+          : worker,
+      );
+
+      return merged.filter((_, index) => index !== sourceIndex);
+    });
   };
 
   // =========================================================
@@ -389,7 +481,9 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
     const workerIds = workers.map((worker) => worker.selectedWorkerId!);
 
     if (new Set(workerIds).size !== workerIds.length) {
-      setError("Worker yang sama tidak boleh dipilih lebih dari satu kali.");
+      setError(
+        "Worker yang sama dipilih lebih dari satu kali. Gabungkan barisnya sebagai timbang ulang.",
+      );
       return;
     }
 
@@ -403,6 +497,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
         name: selectedMatch?.name ?? worker.name!,
         pieces: worker.pieces!,
         weightKg: worker.weightKg!,
+        weighings: toWeighings(worker),
       };
     });
 
@@ -450,8 +545,7 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
             saleId,
             workers: finalReview.workers.map((worker) => ({
               workerId: worker.workerId,
-              pieces: worker.pieces,
-              weightKg: worker.weightKg,
+              weighings: worker.weighings,
             })),
           }),
         },
@@ -738,13 +832,25 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleSwap(index)}
-                      className="inline-flex h-8 w-full items-center justify-center rounded-[9px] border border-border px-3 text-[10px] font-medium text-text-secondary transition hover:border-border hover:bg-surface-soft sm:w-auto"
-                    >
-                      ⇄&nbsp; Swap
-                    </button>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      {reweighTargetOf(index) !== null && (
+                        <button
+                          type="button"
+                          onClick={() => handleMergeReweigh(index)}
+                          className="inline-flex h-8 w-full items-center justify-center rounded-[9px] border border-warning bg-warning-soft px-3 text-[10px] font-semibold text-warning transition sm:w-auto"
+                        >
+                          Gabung timbang ulang ke #{reweighTargetOf(index)! + 1}
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleSwap(index)}
+                        className="inline-flex h-8 w-full items-center justify-center rounded-[9px] border border-border px-3 text-[10px] font-medium text-text-secondary transition hover:border-border hover:bg-surface-soft sm:w-auto"
+                      >
+                        ⇄&nbsp; Swap
+                      </button>
+                    </div>
                   </div>
 
                   {/* FIELDS */}
@@ -799,6 +905,23 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
                       />
                     </div>
                   </div>
+
+                  {worker.reweighs.length > 0 && (
+                    <div className="border-t border-border px-4 py-3 text-[10px] text-text-secondary sm:px-5">
+                      <p className="font-semibold text-text-primary">
+                        {worker.reweighs.length + 1} kali timbang
+                      </p>
+
+                      <p className="mt-1">
+                        {toWeighings(worker)
+                          .map(
+                            (weigh, weighIndex) =>
+                              `Timbang ${weighIndex + 1}: ${weigh.pieces} keping · ${weigh.weightKg.toLocaleString("id-ID")} kg`,
+                          )
+                          .join("  |  ")}
+                      </p>
+                    </div>
+                  )}
 
                   {/* MATCHES */}
 
@@ -1023,6 +1146,11 @@ export default function RubberNoteScan({ saleId }: RubberNoteScanProps) {
 
                           <td className="px-4 py-3.5 text-right text-xs font-medium text-success sm:px-5">
                             {worker.weightKg.toLocaleString("id-ID")} kg
+                            {worker.weighings.length > 1 && (
+                              <span className="ml-1 text-[9px] text-text-muted">
+                                ({worker.weighings.length}×)
+                              </span>
+                            )}
                           </td>
                         </tr>
                       ))}

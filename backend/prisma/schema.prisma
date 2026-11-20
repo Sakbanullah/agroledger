@@ -159,7 +159,23 @@ model RubberSaleWorker {
   sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
   worker Person @relation(fields: [workerId], references: [id], onDelete: Restrict)
 
+  // One worker may be weighed several times (too many pieces for one scale
+  // load). pieces/weightKg above always hold the sum of these rows.
+  weighings RubberSaleWorkerWeighing[]
+
   @@unique([saleId, workerId])
+}
+
+model RubberSaleWorkerWeighing {
+  id                 Int      @id @default(autoincrement())
+  rubberSaleWorkerId Int
+  pieces             Int
+  weightKg           Decimal  @db.Decimal(12, 2)
+  createdAt          DateTime @default(now())
+
+  rubberSaleWorker RubberSaleWorker @relation(fields: [rubberSaleWorkerId], references: [id], onDelete: Cascade)
+
+  @@index([rubberSaleWorkerId])
 }
 
 model CreditAccount {
