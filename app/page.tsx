@@ -746,15 +746,15 @@ function CashFlowCard({
                 const moneyOut = Number(item.moneyOut ?? 0);
 
                 const inHeight =
-                  moneyIn > 0 ? Math.max((moneyIn / maxValue) * 100, 3) : 0;
+                  moneyIn > 0 ? Math.max((moneyIn / maxValue) * 100, 1.5) : 0;
 
                 const outHeight =
-                  moneyOut > 0 ? Math.max((moneyOut / maxValue) * 100, 3) : 0;
+                  moneyOut > 0 ? Math.max((moneyOut / maxValue) * 100, 1.5) : 0;
 
                 return (
                   <div
                     key={`${item.date}-${index}`}
-                    className="group flex h-full min-w-[44px] flex-1 items-end gap-1"
+                    className="group relative flex h-full min-w-[44px] flex-1 items-end gap-1"
                   >
                     <div
                       className="relative flex-1"
@@ -762,13 +762,7 @@ function CashFlowCard({
                         height: `${inHeight}%`,
                       }}
                     >
-                      <div className="h-full w-full rounded-t-[4px] bg-success-soft/75 transition group-hover:bg-success-soft" />
-
-                      {moneyIn > 0 && (
-                        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[7px] bg-surface px-2.5 py-1.5 text-[10px] text-white shadow-lg group-hover:block">
-                          Masuk: {formatRupiah(moneyIn)}
-                        </div>
-                      )}
+                      <div className="h-full w-full rounded-t-[4px] bg-agro-primary transition-opacity group-hover:opacity-80" />
                     </div>
 
                     <div
@@ -777,14 +771,21 @@ function CashFlowCard({
                         height: `${outHeight}%`,
                       }}
                     >
-                      <div className="h-full w-full rounded-t-[4px] bg-warning-soft/75 transition group-hover:bg-warning-soft" />
-
-                      {moneyOut > 0 && (
-                        <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-[7px] bg-surface px-2.5 py-1.5 text-[10px] text-white shadow-lg group-hover:block">
-                          Keluar: {formatRupiah(moneyOut)}
-                        </div>
-                      )}
+                      <div className="h-full w-full rounded-t-[4px] bg-warning transition-opacity group-hover:opacity-80" />
                     </div>
+
+                    {(moneyIn > 0 || moneyOut > 0) && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-full z-20 mb-2 hidden justify-center group-hover:flex">
+                        <div className="whitespace-nowrap rounded-[7px] bg-text-primary px-2.5 py-1.5 text-[10px] text-surface shadow-lg">
+                          {moneyIn > 0 && <div>Masuk: {formatRupiah(moneyIn)}</div>}
+                          {moneyOut > 0 && (
+                            <div className="text-surface/75">
+                              Keluar: {formatRupiah(moneyOut)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -804,12 +805,12 @@ function CashFlowCard({
             <div className="mt-5 flex items-center justify-between">
               <div className="flex gap-5 text-[10px] text-text-secondary">
                 <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-success-soft" />
+                  <span className="h-2 w-2 rounded-full bg-agro-primary" />
                   Uang masuk
                 </span>
 
                 <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-warning-soft" />
+                  <span className="h-2 w-2 rounded-full bg-warning" />
                   Uang keluar
                 </span>
               </div>
