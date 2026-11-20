@@ -153,7 +153,7 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[12px] font-medium text-white transition hover:bg-surface-soft disabled:opacity-60 active:scale-[0.99]"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-agro-primary px-4 text-[12px] font-medium text-white transition hover:bg-agro-primary-dark disabled:opacity-60 active:scale-[0.99]"
                 >
                   {isSaving ? (
                     <>

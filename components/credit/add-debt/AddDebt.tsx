@@ -263,7 +263,7 @@ export default function AddDebt({
             <button
               type="submit"
               disabled={loading || numericAmount <= 0}
-              className="h-10 rounded-[10px] bg-surface px-5 text-[12px] font-semibold text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-10 rounded-[10px] bg-agro-primary px-5 text-[12px] font-semibold text-white transition hover:bg-agro-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Menyimpan..." : "Simpan Kasbon"}
             </button>

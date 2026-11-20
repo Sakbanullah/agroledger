@@ -213,7 +213,7 @@ export default function CreditDetail({ workerId }: CreditDetailProps) {
               <button
                 type="button"
                 onClick={() => setShowAddDebt(true)}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[11px] font-medium text-white transition hover:bg-surface-soft"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-agro-primary px-4 text-[11px] font-medium text-white transition hover:bg-agro-primary-dark"
               >
                 <Plus size={14} />
                 Tambah Kasbon

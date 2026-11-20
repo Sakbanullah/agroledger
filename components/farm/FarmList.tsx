@@ -221,7 +221,7 @@ export default function FarmList() {
         <button
           type="button"
           onClick={openAddModal}
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-[9px] bg-success-soft px-3.5 text-[11px] font-semibold text-white transition hover:bg-success-soft active:scale-[0.98]"
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-[9px] bg-agro-primary px-3.5 text-[11px] font-semibold text-white transition hover:bg-agro-primary-dark active:scale-[0.98]"
         >
           <Plus size={14} strokeWidth={2} />
           Tambah Ladang

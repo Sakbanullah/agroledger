@@ -480,7 +480,7 @@ export default function SaleList() {
             <button
               type="button"
               onClick={() => router.push("/settlement/sale/new")}
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-surface px-4 text-[11px] font-medium text-white transition hover:bg-surface-soft"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[10px] bg-agro-primary px-4 text-[11px] font-medium text-white transition hover:bg-agro-primary-dark"
             >
               <span className="text-sm leading-none">+</span>
               Penjualan Baru

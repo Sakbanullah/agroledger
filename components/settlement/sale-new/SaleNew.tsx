@@ -518,7 +518,7 @@ export default function SaleNew() {
                 !saleDate ||
                 (isSawit && (!weightKg || !pricePerKg))
               }
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-surface px-5 text-sm font-semibold text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-agro-primary px-5 text-sm font-semibold text-white transition hover:bg-agro-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isCreating ? (
                 <>

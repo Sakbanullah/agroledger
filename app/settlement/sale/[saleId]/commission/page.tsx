@@ -182,7 +182,7 @@ export default function CommissionPage() {
 
               <Link
                 href="/settlement"
-                className="inline-flex h-10 items-center rounded-[10px] bg-surface px-4 text-xs font-medium text-white transition hover:bg-surface-soft"
+                className="inline-flex h-10 items-center rounded-[10px] border border-border-strong px-4 text-xs font-medium text-text-secondary transition hover:bg-surface-soft"
               >
                 Kembali ke Penjualan
               </Link>
@@ -244,7 +244,7 @@ export default function CommissionPage() {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-5 text-xs font-medium text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-agro-primary px-5 text-xs font-medium text-white transition hover:bg-agro-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             Simpan & Selesaikan

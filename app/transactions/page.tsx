@@ -273,7 +273,7 @@ export default function TransactionsPage() {
           <button
             type="button"
             onClick={openForm}
-            className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[12px] font-medium text-white transition hover:bg-surface-soft sm:w-auto"
+            className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-[10px] bg-agro-primary px-4 text-[12px] font-medium text-white transition hover:bg-agro-primary-dark sm:w-auto"
           >
             <Plus size={15} strokeWidth={2} />
             Tambah Transaksi
@@ -778,7 +778,7 @@ export default function TransactionsPage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="h-10 rounded-[10px] bg-surface text-[11px] font-medium text-white transition hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-60 sm:text-[12px]"
+                    className="h-10 rounded-[10px] bg-agro-primary text-[11px] font-medium text-white transition hover:bg-agro-primary-dark disabled:cursor-not-allowed disabled:opacity-60 sm:text-[12px]"
                   >
                     {saving ? "Menyimpan..." : "Simpan Transaksi"}
                   </button>

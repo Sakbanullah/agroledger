@@ -189,7 +189,7 @@ export default function TransactionDetailPage() {
 
             <Link
               href="/transactions"
-              className="mt-5 inline-flex h-9 items-center justify-center rounded-[10px] bg-surface px-4 text-[12px] font-medium text-white transition hover:bg-surface-soft"
+              className="mt-5 inline-flex h-9 items-center justify-center rounded-[10px] border border-border-strong px-4 text-[12px] font-medium text-text-secondary transition hover:bg-surface-soft"
             >
               Kembali ke Daftar Transaksi
             </Link>

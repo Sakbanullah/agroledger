@@ -255,7 +255,7 @@ export default function PeoplePage() {
           <button
             type="button"
             onClick={openAddModal}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-surface px-4 text-[12px] font-medium text-white transition hover:bg-surface-soft active:scale-[0.99]"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-agro-primary px-4 text-[12px] font-medium text-white transition hover:bg-agro-primary-dark active:scale-[0.99]"
           >
             <Plus size={15} />
             Tambah Person
