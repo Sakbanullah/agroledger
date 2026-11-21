@@ -16,6 +16,8 @@
     "../../src/credit/**/*.ts",
     "../../src/settlements/**/*.ts",
     "../../src/sales/sale-status.ts",
+    "../../src/rubber-workers/**/*.ts",
+    "../../src/people/**/*.ts",
     "../../src/auth/**/*.ts",
     "../../src/prisma/prisma.service.ts",
     "../../src/generated/prisma/**/*.ts",

@@ -26,7 +26,10 @@ execFileSync(
   { cwd: root, stdio: 'inherit' },
 );
 
-const checks = ['./credit-reference.check.js'];
+const checks = [
+  './credit-reference.check.js',
+  './worker-settlement-guard.check.js',
+];
 
 (async () => {
   for (const check of checks) {
