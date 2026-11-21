@@ -52,10 +52,40 @@ describe('historical settlement backfill classification', () => {
     });
   });
 
-  it('zero gross -> never PAID_OUT or offset', () => {
+  it('BD-17: gross 0, deduction 0, no rows -> NO_BALANCE', () => {
     expect(
       classifyHistoricalSettlement(
         sale({ grossShare: 0, deductionAmount: 0, netAmount: 0 }),
+        [],
+        [],
+      ),
+    ).toEqual({ status: 'NO_BALANCE', settlementMethod: 'NO_BALANCE' });
+  });
+
+  it('BD-17: gross 0 with a cash row -> REQUIRED', () => {
+    expect(
+      classifyHistoricalSettlement(
+        sale({ grossShare: 0, deductionAmount: 0, netAmount: 0 }),
+        [out(1, 10, 0)],
+        [],
+      ),
+    ).toEqual({ status: 'PENDING', reconciliationStatus: 'REQUIRED' });
+  });
+
+  it('BD-17: gross 0 with a PAYMENT row -> REQUIRED', () => {
+    expect(
+      classifyHistoricalSettlement(
+        sale({ grossShare: 0, deductionAmount: 0, netAmount: 0 }),
+        [],
+        [payment(2, 10, 0)],
+      ),
+    ).toEqual({ status: 'PENDING', reconciliationStatus: 'REQUIRED' });
+  });
+
+  it('BD-17: gross 0 with a non-zero deduction -> REQUIRED', () => {
+    expect(
+      classifyHistoricalSettlement(
+        sale({ grossShare: 0, deductionAmount: 500, netAmount: 0 }),
         [],
         [],
       ),

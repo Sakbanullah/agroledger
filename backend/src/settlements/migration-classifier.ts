@@ -33,6 +33,7 @@ export interface HistoricalCreditRow {
 export type HistoricalClassification =
   | { status: 'PAID_OUT'; settlementMethod: 'CASH'; evidenceMoneyTransactionId: number }
   | { status: 'SETTLED_BY_OFFSET'; settlementMethod: 'OFFSET'; evidenceCreditTransactionId: number }
+  | { status: 'NO_BALANCE'; settlementMethod: 'NO_BALANCE' }
   | { status: 'PENDING'; reconciliationStatus: 'REQUIRED' };
 
 export function classifyHistoricalSettlement(
@@ -101,6 +102,19 @@ export function classifyHistoricalSettlement(
         evidenceCreditTransactionId: payments[0].id,
       };
     }
+  }
+
+  // BD-17: nothing was ever owed. Every condition must hold: gross 0,
+  // deduction 0, net 0, and not a single payment or kasbon row for the
+  // settlement. Anything else falls through to reconciliation.
+  if (
+    settlement.grossShare === 0 &&
+    settlement.deductionAmount === 0 &&
+    settlement.netAmount === 0 &&
+    rows.length === 0 &&
+    credit.every((row) => row.settlementId !== settlement.id)
+  ) {
+    return { status: 'NO_BALANCE', settlementMethod: 'NO_BALANCE' };
   }
 
   return { status: 'PENDING', reconciliationStatus: 'REQUIRED' };

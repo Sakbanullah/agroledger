@@ -1,4 +1,13 @@
-import { IsIn, IsInt, IsOptional, IsString, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 /**
  * A reconciliation records what the admin concludes about an old settlement
@@ -11,7 +20,8 @@ export const RECONCILIATION_CHOICES = [
   'USE_EXISTING_PAYMENT',
   // Explicitly put the settlement back to PENDING for recalculation.
   'RESET_CALCULATION',
-  // Only note that nothing was handed over; the settlement stays REQUIRED.
+  // BD-18: the evidence proves nothing was handed over; the settlement goes
+  // back to PENDING + RESOLVED and may be paid through the normal endpoint.
   'REVIEWED_UNSETTLED',
 ] as const;
 
@@ -24,6 +34,16 @@ export class ReconcileSettlementDto {
   @IsOptional()
   @IsIn(['PAID_OUT', 'SETTLED_BY_OFFSET'])
   decision?: 'PAID_OUT' | 'SETTLED_BY_OFFSET';
+
+  // BD-18 confirmations. Both are required for REVIEWED_UNSETTLED and are
+  // verified against the ledger by the service before anything changes.
+  @IsOptional()
+  @IsBoolean()
+  verifiedNoCashPayment?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  verifiedKasbonDeductionNotRecorded?: boolean;
 
   // Evidence rows the admin examined. Checked to belong to this settlement.
   @IsOptional()

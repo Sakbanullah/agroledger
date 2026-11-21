@@ -1,6 +1,8 @@
 import {
   RECONCILIATION_STATUS,
   SETTLEMENT_STATUS,
+  isSettlementClosed,
+  isSettlementPaymentGuarded,
   isSettlementSettled,
   reconciliationDecisionAllowed,
   reconciliationDecisionMessage,
@@ -49,11 +51,21 @@ describe('resolveSettlementMethod (net 0 is not automatically an offset)', () =>
     ).toBe('INVALID');
   });
 
-  it('is INVALID for a zero-balance settlement (open PO decision)', () => {
+  it('is NO_BALANCE for gross 0 with nothing deducted (BD-17)', () => {
     expect(
       resolveSettlementMethod({
         grossShare: 0,
         deductionAmount: 0,
+        netAmount: 0,
+      }),
+    ).toBe('NO_BALANCE');
+  });
+
+  it('is INVALID for gross 0 with a deduction', () => {
+    expect(
+      resolveSettlementMethod({
+        grossShare: 0,
+        deductionAmount: 1000,
         netAmount: 0,
       }),
     ).toBe('INVALID');
@@ -136,6 +148,21 @@ describe('salePaymentState (computed from settlement rows)', () => {
     expect(salePaymentState([])).toBe('NOT_SETTLED');
   });
 
+  it('NO_BALANCE is closed but never a payment', () => {
+    expect(isSettlementClosed(SETTLEMENT_STATUS.NO_BALANCE)).toBe(true);
+    expect(isSettlementPaymentGuarded(SETTLEMENT_STATUS.NO_BALANCE)).toBe(false);
+    expect(isSettlementSettled(SETTLEMENT_STATUS.NO_BALANCE)).toBe(false);
+    expect(salePaymentState([{ status: SETTLEMENT_STATUS.NO_BALANCE }])).toBe(
+      'FULLY_SETTLED',
+    );
+    expect(
+      salePaymentState([
+        { status: SETTLEMENT_STATUS.NO_BALANCE },
+        { status: SETTLEMENT_STATUS.PENDING },
+      ]),
+    ).toBe('PARTIALLY_SETTLED');
+  });
+
   it('counts only cash and offset as settled', () => {
     expect(isSettlementSettled(SETTLEMENT_STATUS.PAID_OUT)).toBe(true);
     expect(isSettlementSettled(SETTLEMENT_STATUS.SETTLED_BY_OFFSET)).toBe(true);
@@ -143,6 +170,7 @@ describe('salePaymentState (computed from settlement rows)', () => {
     expect(isSettlementSettled(SETTLEMENT_STATUS.CANCELLED)).toBe(false);
     expect(isSettlementSettled('CONFIRMED')).toBe(false);
     expect(isSettlementSettled('NO_BALANCE')).toBe(false);
+    expect(isSettlementPaymentGuarded('NO_BALANCE')).toBe(false);
   });
 });
 

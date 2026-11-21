@@ -8,6 +8,7 @@ import type { Prisma } from '../generated/prisma/client';
 import { PeopleService } from '../people/people.service';
 import { PERSON_TYPE_WORKER } from '../people/person-type.constants';
 import { PrismaService } from '../prisma/prisma.service';
+import { SETTLEMENT_SETTLED_STATUSES } from '../settlements/settlement-status';
 import { CreateRubberWorkerDto } from './dto/create-rubber-worker.dto';
 import { UpdateRubberWorkerDto } from './dto/update-rubber-worker.dto';
 import { CreateWorkerCandidateDto } from './dto/create-worker-candidate.dto';
@@ -606,13 +607,16 @@ export class RubberWorkersService {
 
     // Any settlement row means the calculation exists; the sale status above
     // already blocks edits, this is the second line of defence.
-    const existingSettlement = await this.prisma.settlement.findFirst({
+    // Only settlements that moved something (cash or kasbon) block edits; a
+    // NO_BALANCE row handed nothing over (BD-17).
+    const movedSettlement = await this.prisma.settlement.findFirst({
       where: {
         saleId: rubberWorker.saleId,
+        status: { in: [...SETTLEMENT_SETTLED_STATUSES] },
       },
     });
 
-    if (existingSettlement) {
+    if (movedSettlement) {
       throw new BadRequestException(
         'Worker tidak dapat diubah karena settlement untuk sale ini sudah dibuat',
       );
@@ -719,13 +723,16 @@ export class RubberWorkersService {
       );
     }
 
-    const existingSettlement = await this.prisma.settlement.findFirst({
+    // Only settlements that moved something (cash or kasbon) block edits; a
+    // NO_BALANCE row handed nothing over (BD-17).
+    const movedSettlement = await this.prisma.settlement.findFirst({
       where: {
         saleId: rubberWorker.saleId,
+        status: { in: [...SETTLEMENT_SETTLED_STATUSES] },
       },
     });
 
-    if (existingSettlement) {
+    if (movedSettlement) {
       throw new BadRequestException(
         'Worker tidak dapat dihapus karena settlement untuk sale ini sudah dibuat',
       );

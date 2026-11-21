@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  SETTLEMENT_SETTLED_STATUSES,
+  SETTLEMENT_NON_PAYMENT_STATUSES,
   reconciliationRequiredFilter,
 } from '../settlements/settlement-status';
 import {
@@ -236,7 +236,7 @@ export class ReportsService {
     const [settlements, needingReconciliation] = await Promise.all([
       this.prisma.settlement.findMany({
         where: {
-          status: { in: [...SETTLEMENT_SETTLED_STATUSES] },
+          status: { in: [...SETTLEMENT_NON_PAYMENT_STATUSES] },
           reconciliationStatus: null,
           createdAt: {
             gte: startDate,
@@ -323,7 +323,7 @@ export class ReportsService {
 
       this.prisma.settlement.findMany({
         where: {
-          status: { in: [...SETTLEMENT_SETTLED_STATUSES] },
+          status: { in: [...SETTLEMENT_NON_PAYMENT_STATUSES] },
           reconciliationStatus: null,
         },
       }),

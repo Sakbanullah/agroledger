@@ -58,6 +58,7 @@ const STATUS_LABEL: Record<string, string> = {
   PENDING: "Belum dibayar",
   PAID_OUT: "Sudah dibayar tunai",
   SETTLED_BY_OFFSET: "Lunas lewat potongan kasbon",
+  NO_BALANCE: "Tidak ada hak dibayar (Rp0)",
   CANCELLED: "Dibatalkan",
 };
 
@@ -65,6 +66,7 @@ const STATUS_CLASS: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-900",
   PAID_OUT: "bg-emerald-100 text-emerald-900",
   SETTLED_BY_OFFSET: "bg-sky-100 text-sky-900",
+  NO_BALANCE: "bg-neutral-200 text-neutral-700",
   CANCELLED: "bg-neutral-200 text-neutral-700",
 };
 
@@ -117,6 +119,9 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
   const [reconcileEvidence, setReconcileEvidence] = useState("");
   const [reconcileError, setReconcileError] = useState("");
   const [reconciling, setReconciling] = useState(false);
+  // BD-18: UNSETTLED requires both checks; they are stored with the decision.
+  const [verifiedNoCash, setVerifiedNoCash] = useState(false);
+  const [verifiedNoKasbon, setVerifiedNoKasbon] = useState(false);
 
   const reloadChecks = async () => {
     const refreshed = await fetch(
@@ -135,6 +140,8 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
     setReconcileReason("");
     setReconcileEvidence("");
     setReconcileChoice("REVIEWED_UNSETTLED");
+    setVerifiedNoCash(false);
+    setVerifiedNoKasbon(false);
     setReconcileDecision(check.calculation.netAmount > 0 ? "PAID_OUT" : "SETTLED_BY_OFFSET");
 
     try {
@@ -167,6 +174,11 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
         choice: reconcileChoice,
         reason: reconcileReason.trim(),
       };
+
+      if (reconcileChoice === "REVIEWED_UNSETTLED") {
+        body.verifiedNoCashPayment = verifiedNoCash;
+        body.verifiedKasbonDeductionNotRecorded = verifiedNoKasbon;
+      }
 
       if (reconcileChoice === "USE_EXISTING_PAYMENT") {
         body.decision = reconcileDecision;
@@ -807,8 +819,29 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
                   onChange={() => setReconcileChoice("REVIEWED_UNSETTLED")}
                 />
                 <span>
-                  Sudah diperiksa dan tidak ditemukan bukti pembayaran — catat
-                  saja, tetap menunggu keputusan pemilik produk.
+                  Belum dibayar: tidak ada pembayaran tunai dan potongan kasbon
+                  belum tercatat. Settlement kembali ke PENDING dan bisa dibayar
+                  melalui alur normal.
+                  {reconcileChoice === "REVIEWED_UNSETTLED" && (
+                    <span className="mt-1 block space-y-1">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={verifiedNoCash}
+                          onChange={(event) => setVerifiedNoCash(event.target.checked)}
+                        />
+                        Saya pastikan tidak ada pembayaran tunai untuk pekerja ini
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={verifiedNoKasbon}
+                          onChange={(event) => setVerifiedNoKasbon(event.target.checked)}
+                        />
+                        Saya pastikan potongan kasbon belum tercatat untuk settlement ini
+                      </label>
+                    </span>
+                  )}
                 </span>
               </label>
 
@@ -869,7 +902,12 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
 
               <button
                 type="button"
-                disabled={reconciling || reconcileReason.trim().length < 10}
+                disabled={
+                  reconciling ||
+                  reconcileReason.trim().length < 10 ||
+                  (reconcileChoice === "REVIEWED_UNSETTLED" &&
+                    !(verifiedNoCash && verifiedNoKasbon))
+                }
                 onClick={submitReconcile}
                 className="inline-flex h-9 items-center border border-black bg-black px-4 text-[11px] font-semibold text-white disabled:opacity-50"
               >

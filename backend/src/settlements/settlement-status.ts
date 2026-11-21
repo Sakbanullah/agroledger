@@ -6,19 +6,18 @@
  * SETTLED_BY_OFFSET  gross share fully covered by the kasbon deduction (net 0),
  *                    so no cash moved; the deduction is recorded as a
  *                    CreditTransaction PAYMENT
+ * NO_BALANCE         nothing was ever owed: gross 0, no kasbon to apply and no
+ *                    payment rows. Closed without any transaction (BD-17).
  * CANCELLED          cancelled through the sale's deletion
  *
  * COMPLETED does not exist here any more: finishing the calculation no longer
  * means money moved.
- *
- * A settlement whose figures carry no balance (gross 0) is NOT closed with a
- * status: whether a zero share counts as settled is still an open Product
- * Owner decision, so the payment step refuses it and asks for a recalculation.
  */
 export const SETTLEMENT_STATUS = {
   PENDING: 'PENDING',
   PAID_OUT: 'PAID_OUT',
   SETTLED_BY_OFFSET: 'SETTLED_BY_OFFSET',
+  NO_BALANCE: 'NO_BALANCE',
   CANCELLED: 'CANCELLED',
 } as const;
 
@@ -31,8 +30,32 @@ export const SETTLEMENT_SETTLED_STATUSES = [
   SETTLEMENT_STATUS.SETTLED_BY_OFFSET,
 ] as const;
 
+/** Every status that closed without anything being handed over or deducted. */
+export const SETTLEMENT_NON_PAYMENT_STATUSES = [
+  SETTLEMENT_STATUS.PAID_OUT,
+  SETTLEMENT_STATUS.SETTLED_BY_OFFSET,
+  SETTLEMENT_STATUS.NO_BALANCE,
+] as const;
+
 export function isSettlementSettled(status: string): boolean {
   return (SETTLEMENT_SETTLED_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * True only for the statuses a cancellation/deletion must respect. NO_BALANCE
+ * moves no money, so it does not create anything that a reversal could
+ * corrupt and it is deliberately absent here (BD-17).
+ */
+export function isSettlementPaymentGuarded(status: string): boolean {
+  return isSettlementSettled(status);
+}
+
+/**
+ * True when a status means the settlement is closed for any reason, including
+ * NO_BALANCE. Used for presenting and aggregating completion.
+ */
+export function isSettlementClosed(status: string): boolean {
+  return (SETTLEMENT_NON_PAYMENT_STATUSES as readonly string[]).includes(status);
 }
 
 /**
@@ -70,7 +93,9 @@ export const RECONCILIATION_DECISIONS: readonly ReconciliationDecision[] = [
 /**
  * Whether a decision is even possible for the stored figures:
  *   PAID_OUT           needs a positive net (cash was handed over);
- *   SETTLED_BY_OFFSET  needs the deduction to cover the whole share.
+ *   SETTLED_BY_OFFSET  needs the deduction to cover the whole share;
+ *   NO_BALANCE         needs a zero balance with no debt and no payment at all
+ *                      (BD-17), proven at decision time by the service.
  */
 export function reconciliationDecisionAllowed(
   decision: ReconciliationDecision,
@@ -128,7 +153,7 @@ export function salePaymentState(
     return 'NOT_SETTLED';
   }
 
-  const settled = settlements.filter((row) => isSettlementSettled(row.status))
+  const settled = settlements.filter((row) => isSettlementClosed(row.status))
     .length;
 
   if (settled === settlements.length) {
@@ -139,17 +164,17 @@ export function salePaymentState(
 }
 
 /**
- * What the payment step will record, decided from the stored numbers alone:
- *   INVALID  when the figures disagree (negative, not adding up, or a zero net
- *            the deduction does not cover) or there is no balance at all;
- *   OFFSET   when the kasbon deduction covers the entire gross share, so no
- *            cash can move;
- *   CASH     when a net amount is handed to the worker.
- *
- * A zero balance is INVALID on purpose: calling it settled is an open Product
- * Owner decision, so it is refused and sent back for recalculation instead.
+ * What settling a PENDING settlement will record, decided from the stored
+ * numbers alone:
+ *   INVALID     figures disagree (negative, not adding up, or a zero net the
+ *               deduction does not cover);
+ *   NO_BALANCE  gross 0 with nothing deducted (BD-17): nothing is owed, so
+ *               there is no cash to hand over and no kasbon to apply;
+ *   OFFSET      the kasbon deduction covers the entire gross share (net 0),
+ *               so no cash can move;
+ *   CASH        a net amount is handed to the worker.
  */
-export type SettlementSettlementMethod = 'CASH' | 'OFFSET' | 'INVALID';
+export type SettlementSettlementMethod = 'CASH' | 'OFFSET' | 'NO_BALANCE' | 'INVALID';
 
 export function resolveSettlementMethod(input: {
   grossShare: unknown;
@@ -164,8 +189,13 @@ export function resolveSettlementMethod(input: {
     return 'INVALID';
   }
 
-  if (gross <= 0 || deduction < 0 || net < 0) {
+  if (gross < 0 || deduction < 0 || net < 0) {
     return 'INVALID';
+  }
+
+  // BD-17: nothing owed, nothing deducted, nothing to hand over.
+  if (gross === 0) {
+    return deduction === 0 && net === 0 ? 'NO_BALANCE' : 'INVALID';
   }
 
   if (net === 0) {

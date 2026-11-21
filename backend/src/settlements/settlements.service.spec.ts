@@ -67,6 +67,7 @@ describe('SettlementsService (calculation vs payment)', () => {
       },
       moneyTransaction: {
         create: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn(),
         findUnique: jest.fn(),
         updateMany: jest.fn(),
@@ -224,17 +225,38 @@ describe('SettlementsService (calculation vs payment)', () => {
       expect(prisma.creditTransaction.create).not.toHaveBeenCalled();
     });
 
-    it('refuses a zero-gross, zero-deduction settlement (open PO decision)', async () => {
+    it('BD-17: closes a zero-balance settlement as NO_BALANCE without any transaction', async () => {
       arrangePay({
         settlement: { grossShare: 0, deductionAmount: 0, netAmount: 0 },
         credit: [],
+      });
+
+      const result = await service.paySettlement(50);
+
+      expect(result.status).toBe(SETTLEMENT_STATUS.NO_BALANCE);
+      expect(prisma.moneyTransaction.create).not.toHaveBeenCalled();
+      expect(prisma.creditTransaction.create).not.toHaveBeenCalled();
+      expect(prisma.settlement.updateMany).toHaveBeenCalledWith({
+        where: { id: 50, status: SETTLEMENT_STATUS.PENDING },
+        data: expect.objectContaining({
+          status: SETTLEMENT_STATUS.NO_BALANCE,
+          settlementMethod: 'NO_BALANCE',
+          cashTransactionId: null,
+          creditTransactionId: null,
+        }),
+      });
+    });
+
+    it('BD-17: refuses gross 0 when a deduction exists', async () => {
+      arrangePay({
+        settlement: { grossShare: 0, deductionAmount: 500, netAmount: 0 },
+        credit: [{ type: 'DEBT', amount: 500 }],
       });
 
       await expect(service.paySettlement(50)).rejects.toThrow(
         /tidak konsisten/,
       );
       expect(prisma.moneyTransaction.create).not.toHaveBeenCalled();
-      expect(prisma.creditTransaction.create).not.toHaveBeenCalled();
       expect(prisma.settlement.updateMany).not.toHaveBeenCalled();
     });
 
@@ -452,6 +474,8 @@ describe('SettlementsService (calculation vs payment)', () => {
       settlement?: Record<string, unknown>;
       money?: unknown;
       credit?: unknown;
+      cashRows?: number;
+      deductionRows?: number;
     } = {}) => {
       prisma.$queryRaw.mockResolvedValue([{ id: 50 }]);
       prisma.settlement.findUnique.mockResolvedValue(
@@ -462,6 +486,10 @@ describe('SettlementsService (calculation vs payment)', () => {
         }),
       );
       prisma.moneyTransaction.findUnique.mockResolvedValue(overrides.money ?? null);
+      prisma.moneyTransaction.count.mockResolvedValue(overrides.cashRows ?? 0);
+      prisma.creditTransaction.count = jest
+        .fn()
+        .mockResolvedValue(overrides.deductionRows ?? 0);
       prisma.creditTransaction.findFirst = jest
         .fn()
         .mockResolvedValue(overrides.credit ?? null);
@@ -605,16 +633,29 @@ describe('SettlementsService (calculation vs payment)', () => {
       ).rejects.toThrow(/net pembayaran/);
     });
 
-    it('keeps REVIEWED_UNSETTLED unreviewed: audit row only, no status change', async () => {
+    it('BD-18: UNSETTLED with proof of non-payment -> PENDING + RESOLVED, audited, no financial row', async () => {
       arrange();
 
       await service.reconcileSettlement(50, {
         choice: 'REVIEWED_UNSETTLED',
-        reason: 'Sudah dicek, tidak ada bukti pembayaran (menunggu keputusan PO)',
+        verifiedNoCashPayment: true,
+        verifiedKasbonDeductionNotRecorded: true,
+        reason: 'Sudah dicek, kas dan kasbon tidak tercatat untuk worker ini',
       });
 
-      expect(prisma.settlement.updateMany).not.toHaveBeenCalled();
       expect(prisma.moneyTransaction.create).not.toHaveBeenCalled();
+      expect(prisma.creditTransaction.create).not.toHaveBeenCalled();
+      expect(prisma.settlement.updateMany).toHaveBeenCalledWith({
+        where: {
+          id: 50,
+          status: SETTLEMENT_STATUS.PENDING,
+          reconciliationStatus: 'REQUIRED',
+        },
+        data: {
+          status: SETTLEMENT_STATUS.PENDING,
+          reconciliationStatus: 'RESOLVED',
+        },
+      });
       expect(prisma.settlementReconciliation.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           decision: 'REVIEWED_UNSETTLED',
@@ -625,10 +666,90 @@ describe('SettlementsService (calculation vs payment)', () => {
       });
     });
 
+    it('BD-18: UNSETTLED refused without both confirmations', async () => {
+      arrange();
+
+      await expect(
+        service.reconcileSettlement(50, {
+          choice: 'REVIEWED_UNSETTLED',
+          verifiedNoCashPayment: true,
+          reason: 'Hanya satu bukti yang dipastikan',
+        }),
+      ).rejects.toThrow(/keduanya/);
+      expect(prisma.settlement.updateMany).not.toHaveBeenCalled();
+      expect(prisma.settlementReconciliation.create).not.toHaveBeenCalled();
+    });
+
+    it('BD-18: UNSETTLED refused when the ledger shows a cash payment', async () => {
+      arrange({ cashRows: 1 });
+
+      await expect(
+        service.reconcileSettlement(50, {
+          choice: 'REVIEWED_UNSETTLED',
+          verifiedNoCashPayment: true,
+          verifiedKasbonDeductionNotRecorded: true,
+          reason: 'Menganggap belum dibayar padahal ada kas keluar',
+        }),
+      ).rejects.toThrow(/pembayaran kas/);
+      expect(prisma.settlement.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('BD-18: UNSETTLED refused when a kasbon deduction is recorded', async () => {
+      arrange({ deductionRows: 1 });
+
+      await expect(
+        service.reconcileSettlement(50, {
+          choice: 'REVIEWED_UNSETTLED',
+          verifiedNoCashPayment: true,
+          verifiedKasbonDeductionNotRecorded: true,
+          reason: 'Menganggap belum dibayar padahal kasbon sudah dipotong',
+        }),
+      ).rejects.toThrow(/Potongan kasbon/);
+      expect(prisma.settlement.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('BD-18: an UNSETTLED settlement is payable through the normal endpoint, once', async () => {
+      // After reconciliation the row is PENDING and no longer REQUIRED.
+      prisma.$queryRaw.mockResolvedValue([{ saleId: 10 }]);
+      prisma.sale.findUnique.mockResolvedValue({
+        id: 10,
+        status: 'COMPLETED',
+        farmId: 3,
+      });
+      prisma.settlement.findUnique.mockResolvedValue(
+        settlementRow({ reconciliationStatus: 'RESOLVED' }),
+      );
+      prisma.creditTransaction.findMany.mockResolvedValue([
+        { type: 'DEBT', amount: 4000 },
+      ]);
+      prisma.moneyTransaction.create.mockResolvedValue({ id: 900 });
+      prisma.creditTransaction.create.mockResolvedValue({ id: 800 });
+      prisma.settlement.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.paySettlement(50);
+
+      expect(prisma.moneyTransaction.create).toHaveBeenCalledTimes(1);
+
+      // A second payment on the now settled row is a no-op: no new OUT.
+      prisma.settlement.findUnique.mockResolvedValue(
+        settlementRow({
+          reconciliationStatus: 'RESOLVED',
+          status: SETTLEMENT_STATUS.PAID_OUT,
+        }),
+      );
+
+      const retry = await service.paySettlement(50);
+
+      expect(retry.alreadySettled).toBe(true);
+      expect(prisma.moneyTransaction.create).toHaveBeenCalledTimes(1);
+    });
+
     it('takes the actor from the authenticated session, not from the payload', async () => {
       arrange();
       const dto: Record<string, unknown> = {
         choice: 'REVIEWED_UNSETTLED',
+        verifiedNoCashPayment: true,
+        verifiedKasbonDeductionNotRecorded: true,
         reason: 'Dicek ulang, tidak ada bukti pembayaran sama sekali',
       };
       dto.decidedById = 999;
@@ -638,7 +759,6 @@ describe('SettlementsService (calculation vs payment)', () => {
       expect(prisma.settlementReconciliation.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ decidedById: 7 }),
       });
-      expect(prisma.settlement.updateMany).not.toHaveBeenCalled();
     });
 
     it('appends history instead of replacing it', async () => {

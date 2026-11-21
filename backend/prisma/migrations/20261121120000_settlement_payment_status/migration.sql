@@ -5,6 +5,7 @@
 --   PENDING            calculated; nothing handed over, kasbon not deducted
 --   PAID_OUT           net cash handed to the worker
 --   SETTLED_BY_OFFSET  the whole share was covered by the kasbon deduction
+--   NO_BALANCE         gross 0, nothing deducted, no payment rows (BD-17)
 --   CANCELLED          cancelled through the sale's deletion
 --
 -- Settlement.reconciliationStatus (orthogonal to status):
@@ -13,9 +14,8 @@
 --             normal payment path refuses it until an admin resolves it
 --   RESOLVED  decided with evidence, see SettlementReconciliation
 --
--- Zero-balance settlements (gross 0) are NOT given a closing status: whether a
--- zero share counts as settled is still an open Product Owner decision, so they
--- are left alone and require recalculation.
+--   NO_BALANCE        gross 0 with no cash row and no kasbon row at all:
+--                     nothing was ever owed (BD-17)
 -- ============================================================================
 
 -- AlterTable: idempotency pointers, completion stamp and the reconciliation
@@ -199,8 +199,35 @@ WHERE s.status = 'CONFIRMED'
   ) = 1;
 
 -- ----------------------------------------------------------------------------
--- 4 + 5. Everything else stays unproven on purpose:
---    * zero balance (gross 0, deduction 0, no rows) - open PO decision;
+-- 4. NO_BALANCE (BD-17): nothing was ever owed.
+--    Every condition must hold:
+--      * grossShare = 0 and deductionAmount = 0 (and net 0, implied);
+--      * not one cash row for this settlement (the old code wrote none);
+--      * not one PAYMENT row for this settlement (the old code wrote none).
+--    Anything else (gross 0 with a cash row, with a PAYMENT row, or with a
+--    non-zero deduction) does not match this query and falls through to
+--    PENDING + REQUIRED below.
+-- ----------------------------------------------------------------------------
+UPDATE `Settlement` s
+SET s.status = 'NO_BALANCE',
+    s.settlementMethod = 'NO_BALANCE',
+    s.settledAt = s.updatedAt
+WHERE s.status = 'CONFIRMED'
+  AND s.grossShare = 0
+  AND s.deductionAmount = 0
+  AND s.netAmount = 0
+  AND NOT EXISTS (
+      SELECT 1 FROM `MoneyTransaction` mt
+      WHERE mt.referenceType = 'SETTLEMENT' AND mt.referenceId = s.id
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM `CreditTransaction` c
+      WHERE c.reference = CONCAT('SETTLEMENT-', s.id)
+  );
+
+-- ----------------------------------------------------------------------------
+-- 5. Everything else stays unproven on purpose:
+--    * gross 0 with any payment, deduction or stray row;
 --    * missing cash row, missing PAYMENT row, duplicate rows, amount mismatch,
 --      inconsistent reference.
 --    Such a row keeps its amounts and becomes PENDING + REQUIRED; it can only

@@ -18,6 +18,7 @@ import {
   reconciliationDecisionMessage,
   resolveSettlementMethod,
   salePaymentState,
+  type SettlementSettlementMethod,
 } from './settlement-status';
 
 @Injectable()
@@ -627,6 +628,24 @@ export class SettlementsService {
           }
         }
 
+        // BD-18: UNSETTLED may only be accepted when the evidence proves the
+        // worker never received anything. The seller has to say what they
+        // checked (both checks are required); the service then verifies the
+        // ledger agrees - the only financial proof that exists.
+        if (dto.choice === 'REVIEWED_UNSETTLED') {
+          if (!dto.verifiedNoCashPayment || !dto.verifiedKasbonDeductionNotRecorded) {
+            throw new BadRequestException(
+              'Keputusan UNSETTLED hanya diterima bila keduanya dipastikan: tidak ada pembayaran tunai dan potongan kasbon belum tercatat',
+            );
+          }
+
+          const unsettled = await this.isUnsettledByEvidence(tx, settlement);
+
+          if (!unsettled.ok) {
+            throw new BadRequestException(unsettled.reason);
+          }
+        }
+
         const statusBefore = settlement.status;
         let statusAfter = statusBefore;
         let updates: Prisma.SettlementUpdateManyMutationInput | null = null;
@@ -654,6 +673,16 @@ export class SettlementsService {
             creditTransactionId: credit?.id ?? null,
             reconciliationStatus: RECONCILIATION_STATUS.RESOLVED,
           };
+        } else if (dto.choice === 'REVIEWED_UNSETTLED') {
+          // BD-18: the settlement is back to "nothing handed over", so it
+          // leaves reconciliation and may be paid through the normal endpoint
+          // again. Nothing financial is written here; the normal payment step
+          // still runs every validation when it is used.
+          statusAfter = SETTLEMENT_STATUS.PENDING;
+          updates = {
+            status: statusAfter,
+            reconciliationStatus: RECONCILIATION_STATUS.RESOLVED,
+          };
         } else if (dto.choice === 'RESET_CALCULATION') {
           // Explicit reset back to the calculation stage; the payment step
           // then recomputes against the current data. Nothing financial is
@@ -661,9 +690,6 @@ export class SettlementsService {
           statusAfter = SETTLEMENT_STATUS.PENDING;
           updates = { status: statusAfter };
         }
-        // REVIEWED_UNSETTLED: the figures stay, nothing is claimed as handed
-        // over, and the settlement stays PENDING + REQUIRED. Whether that may
-        // resolve reconciliation is an open PO decision.
 
         if (updates) {
           const applied = await tx.settlement.updateMany({
@@ -732,6 +758,49 @@ export class SettlementsService {
     return this.prisma.settlement.count({
       where: { reconciliationStatus: RECONCILIATION_STATUS.REQUIRED },
     });
+  }
+
+  /**
+   * Ledger proof for an UNSETTLED decision (BD-18): an OUT money row for this
+   * settlement or a kasbon PAYMENT for this settlement means something was
+   * handed over or deducted, so the worker cannot be declared unpaid.
+   */
+  private async isUnsettledByEvidence(
+    tx: Parameters<Parameters<PrismaService['$transaction']>[0]>[0],
+    settlement: { id: number },
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    const cashRows = await tx.moneyTransaction.count({
+      where: {
+        referenceType: 'SETTLEMENT',
+        referenceId: settlement.id,
+        type: 'OUT',
+      },
+    });
+
+    if (cashRows > 0) {
+      return {
+        ok: false,
+        reason:
+          'Ada transaksi pembayaran kas untuk settlement ini. UNSETTLED tidak dapat ditetapkan.',
+      };
+    }
+
+    const deductions = await tx.creditTransaction.count({
+      where: {
+        reference: `SETTLEMENT-${settlement.id}`,
+        type: 'PAYMENT',
+      },
+    });
+
+    if (deductions > 0) {
+      return {
+        ok: false,
+        reason:
+          'Potongan kasbon untuk settlement ini sudah tercatat. UNSETTLED tidak dapat ditetapkan.',
+      };
+    }
+
+    return { ok: true };
   }
 
   private async evidenceMoneyTransaction(
@@ -900,8 +969,8 @@ export class SettlementsService {
     }
 
     // -----------------------------------------------------
-    // CASH HANDED OVER (only a real net amount moves cash; an OFFSET
-    // settlement writes nothing here)
+    // CASH HANDED OVER (only a real net amount moves cash; OFFSET and
+    // NO_BALANCE write nothing here)
     // -----------------------------------------------------
 
     let cashTransactionId: number | null = null;
@@ -930,10 +999,7 @@ export class SettlementsService {
     const claimed = await tx.settlement.updateMany({
       where: { id: settlement.id, status: SETTLEMENT_STATUS.PENDING },
       data: {
-        status:
-          method === 'CASH'
-            ? SETTLEMENT_STATUS.PAID_OUT
-            : SETTLEMENT_STATUS.SETTLED_BY_OFFSET,
+        status: closingStatusFor(method),
         settlementMethod: method,
         settledAt: now,
         cashTransactionId,
@@ -953,10 +1019,7 @@ export class SettlementsService {
       grossShare,
       netAmount,
       deductionAmount,
-      status:
-        method === 'CASH'
-          ? SETTLEMENT_STATUS.PAID_OUT
-          : SETTLEMENT_STATUS.SETTLED_BY_OFFSET,
+      status: closingStatusFor(method),
       cashTransactionId,
       creditTransactionId,
     };
@@ -1430,4 +1493,18 @@ export class SettlementsService {
       };
     });
   }
+}
+
+/**
+ * Closing status for a settled row: NO_BALANCE (BD-17) is not a payment and
+ * must never be presented as one.
+ */
+function closingStatusFor(method: Exclude<SettlementSettlementMethod, 'INVALID'>) {
+  if (method === 'CASH') {
+    return SETTLEMENT_STATUS.PAID_OUT;
+  }
+
+  return method === 'OFFSET'
+    ? SETTLEMENT_STATUS.SETTLED_BY_OFFSET
+    : SETTLEMENT_STATUS.NO_BALANCE;
 }
