@@ -212,14 +212,72 @@ model Settlement {
   deductionAmount Decimal @db.Decimal(12, 2)
   netAmount       Decimal @db.Decimal(12, 2)
 
+  // PENDING (calculated, nothing handed over) -> PAID_OUT (cash handed to the
+  // worker) or SETTLED_BY_OFFSET (net 0, covered entirely by the kasbon
+  // deduction, so no cash moved). CANCELLED is set when a cancelled sale is
+  // deleted.
   status    String   @default("PENDING")
+  // When the worker was actually settled (cash handed over or offset applied).
+  // Never inferred from createdAt.
+  settledAt DateTime?
+  // Why status moved; complements the audit columns below.
+  settlementMethod String?
+  // Rubber worker settlement cash or CreditTransaction PAYMENT id written by
+  // the settlement step. At most one of them is set; used to make the step
+  // idempotent and is deliberately not a FK (the money row can outlive it).
+  cashTransactionId    Int? @unique
+  creditTransactionId  Int? @unique
+  // Whether the record of an old settlement can be trusted. Orthogonal to
+  // status: null = normal, REQUIRED = every normal payment is refused until
+  // an admin resolves it, RESOLVED = decided with evidence (see
+  // SettlementReconciliation). Never set by the normal payment path.
+  reconciliationStatus String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sale   Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  worker Person @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  sale            Sale                    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  worker          Person                  @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  reconciliations SettlementReconciliation[]
 
   @@unique([saleId, workerId])
+  @@index([reconciliationStatus])
+}
+
+// Append-only audit trail of reconciliation decisions for one settlement.
+// Each decision keeps the figures it was based on, the evidence rows it
+// examined, and the statuses it moved between; earlier decisions are never
+// edited or removed. No MoneyTransaction or CreditTransaction is written.
+model SettlementReconciliation {
+  id           Int @id @default(autoincrement())
+  settlementId Int
+
+  // PAID_OUT | SETTLED_BY_OFFSET (see reconciliation decisions in the code)
+  decision String
+
+  // Snapshot of the settlement figures the decision was taken on.
+  grossShare      Decimal @db.Decimal(12, 2)
+  deductionAmount Decimal @db.Decimal(12, 2)
+  netAmount       Decimal @db.Decimal(12, 2)
+
+  statusBefore String
+  statusAfter  String
+
+  // Historical rows the admin examined, as ids only. Nullable because a
+  // decision may rest on the absence of a row. Not foreign keys: they point at
+  // rows this decision must never change.
+  reviewedMoneyTransactionId  Int?
+  reviewedCreditTransactionId Int?
+
+  reason String @db.Text
+
+  // Trusted identity from the authenticated session, never a request body
+  // value. Null only if the request had no authenticated user.
+  decidedById Int?
+  decidedAt   DateTime @default(now())
+
+  settlement Settlement @relation(fields: [settlementId], references: [id], onDelete: Restrict)
+
+  @@index([settlementId])
 }
 
 model ScanDocument {

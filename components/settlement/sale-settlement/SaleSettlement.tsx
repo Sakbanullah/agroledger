@@ -115,7 +115,8 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
-  const [confirmSuccess, setConfirmSuccess] = useState(false);
+  // Bumped after saving the calculation to refetch the stored settlements.
+  const [reloadAttempt, setReloadAttempt] = useState(0);
 
   // =========================================================
   // FETCH DATA
@@ -288,7 +289,7 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
     };
 
     fetchData();
-  }, [saleId]);
+  }, [saleId, reloadAttempt]);
 
   const workers = sale?.rubberWorkers ?? [];
 
@@ -439,7 +440,10 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
   }, [workerSettlements]);
 
   // =========================================================
-  // CONFIRM SETTLEMENT
+  // SAVE CALCULATION
+  //
+  // This step only computes and stores each worker's share. No money is
+  // handed over here; paying is a separate action on the check page.
   // =========================================================
 
   const handleConfirmSettlement = async () => {
@@ -478,7 +482,6 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
     setIsConfirming(true);
     setConfirmError(null);
-    setConfirmSuccess(false);
 
     try {
       const response = await fetch(
@@ -497,7 +500,7 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        let message = "Gagal mengonfirmasi settlement.";
+        let message = "Gagal menyimpan perhitungan settlement.";
 
         if (Array.isArray(data.message)) {
           message = data.message.join(", ");
@@ -508,17 +511,15 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
         throw new Error(message);
       }
 
-      setHasSettlement(true);
-      setConfirmSuccess(true);
-
-      setTimeout(() => {
-        window.location.href = `/settlement/sale/${sale.id}/check`;
-      }, 500);
+      // Refetch so the page shows the stored settlement rows (snapshots), not
+      // the live kasbon preview. Changing the attempt counter re-runs
+      // fetchData without a full page reload.
+      setReloadAttempt((current) => current + 1);
     } catch (err) {
       setConfirmError(
         err instanceof Error
           ? err.message
-          : "Terjadi kesalahan saat settlement.",
+          : "Terjadi kesalahan saat menyimpan perhitungan.",
       );
     } finally {
       setIsConfirming(false);
@@ -1081,44 +1082,24 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
           </div>
         )}
 
-        {/* SUCCESS */}
-
-        {confirmSuccess && (
-          <div className="mb-4 flex items-start gap-3 rounded-2xl border border-border bg-surface-soft p-4">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success-soft text-xs font-semibold text-success">
-              ✓
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-success">
-                Settlement berhasil dikonfirmasi
-              </p>
-
-              <p className="mt-0.5 text-[10px] text-text-secondary">
-                Membuka halaman check...
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* FINAL ACTION */}
 
         <section className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(23,34,27,0.02)] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-text-secondary">
-              {hasSettlement ? "SETTLEMENT SELESAI" : "FINAL REVIEW"}
+              {hasSettlement ? "PERHITUNGAN TERSIMPAN" : "FINAL REVIEW"}
             </p>
 
             <h2 className="mt-1 text-sm font-semibold text-text-primary">
               {hasSettlement
-                ? "Settlement sudah dikonfirmasi"
-                : "Settlement siap ditinjau"}
+                ? "Perhitungan settlement tersimpan"
+                : "Settlement siap dihitung"}
             </h2>
 
             <p className="mt-1 text-[10px] text-text-muted">
               {hasSettlement
-                ? "Check pembayaran dapat dicetak kembali kapan saja."
-                : "Periksa data worker dan kasbon sebelum settlement dikonfirmasi."}
+                ? "Pembayaran tiap pekerja dilakukan dari halaman check. Pembatalan penjualan tidak lagi tersedia setelah ada pekerja yang dibayar."
+                : "Periksa data worker dan kasbon sebelum perhitungan disimpan. Uang belum dibayarkan pada langkah ini."}
             </p>
           </div>
 
@@ -1160,8 +1141,8 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
               className="inline-flex h-10 w-full items-center justify-center rounded-[10px] bg-success-soft px-5 text-xs font-semibold text-white transition hover:bg-success-soft hover:shadow-[0_6px_16px_rgba(49,95,63,0.18)] disabled:cursor-not-allowed disabled:bg-surface-soft disabled:shadow-none sm:w-auto sm:min-w-[210px]"
             >
               {isConfirming
-                ? "Memproses Settlement..."
-                : "Konfirmasi Settlement"}
+                ? "Menyimpan perhitungan..."
+                : "Simpan Perhitungan"}
             </button>
           )}
         </section>

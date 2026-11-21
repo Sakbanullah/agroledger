@@ -604,16 +604,17 @@ export class RubberWorkersService {
       );
     }
 
-    const confirmedSettlement = await this.prisma.settlement.findFirst({
+    // Any settlement row means the calculation exists; the sale status above
+    // already blocks edits, this is the second line of defence.
+    const existingSettlement = await this.prisma.settlement.findFirst({
       where: {
         saleId: rubberWorker.saleId,
-        status: 'CONFIRMED',
       },
     });
 
-    if (confirmedSettlement) {
+    if (existingSettlement) {
       throw new BadRequestException(
-        'Worker tidak dapat diubah karena sale sudah memiliki settlement yang dikonfirmasi',
+        'Worker tidak dapat diubah karena settlement untuk sale ini sudah dibuat',
       );
     }
 
@@ -718,16 +719,15 @@ export class RubberWorkersService {
       );
     }
 
-    const confirmedSettlement = await this.prisma.settlement.findFirst({
+    const existingSettlement = await this.prisma.settlement.findFirst({
       where: {
         saleId: rubberWorker.saleId,
-        status: 'CONFIRMED',
       },
     });
 
-    if (confirmedSettlement) {
+    if (existingSettlement) {
       throw new BadRequestException(
-        'Worker tidak dapat dihapus karena sale sudah memiliki settlement yang dikonfirmasi',
+        'Worker tidak dapat dihapus karena settlement untuk sale ini sudah dibuat',
       );
     }
 

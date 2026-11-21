@@ -291,6 +291,13 @@ export default function ReportsPage() {
                     <p className="mt-1 text-[16px] font-semibold text-text-primary">{fmtRupiah(settlements?.totalNetPayment ?? 0)}</p>
                   </div>
                 </div>
+
+                {(settlements?.awaitingReconciliation ?? 0) > 0 && (
+                  <p className="mt-3 rounded-[10px] border border-orange-300 bg-orange-50 px-3 py-2 text-[11px] text-orange-900">
+                    {settlements.awaitingReconciliation} settlement lama menunggu
+                    rekonsiliasi dan belum dihitung pada ringkasan ini.
+                  </p>
+                )}
               </div>
             </section>
           </>

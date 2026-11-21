@@ -28,11 +28,45 @@ type SettlementCheck = {
   };
 
   status: string;
+  settledAt: string | null;
+  settlementMethod: string | null;
+  reconciliationStatus: string | null;
 };
+
+type ReconciliationHistory = {
+  id: number;
+  decision: string;
+  statusBefore: string;
+  statusAfter: string;
+  reviewedMoneyTransactionId: number | null;
+  reviewedCreditTransactionId: number | null;
+  reason: string;
+  decidedById: number | null;
+  decidedAt: string;
+};
+
+type ReconciliationChoice =
+  | "USE_EXISTING_PAYMENT"
+  | "RESET_CALCULATION"
+  | "REVIEWED_UNSETTLED";
 
 interface SettlementCheckProps {
   saleId: number;
 }
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: "Belum dibayar",
+  PAID_OUT: "Sudah dibayar tunai",
+  SETTLED_BY_OFFSET: "Lunas lewat potongan kasbon",
+  CANCELLED: "Dibatalkan",
+};
+
+const STATUS_CLASS: Record<string, string> = {
+  PENDING: "bg-amber-100 text-amber-900",
+  PAID_OUT: "bg-emerald-100 text-emerald-900",
+  SETTLED_BY_OFFSET: "bg-sky-100 text-sky-900",
+  CANCELLED: "bg-neutral-200 text-neutral-700",
+};
 
 function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -61,6 +95,172 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
   const [checks, setChecks] = useState<SettlementCheck[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // The dialog summarises one worker before money is handed over.
+  const [payTarget, setPayTarget] = useState<SettlementCheck | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState("");
+
+  // Reconciliation of a historical settlement whose record could not be
+  // proven. Separate from the payment status on purpose.
+  const [reconcileTarget, setReconcileTarget] =
+    useState<SettlementCheck | null>(null);
+  const [reconcileHistory, setReconcileHistory] = useState<
+    ReconciliationHistory[]
+  >([]);
+  const [reconcileChoice, setReconcileChoice] =
+    useState<ReconciliationChoice>("REVIEWED_UNSETTLED");
+  const [reconcileDecision, setReconcileDecision] = useState<
+    "PAID_OUT" | "SETTLED_BY_OFFSET"
+  >("PAID_OUT");
+  const [reconcileReason, setReconcileReason] = useState("");
+  const [reconcileEvidence, setReconcileEvidence] = useState("");
+  const [reconcileError, setReconcileError] = useState("");
+  const [reconciling, setReconciling] = useState(false);
+
+  const reloadChecks = async () => {
+    const refreshed = await fetch(
+      `http://localhost:3001/settlements/sale/${saleId}/check`,
+    );
+
+    if (refreshed.ok) {
+      setChecks(await refreshed.json());
+    }
+  };
+
+  const openReconcile = async (check: SettlementCheck) => {
+    setReconcileTarget(check);
+    setReconcileError("");
+    setReconcileHistory([]);
+    setReconcileReason("");
+    setReconcileEvidence("");
+    setReconcileChoice("REVIEWED_UNSETTLED");
+    setReconcileDecision(check.calculation.netAmount > 0 ? "PAID_OUT" : "SETTLED_BY_OFFSET");
+
+    try {
+      const response = await fetch(
+        `http://localhost:3001/settlements/${check.settlementId}/reconciliations`,
+      );
+
+      if (response.ok) {
+        setReconcileHistory(await response.json());
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const submitReconcile = async () => {
+    if (!reconcileTarget) {
+      return;
+    }
+
+    setReconciling(true);
+    setReconcileError("");
+
+    try {
+      const evidenceId = Number(reconcileEvidence);
+
+      // Only ids travel; the API checks that they belong to this settlement.
+      // The body carries no identity: the actor comes from authentication.
+      const body: Record<string, unknown> = {
+        choice: reconcileChoice,
+        reason: reconcileReason.trim(),
+      };
+
+      if (reconcileChoice === "USE_EXISTING_PAYMENT") {
+        body.decision = reconcileDecision;
+
+        if (Number.isInteger(evidenceId) && evidenceId > 0) {
+          if (reconcileDecision === "PAID_OUT") {
+            body.reviewedMoneyTransactionId = evidenceId;
+          } else {
+            body.reviewedCreditTransactionId = evidenceId;
+          }
+        }
+      }
+
+      const response = await fetch(
+        `http://localhost:3001/settlements/${reconcileTarget.settlementId}/reconcile`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          (Array.isArray(data?.message)
+            ? data.message.join(", ")
+            : data?.message) || "Gagal menyimpan rekonsiliasi",
+        );
+      }
+
+      setReconcileTarget(null);
+      await reloadChecks();
+    } catch (err) {
+      setReconcileError(
+        err instanceof Error ? err.message : "Gagal menyimpan rekonsiliasi",
+      );
+    } finally {
+      setReconciling(false);
+    }
+  };
+
+  const awaitingReconciliation = checks.filter(
+    (check) => check.reconciliationStatus === "REQUIRED",
+  ).length;
+
+  // Settlement step is idempotent, so a retry after a lost response cannot
+  // pay twice; the row simply comes back as already settled.
+  const paySettlement = async (settlementId: number) => {
+    setPaying(true);
+    setPayError("");
+
+    try {
+      const response = await fetch(
+        `http://localhost:3001/settlements/${settlementId}/pay`,
+        { method: "POST" },
+      );
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message = Array.isArray(data?.message)
+          ? data.message.join(", ")
+          : data?.message;
+
+        // A refused payment because the settlement still needs reconciliation
+        // gets its own wording, plus a refresh so the badge shows up.
+        throw new Error(
+          message?.includes("rekonsiliasi")
+            ? `${message} Buka rekonsiliasi pada baris pekerja ini.`
+            : message || "Gagal membayar settlement",
+        );
+      }
+
+      setPayTarget(null);
+
+      const refreshed = await fetch(
+        `http://localhost:3001/settlements/sale/${saleId}/check`,
+      );
+
+      if (refreshed.ok) {
+        setChecks(await refreshed.json());
+      }
+    } catch (err) {
+      setPayError(
+        err instanceof Error ? err.message : "Gagal membayar settlement",
+      );
+      await reloadChecks();
+      setPayTarget(null);
+    } finally {
+      setPaying(false);
+    }
+  };
 
   // =========================================================
   // FETCH CHECK
@@ -438,6 +638,323 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
           </div>
         </main>
       </div>
+
+      {/* =========================================================
+          WORKER PAYOUTS
+          Paying is separate from calculating: nothing was handed over when
+          the settlement rows were created.
+      ========================================================= */}
+
+      <section className="print:hidden bg-surface-soft px-4 pb-6 sm:px-5 lg:px-7">
+        <div className="mx-auto w-full max-w-[900px] border border-black bg-surface">
+          <div className="border-b border-black px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-black">
+              Pembayaran Pekerja
+            </p>
+
+            <p className="mt-1 text-xs text-black">
+              Serahkan uang lalu tandai. Setelah ada pekerja yang diselesaikan,
+              penjualan tidak dapat dibatalkan atau dihapus lagi.
+            </p>
+
+            {awaitingReconciliation > 0 && (
+              <p className="mt-2 border border-orange-700 bg-orange-100 px-3 py-2 text-[11px] font-semibold text-orange-900">
+                {awaitingReconciliation} settlement lama menunggu rekonsiliasi
+                sebelum dapat dibayar melalui alur normal.
+              </p>
+            )}
+          </div>
+
+          <ul>
+            {checks.map((check) => {
+              const settled = check.status !== "PENDING";
+
+              return (
+                <li
+                  key={check.settlementId}
+                  className="flex flex-col gap-3 border-b border-black/20 px-4 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="text-xs font-semibold text-black">
+                      {check.worker.name} ·{" "}
+                      <span
+                        className={`px-1.5 py-0.5 text-[9px] font-semibold ${
+                          STATUS_CLASS[check.status] ?? "bg-neutral-200"
+                        }`}
+                      >
+                        {STATUS_LABEL[check.status] ?? check.status}
+                      </span>
+                      {check.reconciliationStatus === "REQUIRED" && (
+                        <span className="ml-1 px-1.5 py-0.5 text-[9px] font-semibold bg-orange-200 text-orange-900">
+                          Perlu Rekonsiliasi
+                        </span>
+                      )}
+                    </p>
+
+                    <p className="mt-0.5 text-[10px] text-black/70">
+                      Hak {formatRupiah(check.calculation.workerShare)} · Kasbon{" "}
+                      {formatRupiah(check.calculation.deduction)} · Bersih{" "}
+                      {formatRupiah(check.calculation.netAmount)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {!settled && check.status === "PENDING" && check.reconciliationStatus !== "REQUIRED" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPayError("");
+                          setPayTarget(check);
+                        }}
+                        className="inline-flex h-9 items-center justify-center border border-black bg-black px-4 text-[11px] font-semibold text-white transition hover:bg-surface hover:text-black"
+                      >
+                        {check.calculation.netAmount > 0
+                          ? "Bayar Tunai"
+                          : "Selesaikan via Potongan"}
+                      </button>
+                    )}
+
+                    {check.reconciliationStatus === "REQUIRED" && (
+                      <button
+                        type="button"
+                        onClick={() => openReconcile(check)}
+                        className="inline-flex h-9 items-center justify-center border border-orange-700 bg-orange-100 px-4 text-[11px] font-semibold text-orange-900 transition hover:bg-orange-200"
+                      >
+                        Rekonsiliasi
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
+
+      {/* =========================================================
+          RECONCILIATION DIALOG
+      ========================================================= */}
+
+      {reconcileTarget && (
+        <div
+          className="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="max-h-full w-full max-w-lg overflow-y-auto border border-black bg-surface p-5">
+            <h2 className="text-sm font-semibold text-black">
+              Rekonsiliasi Settlement #{reconcileTarget.settlementId}
+            </h2>
+
+            <p className="mt-1 text-[11px] text-black/70">
+              {reconcileTarget.worker.name} · Hak{" "}
+              {formatRupiah(reconcileTarget.calculation.workerShare)} · Potongan
+              kasbon {formatRupiah(reconcileTarget.calculation.deduction)} ·
+              Bersih {formatRupiah(reconcileTarget.calculation.netAmount)}
+            </p>
+
+            <div className="mt-3 border border-black bg-surface-soft p-3 text-[11px] text-black">
+              <p className="font-semibold">Periksa bukti historis</p>
+              <p className="mt-1">
+                Referensi pembayaran tersimpan: kas{" "}
+                <span className="font-mono">#{reconcileTarget.settlementId}</span>{" "}
+                (refType SETTLEMENT). Cari transaksi terkait di halaman Transaksi.
+                Masukkan id transaksi kas atau potongan kasbon yang benar-benar
+                menjadi bukti settlement ini.
+              </p>
+
+              <input
+                type="number"
+                placeholder="ID transaksi kas / potongan kasbon (opsional untuk REVIEWED_UNSETTLED)"
+                value={reconcileEvidence}
+                onChange={(event) => setReconcileEvidence(event.target.value)}
+                className="mt-2 h-8 w-full border border-black bg-surface px-2 text-[11px] text-black"
+              />
+            </div>
+
+            <div className="mt-3 space-y-2 text-[11px] text-black">
+              <label className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="choice"
+                  checked={reconcileChoice === "USE_EXISTING_PAYMENT"}
+                  onChange={() => setReconcileChoice("USE_EXISTING_PAYMENT")}
+                />
+                <span>
+                  Bukti ditemukan: tetapkan keputusan pembayaran
+                  <select
+                    value={reconcileDecision}
+                    onChange={(event) =>
+                      setReconcileDecision(
+                        event.target.value as "PAID_OUT" | "SETTLED_BY_OFFSET",
+                      )
+                    }
+                    className="ml-2 h-7 border border-black bg-surface px-1 text-[11px]"
+                  >
+                    <option value="PAID_OUT">PAID_OUT (tunai)</option>
+                    <option value="SETTLED_BY_OFFSET">
+                      SETTLED_BY_OFFSET (potongan kasbon penuh)
+                    </option>
+                  </select>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="choice"
+                  checked={reconcileChoice === "REVIEWED_UNSETTLED"}
+                  onChange={() => setReconcileChoice("REVIEWED_UNSETTLED")}
+                />
+                <span>
+                  Sudah diperiksa dan tidak ditemukan bukti pembayaran — catat
+                  saja, tetap menunggu keputusan pemilik produk.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2">
+                <input
+                  type="radio"
+                  name="choice"
+                  checked={reconcileChoice === "RESET_CALCULATION"}
+                  onChange={() => setReconcileChoice("RESET_CALCULATION")}
+                />
+                <span>
+                  Kembalikan ke tahap perhitungan (PENDING) agar dihitung ulang
+                  dengan data terbaru.
+                </span>
+              </label>
+            </div>
+
+            <textarea
+              placeholder="Alasan keputusan (minimal 10 karakter)"
+              value={reconcileReason}
+              onChange={(event) => setReconcileReason(event.target.value)}
+              className="mt-3 h-16 w-full border border-black bg-surface p-2 text-[11px] text-black"
+            />
+
+            {reconcileHistory.length > 0 && (
+              <div className="mt-3 border-t border-black pt-2">
+                <p className="text-[10px] font-semibold text-black">
+                  Riwayat rekonsiliasi
+                </p>
+                <ul className="mt-1 space-y-1 text-[10px] text-black/80">
+                  {reconcileHistory.map((row) => (
+                    <li key={row.id}>
+                      {formatDate(row.decidedAt)} · {row.decision}:{" "}
+                      {row.statusBefore} → {row.statusAfter} ·{" "}
+                      {row.decidedById ? `pelaku #${row.decidedById}` : "pelaku tidak tercatat"} ·{" "}
+                      {row.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {reconcileError && (
+              <p className="mt-3 text-[11px] font-semibold text-red-700">
+                {reconcileError}
+              </p>
+            )}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={reconciling}
+                onClick={() => setReconcileTarget(null)}
+                className="inline-flex h-9 items-center border border-black px-4 text-[11px] font-semibold text-black disabled:opacity-50"
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                disabled={reconciling || reconcileReason.trim().length < 10}
+                onClick={submitReconcile}
+                className="inline-flex h-9 items-center border border-black bg-black px-4 text-[11px] font-semibold text-white disabled:opacity-50"
+              >
+                {reconciling ? "Menyimpan..." : "Simpan Rekonsiliasi"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          PAYMENT CONFIRMATION
+      ========================================================= */}
+
+      {payTarget && (
+        <div
+          className="print:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md border border-black bg-surface p-5">
+            <h2 className="text-sm font-semibold text-black">
+              {payTarget.calculation.netAmount > 0
+                ? "Konfirmasi Pembayaran Tunai"
+                : "Konfirmasi Penyelesaian via Potongan Kasbon"}
+            </h2>
+
+            <dl className="mt-4 space-y-1.5 text-xs text-black">
+              <div className="flex justify-between gap-3">
+                <dt>Pekerja</dt>
+                <dd className="font-semibold">{payTarget.worker.name}</dd>
+              </div>
+
+              <div className="flex justify-between gap-3">
+                <dt>Hak bruto pekerja</dt>
+                <dd>{formatRupiah(payTarget.calculation.workerShare)}</dd>
+              </div>
+
+              <div className="flex justify-between gap-3">
+                <dt>Potongan kasbon</dt>
+                <dd>-{formatRupiah(payTarget.calculation.deduction)}</dd>
+              </div>
+
+              <div className="flex justify-between gap-3 border-t border-black pt-1.5">
+                <dt className="font-semibold">Nominal bersih</dt>
+                <dd className="font-semibold">
+                  {formatRupiah(payTarget.calculation.netAmount)}
+                </dd>
+              </div>
+            </dl>
+
+            <p className="mt-4 border border-black bg-surface-soft p-3 text-[11px] leading-relaxed text-black">
+              {payTarget.calculation.netAmount > 0
+                ? "Pastikan uang sudah diserahkan ke pekerja. Setelah dikonfirmasi, penjualan tidak dapat dibatalkan atau dihapus melalui alur normal."
+                : "Periksa ulang: konfirmasi ini hanya sah bila kasbon pekerja yang valid menutup seluruh haknya. Tidak ada uang tunai yang diserahkan; potongan tercatat pada akun kasbon pekerja."}
+            </p>
+
+            {payError && (
+              <p className="mt-3 text-[11px] font-semibold text-red-700">
+                {payError}
+              </p>
+            )}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={paying}
+                onClick={() => setPayTarget(null)}
+                className="inline-flex h-9 items-center border border-black px-4 text-[11px] font-semibold text-black disabled:opacity-50"
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                disabled={paying}
+                onClick={() => paySettlement(payTarget.settlementId)}
+                className="inline-flex h-9 items-center border border-black bg-black px-4 text-[11px] font-semibold text-white disabled:opacity-50"
+              >
+                {paying ? "Memproses..." : "Ya, sudah diserahkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* =========================================================
           SCREEN PREVIEW

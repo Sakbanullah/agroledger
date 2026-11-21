@@ -5,7 +5,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { salePaymentState } from '../settlements/settlement-status';
 import { isSawitCommodity } from '../reports/reports.calculator';
 import { SettingsService } from '../settings/settings.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
@@ -30,15 +32,23 @@ export class SalesService {
   // ==========================================
 
   async findAll() {
-    return this.prisma.sale.findMany({
+    const sales = await this.prisma.sale.findMany({
       orderBy: {
         saleDate: 'desc',
       },
       include: {
         farm: true,
         commodity: true,
+        settlements: { select: { status: true } },
       },
     });
+
+    // Payment state is computed from the settlement rows, never stored on the
+    // sale: one source of truth for "has every worker been settled?".
+    return sales.map(({ settlements, ...sale }) => ({
+      ...sale,
+      paymentState: salePaymentState(settlements),
+    }));
   }
 
   // ==========================================
@@ -46,7 +56,7 @@ export class SalesService {
   // ==========================================
 
   async findOne(id: number) {
-    return this.prisma.sale.findUnique({
+    const sale = await this.prisma.sale.findUnique({
       where: {
         id,
       },
@@ -65,6 +75,15 @@ export class SalesService {
         },
       },
     });
+
+    if (!sale) {
+      return sale;
+    }
+
+    return {
+      ...sale,
+      paymentState: salePaymentState(sale.settlements),
+    };
   }
 
   // ==========================================
@@ -321,7 +340,7 @@ export class SalesService {
           id,
         },
         include: {
-          settlements: { select: { id: true } },
+          settlements: { select: { id: true, status: true } },
           ownerSettlements: { select: { id: true } },
           scanDocuments: { select: { id: true } },
           cancellation: { select: { id: true } },
@@ -486,7 +505,7 @@ export class SalesService {
           include: {
             farm: { select: { name: true } },
             commodity: { select: { name: true } },
-            settlements: { select: { id: true } },
+            settlements: { select: { id: true, status: true } },
             ownerSettlements: { select: { id: true, settledAmount: true } },
           },
         });
@@ -497,6 +516,7 @@ export class SalesService {
 
         const blocker = cancellationBlocker({
           status: sale.status,
+          settlements: sale.settlements,
           ownerSettlements: sale.ownerSettlements,
         });
 
@@ -505,7 +525,21 @@ export class SalesService {
         }
 
         // Claim the transition atomically: a repeated or concurrent
-        // cancellation matches zero rows and writes no second reversal.
+        // cancellation matches zero rows and writes no second reversal. The
+        // settlement rows are locked first, in the same order settleSale uses
+        // (settlements, then the sale), so cancellation cannot interleave with
+        // a payment: either this blocker sees the settlement already settled,
+        // or the payment sees the sale already CANCELLED.
+        const settlementIds = sale.settlements.map((row) => row.id);
+
+        if (settlementIds.length > 0) {
+          await tx.$queryRaw`
+            SELECT id FROM Settlement
+            WHERE id IN (${Prisma.join(settlementIds)})
+            ORDER BY id ASC FOR UPDATE
+          `;
+        }
+
         const claimed = await tx.sale.updateMany({
           where: { id, status: SALE_STATUS.COMPLETED },
           data: { status: SALE_STATUS.CANCELLED },

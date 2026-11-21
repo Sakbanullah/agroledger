@@ -14,6 +14,8 @@ interface Sale {
   status: string;
   notes: string | null;
   ownershipType: string | null;
+  // Computed by the API from the worker settlements.
+  paymentState?: "NOT_SETTLED" | "PARTIALLY_SETTLED" | "FULLY_SETTLED";
 
   farm: {
     id: number;
@@ -382,6 +384,33 @@ export default function SaleList() {
     return "bg-warning-soft text-warning";
   };
 
+  // Computed by the API from the worker settlements, not stored on the sale.
+  // Wording avoids saying "paid": a worker settled through the kasbon offset
+  // never received cash.
+  const getPaymentStateLabel = (state?: string) => {
+    if (state === "FULLY_SETTLED") {
+      return "Seluruhnya Diselesaikan";
+    }
+
+    if (state === "PARTIALLY_SETTLED") {
+      return "Sebagian Diselesaikan";
+    }
+
+    return "Belum Diselesaikan";
+  };
+
+  const getPaymentStateClass = (state?: string) => {
+    if (state === "FULLY_SETTLED") {
+      return "bg-success-soft text-success";
+    }
+
+    if (state === "PARTIALLY_SETTLED") {
+      return "bg-info-soft text-info";
+    }
+
+    return "bg-warning-soft text-warning";
+  };
+
   const getActionLabel = (status: string, commodityName: string) => {
     const sawit = isSawit(commodityName);
 
@@ -706,13 +735,25 @@ export default function SaleList() {
                           </p>
                         </div>
 
-                        <span
-                          className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] ${getStatusClass(
-                            sale.status,
-                          )}`}
-                        >
-                          {getStatusLabel(sale.status)}
-                        </span>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[8px] font-semibold uppercase tracking-[0.08em] ${getStatusClass(
+                              sale.status,
+                            )}`}
+                          >
+                            {getStatusLabel(sale.status)}
+                          </span>
+
+                          {sale.status === "COMPLETED" && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] ${getPaymentStateClass(
+                                sale.paymentState,
+                              )}`}
+                            >
+                              {getPaymentStateLabel(sale.paymentState)}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* METRICS */}
