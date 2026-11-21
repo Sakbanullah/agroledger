@@ -51,6 +51,8 @@ CREATE TABLE `SettlementReconciliation` (
     `reviewedMoneyTransactionId` INTEGER NULL,
     `reviewedCreditTransactionId` INTEGER NULL,
     `reason` TEXT NOT NULL,
+    `verifiedNoCashPayment` BOOLEAN NULL,
+    `verifiedKasbonDeductionNotRecorded` BOOLEAN NULL,
     `decidedById` INTEGER NULL,
     `decidedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 

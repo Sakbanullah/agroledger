@@ -661,7 +661,38 @@ describe('SettlementsService (calculation vs payment)', () => {
           decision: 'REVIEWED_UNSETTLED',
           statusBefore: SETTLEMENT_STATUS.PENDING,
           statusAfter: SETTLEMENT_STATUS.PENDING,
+          verifiedNoCashPayment: true,
+          verifiedKasbonDeductionNotRecorded: true,
           decidedById: null,
+        }),
+      });
+    });
+
+    it('records the assertions even when only UNSETTLED can carry them', async () => {
+      arrange({
+        money: {
+          id: 900,
+          type: 'OUT',
+          amount: 6000,
+          referenceType: 'SETTLEMENT',
+          referenceId: 50,
+          transactionDate: new Date(),
+        },
+      });
+
+      await service.reconcileSettlement(50, {
+        choice: 'USE_EXISTING_PAYMENT',
+        decision: 'PAID_OUT',
+        reviewedMoneyTransactionId: 900,
+        verifiedNoCashPayment: true,
+        reason: 'Bukti transfer ditemukan dan cocok',
+      });
+
+      expect(prisma.settlementReconciliation.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          decision: 'USE_EXISTING_PAYMENT',
+          verifiedNoCashPayment: null,
+          verifiedKasbonDeductionNotRecorded: null,
         }),
       });
     });
@@ -757,7 +788,11 @@ describe('SettlementsService (calculation vs payment)', () => {
       await service.reconcileSettlement(50, dto as never, { userId: 7 });
 
       expect(prisma.settlementReconciliation.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ decidedById: 7 }),
+        data: expect.objectContaining({
+          decidedById: 7,
+          verifiedNoCashPayment: true,
+          verifiedKasbonDeductionNotRecorded: true,
+        }),
       });
     });
 

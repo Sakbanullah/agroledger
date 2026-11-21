@@ -29,6 +29,7 @@ execFileSync(
 const checks = [
   './credit-reference.check.js',
   './worker-settlement-guard.check.js',
+  './reconciliation-audit.check.js',
 ];
 
 (async () => {

@@ -723,6 +723,16 @@ export class SettlementsService {
             reviewedMoneyTransactionId: money?.id ?? null,
             reviewedCreditTransactionId: credit?.id ?? null,
             reason: dto.reason.trim(),
+            // Only UNSETTLED rests on the admin's assertions; every other
+            // decision rests on a ledger row, so the flags stay empty.
+            verifiedNoCashPayment:
+              dto.choice === 'REVIEWED_UNSETTLED'
+                ? Boolean(dto.verifiedNoCashPayment)
+                : null,
+            verifiedKasbonDeductionNotRecorded:
+              dto.choice === 'REVIEWED_UNSETTLED'
+                ? Boolean(dto.verifiedKasbonDeductionNotRecorded)
+                : null,
             decidedById: actor?.userId ?? null,
           },
         });

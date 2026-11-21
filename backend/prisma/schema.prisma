@@ -270,6 +270,12 @@ model SettlementReconciliation {
 
   reason String @db.Text
 
+  // What the admin asserted when the decision was UNSETTLED. Stored next to
+  // the decision so the audit shows the claim itself, not only the reason.
+  // Null for every other decision.
+  verifiedNoCashPayment             Boolean?
+  verifiedKasbonDeductionNotRecorded Boolean?
+
   // Trusted identity from the authenticated session, never a request body
   // value. Null only if the request had no authenticated user.
   decidedById Int?
