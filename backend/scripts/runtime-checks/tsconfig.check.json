@@ -16,6 +16,7 @@
     "../../src/credit/**/*.ts",
     "../../src/settlements/**/*.ts",
     "../../src/sales/**/*.ts",
+    "../../src/common/**/*.ts",
     "../../src/rubber-workers/**/*.ts",
     "../../src/people/**/*.ts",
     "../../src/auth/**/*.ts",

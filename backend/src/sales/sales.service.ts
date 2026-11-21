@@ -541,12 +541,13 @@ export class SalesService {
           throw new ConflictException(blocker);
         }
 
-        // Claim the transition atomically: a repeated or concurrent
-        // cancellation matches zero rows and writes no second reversal. The
-        // settlement rows are locked first, in the same order settleSale uses
-        // (settlements, then the sale), so cancellation cannot interleave with
-        // a payment: either this blocker sees the settlement already settled,
-        // or the payment sees the sale already CANCELLED.
+        // Global lock order (src/common/lock-order.ts): Sale, then Settlement.
+        // The blocker above read the settlements without a lock, so the sale is
+        // locked first and the settlements second; a payment locks in the same
+        // order, so either this blocker sees the settlement already settled, or
+        // the payment sees the sale already CANCELLED.
+        await tx.$queryRaw`SELECT id FROM Sale WHERE id = ${id} FOR UPDATE`;
+
         const settlementIds = sale.settlements.map((row) => row.id);
 
         if (settlementIds.length > 0) {
@@ -557,6 +558,8 @@ export class SalesService {
           `;
         }
 
+        // Claim the transition atomically: a repeated or concurrent
+        // cancellation matches zero rows and writes no second reversal.
         const claimed = await tx.sale.updateMany({
           where: { id, status: SALE_STATUS.COMPLETED },
           data: { status: SALE_STATUS.CANCELLED },

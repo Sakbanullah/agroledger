@@ -30,6 +30,7 @@ const checks = [
   './credit-reference.check.js',
   './worker-settlement-guard.check.js',
   './reconciliation-audit.check.js',
+  './lock-order.check.js',
 ];
 
 (async () => {

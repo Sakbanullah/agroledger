@@ -348,25 +348,29 @@ export class SettlementsService {
   async paySettlement(id: number) {
     return this.prisma.$transaction(
       async (tx) => {
-        const locked = await tx.$queryRaw<Array<{ saleId: number }>>`
-          SELECT saleId FROM Settlement WHERE id = ${id} FOR UPDATE
-        `;
+        const target = await tx.settlement.findUnique({
+          where: { id },
+          select: { saleId: true },
+        });
 
-        if (locked.length === 0) {
+        if (!target) {
           throw new NotFoundException('Settlement tidak ditemukan');
         }
 
-        // Lock order is Settlement (base lock above) -> Sale, the same order
-        // cancelSale takes (settlements, then the sale).
-        await tx.$queryRaw`SELECT id FROM Sale WHERE id = ${locked[0].saleId} FOR UPDATE`;
+        // Global lock order (src/common/lock-order.ts): Sale, then Settlement,
+        // then CreditAccount. The sale is locked first so a concurrent
+        // cancellation and this payment cannot interleave their locks.
+        await tx.$queryRaw`SELECT id FROM Sale WHERE id = ${target.saleId} FOR UPDATE`;
 
         const sale = await tx.sale.findUnique({
-          where: { id: locked[0].saleId },
+          where: { id: target.saleId },
         });
 
         if (!sale) {
           throw new NotFoundException('Sale tidak ditemukan');
         }
+
+        await tx.$queryRaw`SELECT id FROM Settlement WHERE id = ${id} FOR UPDATE`;
 
         const settlement = await tx.settlement.findUnique({
           where: { id },
