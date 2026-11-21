@@ -87,4 +87,30 @@ describe('deletionBlocker (settled workers)', () => {
       }),
     ).toMatch(/dibatalkan terlebih dahulu/);
   });
+
+  it('refuses deleting a cancelled sale that has reconciliation history', () => {
+    expect(
+      deletionBlocker({
+        status: 'CANCELLED',
+        settlements: [{ status: 'PENDING' }],
+        ownerSettlements: [],
+        moneyEntries: 2,
+        settlementIds: [1],
+        reconciledSettlementIds: [1],
+      }),
+    ).toMatch(/riwayat rekonsiliasi/);
+  });
+
+  it('still allows deleting a cancelled sale without reconciliation history', () => {
+    expect(
+      deletionBlocker({
+        status: 'CANCELLED',
+        settlements: [{ status: 'PENDING' }],
+        ownerSettlements: [],
+        moneyEntries: 2,
+        settlementIds: [1],
+        reconciledSettlementIds: [],
+      }),
+    ).toBeNull();
+  });
 });

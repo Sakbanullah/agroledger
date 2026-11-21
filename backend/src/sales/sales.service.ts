@@ -372,11 +372,25 @@ export class SalesService {
         },
       });
 
+      // Reconciliation history is audit data: find out whether any of this
+      // sale's settlements were reconciled before allowing a hard delete.
+      const settlementIds = sale.settlements.map((row) => row.id);
+
+      const reconciled = settlementIds.length
+        ? await tx.settlementReconciliation.findMany({
+            where: { settlementId: { in: settlementIds } },
+            select: { settlementId: true },
+            distinct: ['settlementId'],
+          })
+        : [];
+
       const blocker = deletionBlocker({
         status: sale.status,
         settlements: sale.settlements,
         ownerSettlements: sale.ownerSettlements,
         moneyEntries,
+        settlementIds,
+        reconciledSettlementIds: reconciled.map((row) => row.settlementId),
       });
 
       if (blocker) {

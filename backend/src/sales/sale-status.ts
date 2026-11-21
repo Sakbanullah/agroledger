@@ -68,6 +68,10 @@ export function deletionBlocker(input: {
   settlements: { status: string }[];
   ownerSettlements: unknown[];
   moneyEntries: number;
+  /** Settlement ids on this sale (used to look up reconciliation history). */
+  settlementIds?: number[];
+  /** Settlement ids that carry reconciliation decisions. */
+  reconciledSettlementIds?: number[];
 }): string | null {
   if (input.status === SALE_STATUS.COMPLETED) {
     return 'Penjualan berstatus Selesai harus dibatalkan terlebih dahulu sebelum dihapus';
@@ -77,6 +81,13 @@ export function deletionBlocker(input: {
   // must stay traceable to a settlement row.
   if (input.settlements.some((row) => isSettlementSettled(row.status))) {
     return 'Penjualan tidak dapat dihapus karena pembayaran pekerja sudah diserahkan';
+  }
+
+  // Reconciliation decisions are append-only audit records. Deleting the sale
+  // would cascade the settlement away, so the hard delete is refused instead of
+  // dropping the trail (or failing on the foreign key).
+  if ((input.reconciledSettlementIds ?? []).length > 0) {
+    return 'Penjualan tidak dapat dihapus karena memiliki riwayat rekonsiliasi settlement';
   }
 
   if (input.status !== SALE_STATUS.PENDING && input.status !== SALE_STATUS.CANCELLED) {
