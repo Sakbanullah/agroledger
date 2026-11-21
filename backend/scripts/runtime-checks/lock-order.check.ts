@@ -41,6 +41,11 @@ function makePrisma(settlement: Record<string, unknown>) {
         return [{ id: settlement.saleId }];
       }
 
+      if (entity === 'Settlement' && (!values.length || Array.isArray(values[0]))) {
+        // `WHERE saleId = ?` probes answer with rows; `WHERE id = ?` too.
+        return [{ id: settlement.id, saleId: settlement.saleId }];
+      }
+
       return [{ id: settlement.id, saleId: settlement.saleId }];
     },
     sale: {
@@ -167,4 +172,25 @@ export async function checkLockOrder(): Promise<void> {
     process.stdout.write('PASS cancelSale locks Sale -> Settlement\n');
   }
 
+  {
+    const { prisma, locks } = makePrisma(settlement);
+    const sales = new SalesService(prisma as never, {} as never);
+    // A cancelled sale can be hard-deleted; the lock order must still hold.
+    prisma.sale.findUnique = async () => ({
+      id: 10,
+      status: 'CANCELLED',
+      totalWeightKg: 20,
+      pricePerKg: 2000,
+      saleDate: new Date(),
+      settlements: [{ id: settlement.id, status: 'PENDING' }],
+      ownerSettlements: [],
+      scanDocuments: [],
+      cancellation: { id: 5 },
+      farm: { name: 'Kebun' },
+      commodity: { name: 'Karet' },
+    });
+    await sales.deleteDraftSale(10);
+    assertOrdered(locks, 'deleteDraftSale');
+    process.stdout.write('PASS deleteDraftSale locks Sale -> Settlement\n');
+  }
 }

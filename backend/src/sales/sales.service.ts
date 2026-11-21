@@ -335,6 +335,29 @@ export class SalesService {
   async deleteDraftSale(id: number) {
     return this.prisma.$transaction(async (tx) => {
       // ==========================================
+      // LOCK SALE AND ITS SETTLEMENTS FIRST
+      //
+      // Every decision below (blockers, settlement neutralisation, money
+      // repointing) has to see a fixed snapshot: a payment or a
+      // reconciliation running at the same time must either finish before this
+      // lock is taken or wait until the delete commits, never interleave
+      // between the check and the write. Lock order is the global one
+      // (src/common/lock-order.ts): Sale first, then its settlements.
+      // ==========================================
+
+      const locked = await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT id FROM Sale WHERE id = ${id} FOR UPDATE
+      `;
+
+      if (locked.length === 0) {
+        throw new NotFoundException('Sale tidak ditemukan');
+      }
+
+      await tx.$queryRaw`
+        SELECT id FROM Settlement WHERE saleId = ${id} ORDER BY id ASC FOR UPDATE
+      `;
+
+      // ==========================================
       // GET SALE
       // ==========================================
 
