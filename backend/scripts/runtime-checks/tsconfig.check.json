@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./.build",
+    "rootDir": "../..",
+    "noEmit": false,
+    "module": "commonjs",
+    "moduleResolution": "bundler",
+    "incremental": false,
+    "isolatedModules": false,
+    "lib": ["es2023"],
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": [
+    "../../src/credit/**/*.ts",
+    "../../src/settlements/**/*.ts",
+    "../../src/sales/sale-status.ts",
+    "../../src/auth/**/*.ts",
+    "../../src/prisma/prisma.service.ts",
+    "../../src/generated/prisma/**/*.ts",
+    "./**/*.check.ts"
+  ],
+  "exclude": ["../../src/**/*.spec.ts"]
+}
