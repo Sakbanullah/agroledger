@@ -7,7 +7,9 @@ import {
 
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { salePaymentState } from '../settlements/settlement-status';
+import {
+  salePaymentState,
+} from '../settlements/settlement-status';
 import { isSawitCommodity } from '../reports/reports.calculator';
 import { SettingsService } from '../settings/settings.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
@@ -19,6 +21,7 @@ import {
   cancellationBlocker,
   deletionBlocker,
 } from './sale-status';
+import { settlementReversalAllowed } from './sale-cancellation-rules';
 
 @Injectable()
 export class SalesService {
@@ -624,13 +627,24 @@ export class SalesService {
         saleMoney.forEach(queueReversal);
 
         // 2. Cash paid to rubber workers for this sale.
-        const settlementMoney = await tx.moneyTransaction.findMany({
-          where: {
-            category: 'RUBBER_WORKER_SETTLEMENT',
-            referenceType: 'SETTLEMENT',
-            referenceId: { in: sale.settlements.map((row) => row.id) },
-          },
-        });
+        //
+        // Only settle-state settlements can have handed cash over. A PENDING or
+        // NO_BALANCE settlement never moved money, so writing its "reversal"
+        // would invent a cash-in that never happened; the row has nothing to
+        // reverse and is skipped here.
+        const settledSettlementIds = sale.settlements
+          .filter((row) => settlementReversalAllowed(row.status))
+          .map((row) => row.id);
+
+        const settlementMoney = settledSettlementIds.length
+          ? await tx.moneyTransaction.findMany({
+              where: {
+                category: 'RUBBER_WORKER_SETTLEMENT',
+                referenceType: 'SETTLEMENT',
+                referenceId: { in: settledSettlementIds },
+              },
+            })
+          : [];
 
         settlementMoney.forEach(queueReversal);
 

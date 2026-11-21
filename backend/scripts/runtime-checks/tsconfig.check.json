@@ -15,7 +15,7 @@
   "include": [
     "../../src/credit/**/*.ts",
     "../../src/settlements/**/*.ts",
-    "../../src/sales/sale-status.ts",
+    "../../src/sales/**/*.ts",
     "../../src/rubber-workers/**/*.ts",
     "../../src/people/**/*.ts",
     "../../src/auth/**/*.ts",
