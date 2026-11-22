@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  readCompletionState,
+  readSettlementList,
+  type SettlementCompletionState,
+} from "@/lib/settlement-response";
+
 interface RubberWorker {
   id: number;
   saleId: number;
@@ -106,6 +112,10 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
 
   const [hasSettlement, setHasSettlement] = useState(false);
 
+  // Computed by the API from the settlement rows; displayed, never stored.
+  const [completionState, setCompletionState] =
+    useState<SettlementCompletionState>("NOT_SETTLED");
+
   const [loading, setLoading] = useState(true);
   const [loadingKasbon, setLoadingKasbon] = useState(false);
 
@@ -163,23 +173,18 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
         }
 
         /*
-         * FIX:
-         * Simpan settlement yang sudah ada.
-         *
-         * Sebelumnya hanya:
-         * setHasSettlement(...)
-         *
-         * Akibatnya data settlement lama tidak digunakan
-         * untuk menghitung kasbon.
+         * GET /settlements/sale/:id answers with an envelope
+         * ({ saleId, completionState, settlements }) so the computed state
+         * travels with the list. Read the list from `settlements`; a bare
+         * array is still accepted for older responses, but never fall back to
+         * an empty list when the envelope is present.
          */
-        const existingSettlements: SettlementRecord[] = Array.isArray(
-          settlementData,
-        )
-          ? settlementData
-          : [];
+        const existingSettlements: SettlementRecord[] =
+          readSettlementList<SettlementRecord>(settlementData);
 
         setSettlements(existingSettlements);
         setHasSettlement(existingSettlements.length > 0);
+        setCompletionState(readCompletionState(settlementData));
 
         // =====================================================
         // GET CREDIT ACCOUNTS
@@ -1095,6 +1100,16 @@ export default function SaleSettlement({ saleId }: SaleSettlementProps) {
                 ? "Perhitungan settlement tersimpan"
                 : "Settlement siap dihitung"}
             </h2>
+
+            {hasSettlement && (
+              <span className="mt-1 inline-block rounded-full bg-surface-soft px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
+                {completionState === "FULLY_SETTLED"
+                  ? "Seluruhnya Diselesaikan"
+                  : completionState === "PARTIALLY_SETTLED"
+                    ? "Sebagian Diselesaikan"
+                    : "Belum Diselesaikan"}
+              </span>
+            )}
 
             <p className="mt-1 text-[10px] text-text-muted">
               {hasSettlement
