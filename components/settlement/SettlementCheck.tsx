@@ -102,6 +102,9 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
   const [payTarget, setPayTarget] = useState<SettlementCheck | null>(null);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState("");
+  // Shown when the backend answered alreadySettled: the money left the user on
+  // an earlier request, so this click recorded nothing new.
+  const [payNotice, setPayNotice] = useState<string | null>(null);
 
   // Reconciliation of a historical settlement whose record could not be
   // proven. Separate from the payment status on purpose.
@@ -231,6 +234,7 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
   const paySettlement = async (settlementId: number) => {
     setPaying(true);
     setPayError("");
+    setPayNotice(null);
 
     try {
       const response = await fetch(
@@ -255,6 +259,14 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
       }
 
       setPayTarget(null);
+
+      // A retry comes back as alreadySettled. Say so: without this the operator
+      // cannot tell a fresh payment from a duplicate click.
+      setPayNotice(
+        data?.alreadySettled
+          ? `Settlement #${settlementId} sudah diselesaikan oleh permintaan sebelumnya. Tidak ada pembayaran baru yang dicatat.`
+          : null,
+      );
 
       const refreshed = await fetch(
         `http://localhost:3001/settlements/sale/${saleId}/check`,
@@ -675,6 +687,15 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
                 sebelum dapat dibayar melalui alur normal.
               </p>
             )}
+
+            {payNotice && (
+              <p
+                role="status"
+                className="mt-2 border border-emerald-700 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-900"
+              >
+                {payNotice}
+              </p>
+            )}
           </div>
 
           <ul>
@@ -716,6 +737,7 @@ export default function SettlementCheck({ saleId }: SettlementCheckProps) {
                         type="button"
                         onClick={() => {
                           setPayError("");
+                          setPayNotice(null);
                           setPayTarget(check);
                         }}
                         className="inline-flex h-9 items-center justify-center border border-black bg-black px-4 text-[11px] font-semibold text-white transition hover:bg-surface hover:text-black"
