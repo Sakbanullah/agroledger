@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  SETTLEMENT_NON_PAYMENT_STATUSES,
+  reconciliationRequiredFilter,
+} from '../settlements/settlement-status';
+import {
   computeSaleOwnIncome,
   isSawitCommodity,
   parseDecimal,
@@ -225,15 +229,31 @@ export class ReportsService {
   }
 
   async getSettlementSummary(startDate: Date, endDate: Date) {
-    const settlements = await this.prisma.settlement.findMany({
-      where: {
-        status: 'CONFIRMED',
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
+    // Only settlements that are actually finished count as settlement value;
+    // a PENDING row is a calculation, not a paid share. A settlement flagged
+    // for reconciliation has an unknown history, so it is reported separately
+    // instead of being counted as a finished payment.
+    const [settlements, needingReconciliation] = await Promise.all([
+      this.prisma.settlement.findMany({
+        where: {
+          status: { in: [...SETTLEMENT_NON_PAYMENT_STATUSES] },
+          reconciliationStatus: null,
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
         },
-      },
-    });
+      }),
+      this.prisma.settlement.count({
+        where: {
+          ...reconciliationRequiredFilter,
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+      }),
+    ]);
 
     let totalSettlements = 0;
     let totalWorkerShare = 0;
@@ -252,6 +272,7 @@ export class ReportsService {
       totalWorkerShare,
       totalDeduction,
       totalNetPayment,
+      awaitingReconciliation: needingReconciliation,
     };
   }
 
@@ -263,6 +284,7 @@ export class ReportsService {
       sales,
       settlements,
       ownerSettlementResult,
+      settlementsAwaitingReconciliation,
     ] = await Promise.all([
       this.prisma.moneyTransaction.findMany({
         orderBy: {
@@ -301,7 +323,8 @@ export class ReportsService {
 
       this.prisma.settlement.findMany({
         where: {
-          status: 'CONFIRMED',
+          status: { in: [...SETTLEMENT_NON_PAYMENT_STATUSES] },
+          reconciliationStatus: null,
         },
       }),
 
@@ -311,6 +334,10 @@ export class ReportsService {
           settledAmount: true,
           ownerShareAmount: true,
         },
+      }),
+
+      this.prisma.settlement.count({
+        where: reconciliationRequiredFilter,
       }),
     ]);
 
@@ -515,6 +542,7 @@ export class ReportsService {
         totalWorkerShare,
         totalDeduction,
         totalNetPayment,
+        awaitingReconciliation: settlementsAwaitingReconciliation,
       },
 
       recentTransactions,

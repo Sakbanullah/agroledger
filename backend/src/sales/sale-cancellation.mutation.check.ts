@@ -108,7 +108,7 @@ async function run() {
       assert.equal(
         deletionBlocker({
           status: 'CANCELLED',
-          settlements: [{ id: 1 }],
+          settlements: [{ status: 'CANCELLED' }],
           ownerSettlements: [],
           moneyEntries: 3,
         }),

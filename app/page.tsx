@@ -85,6 +85,7 @@ type DashboardData = {
     totalWorkerShare: number;
     totalDeduction: number;
     totalNetPayment: number;
+    awaitingReconciliation: number;
   };
   recentTransactions: Array<{
     id: number;

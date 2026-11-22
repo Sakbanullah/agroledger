@@ -1,3 +1,5 @@
+import { isSettlementSettled } from '../settlements/settlement-status';
+
 /**
  * Sale lifecycle.
  *
@@ -25,6 +27,7 @@ export type SaleStatus = (typeof SALE_STATUS)[keyof typeof SALE_STATUS];
  */
 export function cancellationBlocker(input: {
   status: string;
+  settlements?: { status: string }[];
   ownerSettlements: { settledAmount: unknown }[];
 }): string | null {
   if (input.status === SALE_STATUS.CANCELLED) {
@@ -33,6 +36,13 @@ export function cancellationBlocker(input: {
 
   if (input.status !== SALE_STATUS.COMPLETED) {
     return 'Hanya penjualan berstatus Selesai yang dapat dibatalkan';
+  }
+
+  // Once a worker has actually been settled, the money already left the user.
+  // Reversing it as cash-in would invent cash that never came back, so this
+  // path is refused; a dedicated correction flow is a separate decision.
+  if ((input.settlements ?? []).some((row) => isSettlementSettled(row.status))) {
+    return 'Pembatalan tidak dapat dilakukan karena pembayaran pekerja sudah diserahkan';
   }
 
   const paidOwner = input.ownerSettlements.find(
@@ -55,12 +65,29 @@ export function cancellationBlocker(input: {
  */
 export function deletionBlocker(input: {
   status: string;
-  settlements: unknown[];
+  settlements: { status: string }[];
   ownerSettlements: unknown[];
   moneyEntries: number;
+  /** Settlement ids on this sale (used to look up reconciliation history). */
+  settlementIds?: number[];
+  /** Settlement ids that carry reconciliation decisions. */
+  reconciledSettlementIds?: number[];
 }): string | null {
   if (input.status === SALE_STATUS.COMPLETED) {
     return 'Penjualan berstatus Selesai harus dibatalkan terlebih dahulu sebelum dihapus';
+  }
+
+  // Settled workers keep their financial history: the cash that left the user
+  // must stay traceable to a settlement row.
+  if (input.settlements.some((row) => isSettlementSettled(row.status))) {
+    return 'Penjualan tidak dapat dihapus karena pembayaran pekerja sudah diserahkan';
+  }
+
+  // Reconciliation decisions are append-only audit records. Deleting the sale
+  // would cascade the settlement away, so the hard delete is refused instead of
+  // dropping the trail (or failing on the foreign key).
+  if ((input.reconciledSettlementIds ?? []).length > 0) {
+    return 'Penjualan tidak dapat dihapus karena memiliki riwayat rekonsiliasi settlement';
   }
 
   if (input.status !== SALE_STATUS.PENDING && input.status !== SALE_STATUS.CANCELLED) {

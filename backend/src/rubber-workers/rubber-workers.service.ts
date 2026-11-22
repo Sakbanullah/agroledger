@@ -247,91 +247,96 @@ export class RubberWorkersService {
     });
   }
   async create(createRubberWorkerDto: CreateRubberWorkerDto) {
-    const sale = await this.prisma.sale.findUnique({
-      where: {
-        id: createRubberWorkerDto.saleId,
-      },
-    });
+    return this.prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findUnique({
+        where: {
+          id: createRubberWorkerDto.saleId,
+        },
+      });
 
-    if (!sale) {
-      throw new NotFoundException('Sale tidak ditemukan');
-    }
+      if (!sale) {
+        throw new NotFoundException('Sale tidak ditemukan');
+      }
 
-    if (sale.status !== 'PENDING') {
-      throw new BadRequestException(
-        'Worker tidak dapat ditambahkan karena sale sudah selesai',
+      if (sale.status !== 'PENDING') {
+        throw new BadRequestException(
+          'Worker tidak dapat ditambahkan karena sale sudah selesai',
+        );
+      }
+
+      const worker = await this.prisma.person.findUnique({
+        where: {
+          id: createRubberWorkerDto.workerId,
+        },
+      });
+
+      if (!worker) {
+        throw new NotFoundException('Worker tidak ditemukan');
+      }
+
+      if (worker.type !== PERSON_TYPE_WORKER) {
+        throw new BadRequestException('Person yang dipilih bukan worker');
+      }
+
+      const existingWorker = await this.prisma.rubberSaleWorker.findUnique({
+        where: {
+          saleId_workerId: {
+            saleId: createRubberWorkerDto.saleId,
+            workerId: createRubberWorkerDto.workerId,
+          },
+        },
+      });
+
+      if (existingWorker) {
+        throw new BadRequestException('Worker sudah terdaftar pada sale ini');
+      }
+
+      const existingWorkers = await this.prisma.rubberSaleWorker.findMany({
+        where: {
+          saleId: createRubberWorkerDto.saleId,
+        },
+      });
+
+      const totalWorkerWeight = existingWorkers.reduce(
+        (total, item) => total + Number(item.weightKg),
+        0,
       );
-    }
 
-    const worker = await this.prisma.person.findUnique({
-      where: {
-        id: createRubberWorkerDto.workerId,
-      },
-    });
+      const newTotalWeight =
+        totalWorkerWeight + Number(createRubberWorkerDto.weightKg);
 
-    if (!worker) {
-      throw new NotFoundException('Worker tidak ditemukan');
-    }
+      if (newTotalWeight > Number(sale.totalWeightKg)) {
+        throw new BadRequestException(
+          'Total berat worker melebihi total berat sale',
+        );
+      }
 
-    if (worker.type !== PERSON_TYPE_WORKER) {
-      throw new BadRequestException('Person yang dipilih bukan worker');
-    }
+      await this.assertNoSettlement(createRubberWorkerDto.saleId, 'ditambahkan', tx);
 
-    const existingWorker = await this.prisma.rubberSaleWorker.findUnique({
-      where: {
-        saleId_workerId: {
+      return tx.rubberSaleWorker.create({
+        data: {
           saleId: createRubberWorkerDto.saleId,
           workerId: createRubberWorkerDto.workerId,
+          pieces: createRubberWorkerDto.pieces,
+          weightKg: createRubberWorkerDto.weightKg,
+          weighings: {
+            create: [
+              {
+                pieces: createRubberWorkerDto.pieces,
+                weightKg: createRubberWorkerDto.weightKg,
+              },
+            ],
+          },
         },
-      },
-    });
-
-    if (existingWorker) {
-      throw new BadRequestException('Worker sudah terdaftar pada sale ini');
-    }
-
-    const existingWorkers = await this.prisma.rubberSaleWorker.findMany({
-      where: {
-        saleId: createRubberWorkerDto.saleId,
-      },
-    });
-
-    const totalWorkerWeight = existingWorkers.reduce(
-      (total, item) => total + Number(item.weightKg),
-      0,
-    );
-
-    const newTotalWeight =
-      totalWorkerWeight + Number(createRubberWorkerDto.weightKg);
-
-    if (newTotalWeight > Number(sale.totalWeightKg)) {
-      throw new BadRequestException(
-        'Total berat worker melebihi total berat sale',
-      );
-    }
-
-    return this.prisma.rubberSaleWorker.create({
-      data: {
-        saleId: createRubberWorkerDto.saleId,
-        workerId: createRubberWorkerDto.workerId,
-        pieces: createRubberWorkerDto.pieces,
-        weightKg: createRubberWorkerDto.weightKg,
-        weighings: {
-          create: [
-            {
-              pieces: createRubberWorkerDto.pieces,
-              weightKg: createRubberWorkerDto.weightKg,
-            },
-          ],
+        include: {
+          worker: true,
+          sale: true,
+          weighings: true,
         },
-      },
-      include: {
-        worker: true,
-        sale: true,
-        weighings: true,
-      },
+      });
     });
   }
+
   // =========================================================
   // SAVE DRAFT WORKERS (manual input checkpoint)
   //
@@ -604,18 +609,11 @@ export class RubberWorkersService {
       );
     }
 
-    const confirmedSettlement = await this.prisma.settlement.findFirst({
-      where: {
-        saleId: rubberWorker.saleId,
-        status: 'CONFIRMED',
-      },
-    });
-
-    if (confirmedSettlement) {
-      throw new BadRequestException(
-        'Worker tidak dapat diubah karena sale sudah memiliki settlement yang dikonfirmasi',
-      );
-    }
+    // A settlement freezes the worker figures it was calculated from. This
+    // holds for every status, including PENDING and NO_BALANCE: changing the
+    // worker afterwards would make the stored settlement disagree with the
+    // data it claims to describe.
+    await this.assertNoSettlement(rubberWorker.saleId, 'diubah');
 
     // A plain edit carries one pieces/weight pair, so a worker weighed more
     // than once has no single value to overwrite.
@@ -691,6 +689,28 @@ export class RubberWorkersService {
     });
   }
 
+  /**
+   * Refuse a worker change when the sale already has a settlement, whatever
+   * its status. Pass the transaction client when the change runs inside one,
+   * so the check and the write share the same snapshot.
+   */
+  private async assertNoSettlement(
+    saleId: number,
+    action: 'diubah' | 'dihapus' | 'ditambahkan',
+    client: RubberWorkersClient | PrismaService = this.prisma,
+  ) {
+    const settlement = await client.settlement.findFirst({
+      where: { saleId },
+      select: { id: true },
+    });
+
+    if (settlement) {
+      throw new BadRequestException(
+        `Worker tidak dapat ${action} karena settlement untuk sale ini sudah dibuat`,
+      );
+    }
+  }
+
   async remove(id: number) {
     const rubberWorker = await this.prisma.rubberSaleWorker.findUnique({
       where: {
@@ -718,18 +738,8 @@ export class RubberWorkersService {
       );
     }
 
-    const confirmedSettlement = await this.prisma.settlement.findFirst({
-      where: {
-        saleId: rubberWorker.saleId,
-        status: 'CONFIRMED',
-      },
-    });
-
-    if (confirmedSettlement) {
-      throw new BadRequestException(
-        'Worker tidak dapat dihapus karena sale sudah memiliki settlement yang dikonfirmasi',
-      );
-    }
+    // Same rule as editing: any settlement freezes the worker.
+    await this.assertNoSettlement(rubberWorker.saleId, 'dihapus');
 
     return this.prisma.rubberSaleWorker.delete({
       where: {

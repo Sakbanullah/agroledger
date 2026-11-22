@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  salePaymentState,
+} from '../settlements/settlement-status';
 import { isSawitCommodity } from '../reports/reports.calculator';
 import { SettingsService } from '../settings/settings.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
@@ -17,6 +21,7 @@ import {
   cancellationBlocker,
   deletionBlocker,
 } from './sale-status';
+import { settlementReversalAllowed } from './sale-cancellation-rules';
 
 @Injectable()
 export class SalesService {
@@ -30,15 +35,23 @@ export class SalesService {
   // ==========================================
 
   async findAll() {
-    return this.prisma.sale.findMany({
+    const sales = await this.prisma.sale.findMany({
       orderBy: {
         saleDate: 'desc',
       },
       include: {
         farm: true,
         commodity: true,
+        settlements: { select: { status: true } },
       },
     });
+
+    // Payment state is computed from the settlement rows, never stored on the
+    // sale: one source of truth for "has every worker been settled?".
+    return sales.map(({ settlements, ...sale }) => ({
+      ...sale,
+      paymentState: salePaymentState(settlements),
+    }));
   }
 
   // ==========================================
@@ -46,7 +59,7 @@ export class SalesService {
   // ==========================================
 
   async findOne(id: number) {
-    return this.prisma.sale.findUnique({
+    const sale = await this.prisma.sale.findUnique({
       where: {
         id,
       },
@@ -65,6 +78,15 @@ export class SalesService {
         },
       },
     });
+
+    if (!sale) {
+      return sale;
+    }
+
+    return {
+      ...sale,
+      paymentState: salePaymentState(sale.settlements),
+    };
   }
 
   // ==========================================
@@ -313,6 +335,29 @@ export class SalesService {
   async deleteDraftSale(id: number) {
     return this.prisma.$transaction(async (tx) => {
       // ==========================================
+      // LOCK SALE AND ITS SETTLEMENTS FIRST
+      //
+      // Every decision below (blockers, settlement neutralisation, money
+      // repointing) has to see a fixed snapshot: a payment or a
+      // reconciliation running at the same time must either finish before this
+      // lock is taken or wait until the delete commits, never interleave
+      // between the check and the write. Lock order is the global one
+      // (src/common/lock-order.ts): Sale first, then its settlements.
+      // ==========================================
+
+      const locked = await tx.$queryRaw<Array<{ id: number }>>`
+        SELECT id FROM Sale WHERE id = ${id} FOR UPDATE
+      `;
+
+      if (locked.length === 0) {
+        throw new NotFoundException('Sale tidak ditemukan');
+      }
+
+      await tx.$queryRaw`
+        SELECT id FROM Settlement WHERE saleId = ${id} ORDER BY id ASC FOR UPDATE
+      `;
+
+      // ==========================================
       // GET SALE
       // ==========================================
 
@@ -321,7 +366,7 @@ export class SalesService {
           id,
         },
         include: {
-          settlements: { select: { id: true } },
+          settlements: { select: { id: true, status: true } },
           ownerSettlements: { select: { id: true } },
           scanDocuments: { select: { id: true } },
           cancellation: { select: { id: true } },
@@ -353,11 +398,25 @@ export class SalesService {
         },
       });
 
+      // Reconciliation history is audit data: find out whether any of this
+      // sale's settlements were reconciled before allowing a hard delete.
+      const settlementIds = sale.settlements.map((row) => row.id);
+
+      const reconciled = settlementIds.length
+        ? await tx.settlementReconciliation.findMany({
+            where: { settlementId: { in: settlementIds } },
+            select: { settlementId: true },
+            distinct: ['settlementId'],
+          })
+        : [];
+
       const blocker = deletionBlocker({
         status: sale.status,
         settlements: sale.settlements,
         ownerSettlements: sale.ownerSettlements,
         moneyEntries,
+        settlementIds,
+        reconciledSettlementIds: reconciled.map((row) => row.settlementId),
       });
 
       if (blocker) {
@@ -486,7 +545,7 @@ export class SalesService {
           include: {
             farm: { select: { name: true } },
             commodity: { select: { name: true } },
-            settlements: { select: { id: true } },
+            settlements: { select: { id: true, status: true } },
             ownerSettlements: { select: { id: true, settledAmount: true } },
           },
         });
@@ -497,11 +556,29 @@ export class SalesService {
 
         const blocker = cancellationBlocker({
           status: sale.status,
+          settlements: sale.settlements,
           ownerSettlements: sale.ownerSettlements,
         });
 
         if (blocker) {
           throw new ConflictException(blocker);
+        }
+
+        // Global lock order (src/common/lock-order.ts): Sale, then Settlement.
+        // The blocker above read the settlements without a lock, so the sale is
+        // locked first and the settlements second; a payment locks in the same
+        // order, so either this blocker sees the settlement already settled, or
+        // the payment sees the sale already CANCELLED.
+        await tx.$queryRaw`SELECT id FROM Sale WHERE id = ${id} FOR UPDATE`;
+
+        const settlementIds = sale.settlements.map((row) => row.id);
+
+        if (settlementIds.length > 0) {
+          await tx.$queryRaw`
+            SELECT id FROM Settlement
+            WHERE id IN (${Prisma.join(settlementIds)})
+            ORDER BY id ASC FOR UPDATE
+          `;
         }
 
         // Claim the transition atomically: a repeated or concurrent
@@ -576,13 +653,24 @@ export class SalesService {
         saleMoney.forEach(queueReversal);
 
         // 2. Cash paid to rubber workers for this sale.
-        const settlementMoney = await tx.moneyTransaction.findMany({
-          where: {
-            category: 'RUBBER_WORKER_SETTLEMENT',
-            referenceType: 'SETTLEMENT',
-            referenceId: { in: sale.settlements.map((row) => row.id) },
-          },
-        });
+        //
+        // Only settle-state settlements can have handed cash over. A PENDING or
+        // NO_BALANCE settlement never moved money, so writing its "reversal"
+        // would invent a cash-in that never happened; the row has nothing to
+        // reverse and is skipped here.
+        const settledSettlementIds = sale.settlements
+          .filter((row) => settlementReversalAllowed(row.status))
+          .map((row) => row.id);
+
+        const settlementMoney = settledSettlementIds.length
+          ? await tx.moneyTransaction.findMany({
+              where: {
+                category: 'RUBBER_WORKER_SETTLEMENT',
+                referenceType: 'SETTLEMENT',
+                referenceId: { in: settledSettlementIds },
+              },
+            })
+          : [];
 
         settlementMoney.forEach(queueReversal);
 
