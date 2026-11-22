@@ -98,12 +98,20 @@ export class CreditService {
         throw new NotFoundException('Person tidak ditemukan');
       }
 
-      // 2. Cari credit account worker
-      let creditAccount = await tx.creditAccount.findUnique({
-        where: {
-          personId: createDebtDto.personId,
-        },
-      });
+      // 2. Cari credit account worker, with the row lock the payment path
+      //    already takes. A concurrent PAYMENT reads the outstanding balance to
+      //    refuse an over-payment; without this lock a debt could be inserted
+      //    between that read and the payment's write.
+      const [lockedAccount] = await tx.$queryRaw<
+        Array<{ id: number; personId: number; status: string }>
+      >`
+        SELECT id, personId, status
+        FROM CreditAccount
+        WHERE personId = ${createDebtDto.personId}
+        FOR UPDATE
+      `;
+
+      let creditAccount = lockedAccount ?? null;
 
       // 3. Kalau belum punya akun kasbon, buat otomatis
       if (!creditAccount) {
@@ -190,11 +198,22 @@ export class CreditService {
             throw new NotFoundException('Credit account tidak ditemukan');
           }
         } else {
-          creditAccount = await tx.creditAccount.findUnique({
-            where: {
-              id: createCreditTransactionDto.creditAccountId,
-            },
-          });
+          // A DEBT row also changes the balance a concurrent PAYMENT is
+          // checked against, so it takes the same row lock.
+          const lockedAccounts = await tx.$queryRaw<
+            Array<{
+              id: number;
+              personId: number;
+              status: string;
+            }>
+          >`
+          SELECT id, personId, status
+          FROM CreditAccount
+          WHERE id = ${createCreditTransactionDto.creditAccountId}
+          FOR UPDATE
+        `;
+
+          creditAccount = lockedAccounts[0];
 
           if (!creditAccount) {
             throw new NotFoundException('Credit account tidak ditemukan');

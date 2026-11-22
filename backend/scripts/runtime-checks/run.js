@@ -34,6 +34,7 @@ const checks = [
   './settlement-response.check.js',
   './pay-response.check.js',
   './reconciliation-cancelled-sale.check.js',
+  './credit-balance-lock.check.js',
 ];
 
 (async () => {
