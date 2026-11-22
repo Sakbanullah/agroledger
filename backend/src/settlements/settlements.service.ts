@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -571,6 +572,31 @@ export class SettlementsService {
   ) {
     return this.prisma.$transaction(
       async (tx) => {
+        const target = await tx.settlement.findUnique({
+          where: { id },
+          select: { saleId: true },
+        });
+
+        if (!target) {
+          throw new NotFoundException('Settlement tidak ditemukan');
+        }
+
+        // Global lock order (src/common/lock-order.ts): Sale, then Settlement,
+        // then CreditAccount. The sale is locked first so a concurrent
+        // cancellation cannot slip between this status check and the write.
+        await tx.$queryRaw`SELECT id FROM Sale WHERE id = ${target.saleId} FOR UPDATE`;
+
+        const sale = await tx.sale.findUnique({
+          where: { id: target.saleId },
+          select: { status: true },
+        });
+
+        if (sale?.status === 'CANCELLED') {
+          throw new ConflictException(
+            'Sale sudah dibatalkan. Settlement tidak dapat direkonsiliasi.',
+          );
+        }
+
         const locked = await tx.$queryRaw<Array<{ id: number }>>`
           SELECT id FROM Settlement WHERE id = ${id} FOR UPDATE
         `;

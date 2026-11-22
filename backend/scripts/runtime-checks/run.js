@@ -33,6 +33,7 @@ const checks = [
   './lock-order.check.js',
   './settlement-response.check.js',
   './pay-response.check.js',
+  './reconciliation-cancelled-sale.check.js',
 ];
 
 (async () => {

@@ -21,6 +21,9 @@ export async function checkReconciliationAudit(): Promise<void> {
       }),
       updateMany: async () => ({ count: 1 }),
     },
+    sale: {
+      findUnique: async () => ({ status: 'COMPLETED' }),
+    },
     moneyTransaction: {
       count: async () => 0,
       findUnique: async () => null,
