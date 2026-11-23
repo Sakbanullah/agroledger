@@ -9,12 +9,14 @@ import {
 import { ConfirmSettlementDto } from './dto/confirm-settlement.dto';
 import { ConfirmSaleSettlementsDto } from './dto/confirm-sale-settlements.dto';
 import { ReconcileSettlementDto } from './dto/reconcile-settlement.dto';
+import { MigrationBackfillPreviewService } from './migration-backfill-preview.service';
 import { SettlementsService } from './settlements.service';
 
 @Controller('settlements')
 export class SettlementsController {
   constructor(
     private readonly settlementsService: SettlementsService,
+    private readonly migrationBackfillPreview: MigrationBackfillPreviewService,
   ) {}
 
   // ==========================================
@@ -153,5 +155,17 @@ export class SettlementsController {
   @Get('reconciliation-count')
   reconciliationCount() {
     return this.settlementsService.countAwaitingReconciliation();
+  }
+
+  // ==========================================
+  // MIGRATION BACKFILL PREVIEW
+  //
+  // Read-only: selects only, inside one read-only snapshot. Declared after the
+  // ':id' routes' siblings so no existing route changes meaning.
+  // ==========================================
+
+  @Get('migration-preview')
+  migrationPreview() {
+    return this.migrationBackfillPreview.preview();
   }
 }
