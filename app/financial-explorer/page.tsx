@@ -22,6 +22,7 @@ import {
   categoryLabel,
   daysAgoISO,
   formatRupiah,
+  formatShort,
   todayISO,
 } from "@/components/financial-explorer/format";
 
@@ -151,7 +152,7 @@ export default function FinancialExplorerPage() {
                             {categoryLabel(item.category)}
                           </span>
                           <span className="shrink-0 text-text-secondary">
-                            {formatRupiah(item.total)}
+                            {formatShort(item.total)}
                           </span>
                         </div>
                         <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-soft">

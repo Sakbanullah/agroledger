@@ -21,7 +21,7 @@ export function formatRupiah(value: number) {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(Math.round(value));
 }
 
 export function formatShort(value: number) {

@@ -17,6 +17,7 @@ import {
   categoryLabel,
   formatDateLabel,
   formatRupiah,
+  formatShort,
   todayISO,
   daysAgoISO,
 } from "@/components/financial-explorer/format";
@@ -152,7 +153,7 @@ export default function DailyExplorerPage({
                       {categoryLabel(item.category)}
                     </span>
                     <span className="shrink-0 text-text-secondary">
-                      {formatRupiah(item.total)} ({item.percentage}%)
+                      {formatShort(item.total)} ({item.percentage}%)
                     </span>
                   </Link>
                 ))

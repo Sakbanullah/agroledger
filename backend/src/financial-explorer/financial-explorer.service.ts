@@ -332,10 +332,6 @@ export class FinancialExplorerService {
             createdAt: true,
           },
         },
-        moneyTransactions: {
-          where: { referenceType: 'SALE' },
-          select: { id: true, type: true, category: true, amount: true },
-        },
       },
     });
   }
