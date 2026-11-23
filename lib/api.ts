@@ -167,6 +167,204 @@ export async function getSettlementSummary(startDate: string, endDate: string) {
   return response.json();
 }
 
+// ── Financial Explorer ──
+
+export type ExplorerParams = {
+  startDate: string;
+  endDate: string;
+  type?: "IN" | "OUT";
+  category?: string;
+  farmId?: number;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  period?: "daily" | "weekly" | "monthly";
+};
+
+async function explorerGet<T>(path: string, params: ExplorerParams): Promise<T> {
+  const search = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      search.set(key, String(value));
+    }
+  }
+
+  const response = await fetch(
+    `${API_URL}/financial-explorer${path}?${search.toString()}`,
+    { cache: "no-store" },
+  );
+
+  if (!response.ok) {
+    throw new Error("Gagal mengambil data financial explorer");
+  }
+
+  return response.json();
+}
+
+export type ExplorerTransaction = {
+  id: number;
+  type: "IN" | "OUT";
+  category: string;
+  amount: number;
+  transactionDate: string;
+  description: string | null;
+  referenceType: string | null;
+  referenceId: number | null;
+  farmId: number | null;
+  farm: { name: string; ownershipType: string | null } | null;
+  role: "OWN" | "PASSTHROUGH";
+};
+
+export type ExplorerSeriesPoint = {
+  date: string;
+  income?: number;
+  expense?: number;
+  amount?: number;
+  count: number;
+};
+
+export type ExplorerSummary = {
+  startDate: string;
+  endDate: string;
+  totalIncome: number;
+  totalExpense: number;
+  netCashFlow: number;
+  openingBalance: number;
+  closingBalance: number;
+  openingBalanceInPeriod: number;
+  transactionCount: number;
+  incomeCount: number;
+  expenseCount: number;
+  passthrough: { salesIn: number; count: number };
+};
+
+export function getExplorerSummary(params: ExplorerParams) {
+  return explorerGet<ExplorerSummary>("/summary", params);
+}
+
+export function getExplorerCashFlow(params: ExplorerParams) {
+  return explorerGet<{
+    period: string;
+    startDate: string;
+    endDate: string;
+    data: ExplorerSeriesPoint[];
+  }>("/cash-flow", params);
+}
+
+export function getExplorerDaily(type: "IN" | "OUT", params: ExplorerParams) {
+  return explorerGet<{
+    type: "IN" | "OUT";
+    total: number;
+    days: ExplorerSeriesPoint[];
+  }>(type === "IN" ? "/income/daily" : "/expenses/daily", params);
+}
+
+export function getExplorerCategories(params: ExplorerParams) {
+  return explorerGet<{
+    income: { total: number; categories: ExplorerCategory[] };
+    expense: { total: number; categories: ExplorerCategory[] };
+    passthrough: ExplorerCategory[];
+  }>("/categories", params);
+}
+
+export type ExplorerCategory = {
+  category: string;
+  total: number;
+  count: number;
+  percentage: number;
+};
+
+export function getExplorerTransactions(params: ExplorerParams) {
+  return explorerGet<{
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    totalAmount: number;
+    data: ExplorerTransaction[];
+  }>("/transactions", params);
+}
+
+export function getExplorerTransaction(id: number) {
+  return explorerGet<ExplorerDetail>(`/transactions/${id}`, {
+    startDate: "",
+    endDate: "",
+  });
+}
+
+export type ExplorerSale = {
+  id: number;
+  status: string;
+  saleDate: string;
+  totalWeightKg: string | null;
+  pricePerKg: string | null;
+  buyerName: string | null;
+  ownershipType: string | null;
+  commissionRatePerKg: string | null;
+  commissionAmount: string | null;
+  ownerShareAmount: string | null;
+  farm: { id: number; name: string; ownershipType: string | null };
+  commodity: { id: number; name: string; unit: string };
+  settlements: Array<{
+    id: number;
+    worker: { id: number; name: string };
+    grossShare: string;
+    deductionAmount: string;
+    netAmount: string;
+    status: string;
+    settledAt: string | null;
+  }>;
+  scanDocuments: Array<{
+    id: number;
+    imagePath: string;
+    status: string;
+    createdAt: string;
+  }>;
+};
+
+export type ExplorerSettlement = {
+  id: number;
+  worker: { id: number; name: string };
+  grossShare: string;
+  kasbonAmount: string;
+  deductionAmount: string;
+  netAmount: string;
+  status: string;
+  settlementMethod: string | null;
+  settledAt: string | null;
+  sale: ExplorerSale;
+  money: Array<{ id: number; type: string; category: string; amount: string }>;
+  credit: Array<{ id: number; type: string; amount: string; description: string | null }>;
+};
+
+export type ExplorerDetail = {
+  transaction: ExplorerTransaction & { createdAt: string };
+  sale: ExplorerSale | null;
+  settlement: ExplorerSettlement | null;
+};
+
+export type ExplorerTrace = {
+  transactionId: number;
+  saleId: number | null;
+  settlementId: number | null;
+  rows: Array<{
+    id: number;
+    relation: "THIS" | "SALE" | "OWNER_SETTLEMENT" | "WORKER_SETTLEMENT";
+    type: string;
+    category: string;
+    amount: number;
+    transactionDate: string;
+  }>;
+};
+
+export function getExplorerTrace(id: number) {
+  return explorerGet<ExplorerTrace>(`/transactions/${id}/trace`, {
+    startDate: "",
+    endDate: "",
+  });
+}
+
 export async function getHarvests() {
   const response = await fetch(`${API_URL}/harvests`, {
     cache: "no-store",
