@@ -109,7 +109,7 @@ export default function TransactionDetailPage({ id }: { id: number }) {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-background px-4 pb-8 pt-5 sm:px-5 sm:pb-10 sm:pt-6 lg:px-7">
-      <div className="w-full max-w-[900px]">
+      <div className="w-full">
         <header className="mb-6">
           <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-text-muted sm:text-[10px]">
             Financial Explorer
@@ -160,7 +160,7 @@ export default function TransactionDetailPage({ id }: { id: number }) {
             </p>
           </div>
 
-          <dl className="mt-5 grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2">
+          <dl className="mt-5 grid grid-cols-1 gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-3">
             <DetailItem
               label="Tanggal"
               value={formatDateLabel(transaction.transactionDate.slice(0, 10))}
