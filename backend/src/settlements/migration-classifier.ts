@@ -6,6 +6,11 @@
  * database; this function only makes the classification rules executable and
  * testable without a database. It must stay in sync with the SQL WHERE
  * clauses; the spec next to it is the contract for both.
+ *
+ * The SQL only touches settlements that still carry the old CONFIRMED status.
+ * Every other row - including CANCELLED, which may keep its historic amounts
+ * but is never written by the backfill - is classified BACKFILL_EXCLUDED so a
+ * preview can say so explicitly instead of reporting it as unproven.
  */
 
 export interface HistoricalSettlement {
@@ -15,6 +20,9 @@ export interface HistoricalSettlement {
   deductionAmount: number;
   netAmount: number;
 }
+
+/** The only status the backfill rewrites. */
+export const BACKFILL_SOURCE_STATUS = 'CONFIRMED';
 
 export interface HistoricalMoneyRow {
   id: number;
@@ -34,13 +42,18 @@ export type HistoricalClassification =
   | { status: 'PAID_OUT'; settlementMethod: 'CASH'; evidenceMoneyTransactionId: number }
   | { status: 'SETTLED_BY_OFFSET'; settlementMethod: 'OFFSET'; evidenceCreditTransactionId: number }
   | { status: 'NO_BALANCE'; settlementMethod: 'NO_BALANCE' }
-  | { status: 'PENDING'; reconciliationStatus: 'REQUIRED' };
+  | { status: 'PENDING'; reconciliationStatus: 'REQUIRED' }
+  | { status: 'BACKFILL_EXCLUDED'; reason: 'STATUS' };
 
 export function classifyHistoricalSettlement(
   settlement: HistoricalSettlement,
   money: HistoricalMoneyRow[],
   credit: HistoricalCreditRow[],
 ): HistoricalClassification {
+  if (settlement.status !== BACKFILL_SOURCE_STATUS) {
+    return { status: 'BACKFILL_EXCLUDED', reason: 'STATUS' };
+  }
+
   const rows = money.filter((row) => row.settlementId === settlement.id);
   const payments = credit.filter(
     (row) => row.settlementId === settlement.id && row.type === 'PAYMENT',

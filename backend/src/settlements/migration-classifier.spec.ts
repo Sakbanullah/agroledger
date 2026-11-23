@@ -1,6 +1,6 @@
 import { classifyHistoricalSettlement } from './migration-classifier';
 
-const sale = (over: Partial<{ id: number; grossShare: number; deductionAmount: number; netAmount: number }> = {}) => ({
+const sale = (over: Partial<{ id: number; status: string; grossShare: number; deductionAmount: number; netAmount: number }> = {}) => ({
   id: 10,
   status: 'CONFIRMED',
   grossShare: 10000,
@@ -16,6 +16,31 @@ const payment = (id: number, settlementId: number, amount: number) =>
   ({ id, settlementId, type: 'PAYMENT' as const, amount });
 
 describe('historical settlement backfill classification', () => {
+  it('a row the backfill does not touch is excluded, never rewritten', () => {
+    // A cancelled settlement can still hold its historic amounts; the SQL
+    // never rewrites it, so neither does the classifier.
+    expect(
+      classifyHistoricalSettlement(
+        sale({ status: 'CANCELLED' }),
+        [out(1, 10, 10000)],
+        [],
+      ),
+    ).toEqual({ status: 'BACKFILL_EXCLUDED', reason: 'STATUS' });
+
+    expect(classifyHistoricalSettlement(sale({ status: 'PENDING' }), [], [])).toEqual({
+      status: 'BACKFILL_EXCLUDED',
+      reason: 'STATUS',
+    });
+
+    expect(
+      classifyHistoricalSettlement(
+        sale({ status: 'PAID_OUT', grossShare: 0, deductionAmount: 0, netAmount: 0 }),
+        [],
+        [],
+      ),
+    ).toEqual({ status: 'BACKFILL_EXCLUDED', reason: 'STATUS' });
+  });
+
   it('cash-only: one exact OUT, no PAYMENT at all -> PAID_OUT', () => {
     expect(classifyHistoricalSettlement(sale(), [out(1, 10, 10000)], [])).toEqual({
       status: 'PAID_OUT',

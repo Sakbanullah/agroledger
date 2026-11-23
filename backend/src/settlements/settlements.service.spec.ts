@@ -499,6 +499,23 @@ describe('SettlementsService (calculation vs payment)', () => {
       );
     };
 
+    it('refuses to reconcile a settlement whose sale is cancelled', async () => {
+      arrange();
+      prisma.sale.findUnique.mockResolvedValue({ status: 'CANCELLED' });
+
+      await expect(
+        service.reconcileSettlement(50, {
+          choice: 'REVIEWED_UNSETTLED',
+          verifiedNoCashPayment: true,
+          verifiedKasbonDeductionNotRecorded: true,
+          reason: 'Tidak ada pembayaran tunai; potongan kasbon belum tercatat',
+        }),
+      ).rejects.toThrow(/dibatalkan/);
+
+      expect(prisma.settlement.updateMany).not.toHaveBeenCalled();
+      expect(prisma.settlementReconciliation.create).not.toHaveBeenCalled();
+    });
+
     it('refuses a settlement that is not flagged for reconciliation', async () => {
       prisma.$queryRaw.mockResolvedValue([{ id: 50 }]);
       prisma.settlement.findUnique.mockResolvedValue(
