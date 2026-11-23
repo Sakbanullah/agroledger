@@ -214,6 +214,28 @@ export type ExplorerTransaction = {
   farmId: number | null;
   farm: { name: string; ownershipType: string | null } | null;
   role: "OWN" | "PASSTHROUGH";
+  settlement: ExplorerSettlementSummary | null;
+};
+
+/** Settlement figures as stored, plus the money that actually moved. */
+export type ExplorerSettlementSummary = {
+  id: number;
+  grossShare: string;
+  workerShareAmount: number;
+  kasbonAmount: string;
+  deductionAmount: string;
+  netAmount: string;
+  status: string;
+  settlementMethod: string | null;
+  settledAt: string | null;
+  worker: { id: number; name: string };
+  sale: {
+    id: number;
+    farm: { id: number; name: string; ownershipType: string | null };
+    commodity: { id: number; name: string; unit: string };
+  };
+  cashTransaction: { amount: number } | null;
+  creditPayment: { amount: number } | null;
 };
 
 export type ExplorerSeriesPoint = {
@@ -323,17 +345,8 @@ export type ExplorerSale = {
   }>;
 };
 
-export type ExplorerSettlement = {
-  id: number;
-  worker: { id: number; name: string };
-  grossShare: string;
-  kasbonAmount: string;
-  deductionAmount: string;
-  netAmount: string;
-  status: string;
-  settlementMethod: string | null;
-  settledAt: string | null;
-  sale: ExplorerSale;
+export type ExplorerSettlement = ExplorerSettlementSummary & {
+  sale: ExplorerSale & ExplorerSettlementSummary["sale"];
   money: Array<{ id: number; type: string; category: string; amount: string }>;
   credit: Array<{ id: number; type: string; amount: string; description: string | null }>;
 };

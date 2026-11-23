@@ -8,11 +8,12 @@ import {
   CircleDollarSign,
   FileText,
   Leaf,
-  ReceiptText,
   Sprout,
   Wallet,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+
+import DailyTransactions from "@/components/dashboard/DailyTransactions";
 
 import {
   getCashFlow,
@@ -87,14 +88,6 @@ type DashboardData = {
     totalNetPayment: number;
     awaitingReconciliation: number;
   };
-  recentTransactions: Array<{
-    id: number;
-    type: string;
-    category: string;
-    amount: string | number;
-    transactionDate: string;
-    description: string | null;
-  }>;
 };
 
 type SalesSummary = {
@@ -933,126 +926,6 @@ function HarvestOverview({ data }: { data: SalesSummary | null }) {
   );
 }
 
-function RecentTransactions({
-  transactions,
-}: {
-  transactions: DashboardData["recentTransactions"];
-}) {
-  const getTransactionTitle = (category: string) => {
-    const titles: Record<string, string> = {
-      HARVEST_SALE: "Penjualan hasil panen",
-      RUBBER_WORKER_SETTLEMENT: "Settlement worker",
-      SETTLEMENT: "Settlement",
-      OPERATIONAL_EXPENSE: "Biaya operasional",
-      OPENING_BALANCE: "Saldo awal",
-    };
-
-    return (
-      titles[category] ??
-      category
-        .replaceAll("_", " ")
-        .toLowerCase()
-        .replace(/\b\w/g, (letter) => letter.toUpperCase())
-    );
-  };
-
-  return (
-    <section className="rounded-[12px] border border-border bg-surface">
-      <div className="flex items-center justify-between border-b border-border px-5 py-4">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
-            Transactions
-          </p>
-
-          <h2 className="mt-1 text-[15px] font-semibold text-text-primary">
-            Aktivitas Terbaru
-          </h2>
-
-          <p className="mt-0.5 text-[11px] text-text-secondary">
-            Pergerakan kas terbaru
-          </p>
-        </div>
-
-        <a
-          href="/transactions"
-          className="text-[11px] font-semibold text-success transition hover:text-success"
-        >
-          Lihat semua
-        </a>
-      </div>
-
-      <div className="divide-y divide-[#EEF0EC]">
-        {transactions.length === 0 ? (
-          <div className="flex min-h-[190px] flex-col items-center justify-center px-5 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-surface-soft text-text-muted">
-              <ReceiptText size={17} />
-            </div>
-
-            <p className="mt-3 text-[12px] font-medium text-text-secondary">
-              Belum ada transaksi
-            </p>
-
-            <p className="mt-1 text-[10px] text-text-muted">
-              Aktivitas keuangan akan muncul di sini.
-            </p>
-          </div>
-        ) : (
-          transactions.slice(0, 6).map((transaction) => {
-            const isIncome = transaction.type === "IN";
-
-            return (
-              <div
-                key={transaction.id}
-                className="flex items-center gap-3 px-5 py-3.5"
-              >
-                <div
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] ${
-                    isIncome
-                      ? "bg-surface-soft text-success"
-                      : "bg-surface-soft text-text-secondary"
-                  }`}
-                >
-                  {isIncome ? (
-                    <ArrowDownLeft size={15} strokeWidth={1.8} />
-                  ) : (
-                    <ArrowUpRight size={15} strokeWidth={1.8} />
-                  )}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[12px] font-semibold text-text-primary">
-                    {getTransactionTitle(transaction.category)}
-                  </p>
-
-                  <p className="mt-0.5 truncate text-[10px] text-text-muted">
-                    {transaction.description ||
-                      formatDate(transaction.transactionDate)}
-                  </p>
-                </div>
-
-                <div className="shrink-0 text-right">
-                  <p
-                    className={`text-[12px] font-semibold ${
-                      isIncome ? "text-success" : "text-text-primary"
-                    }`}
-                  >
-                    {isIncome ? "+" : "-"}
-                    {formatRupiah(transaction.amount)}
-                  </p>
-
-                  <p className="mt-0.5 text-[9px] text-text-muted">
-                    {formatDate(transaction.transactionDate)}
-                  </p>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </section>
-  );
-}
-
 function LatestSettlement({ settlement }: { settlement: Settlement | null }) {
   if (!settlement) {
     return (
@@ -1322,9 +1195,7 @@ export default function Home() {
             </div>
 
             <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
-              <RecentTransactions
-                transactions={dashboard?.recentTransactions ?? []}
-              />
+              <DailyTransactions />
 
               <LatestSettlement settlement={latestSettlement} />
             </div>

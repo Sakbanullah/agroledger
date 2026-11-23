@@ -56,9 +56,57 @@ export class FinancialExplorerService {
       orderBy: [{ transactionDate: 'asc' }, { id: 'asc' }],
     });
 
-    return rows.map((row) => ({
+    return (await this.withSettlements(rows)).map((row) => ({
       ...row,
       farmOwnershipType: row.farm?.ownershipType ?? null,
+      settlement: settlementFacts(row).settlement,
+    }));
+  }
+
+  /**
+   * Attaches the settlement a row pays, read in one grouped query. Prisma has
+   * no relation from MoneyTransaction to Settlement (the link is the
+   * SETTLEMENT reference pair), so this is done explicitly, never per row.
+   */
+  private async withSettlements<T extends { referenceType: string | null; referenceId: number | null }>(
+    rows: T[],
+  ) {
+    const ids = rows
+      .filter((row) => row.referenceType === 'SETTLEMENT' && row.referenceId)
+      .map((row) => row.referenceId as number);
+
+    if (ids.length === 0) return rows.map((row) => ({ ...row, settlement: null }));
+
+    const settlements = await this.prisma.settlement.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        grossShare: true,
+        kasbonAmount: true,
+        deductionAmount: true,
+        netAmount: true,
+        status: true,
+        settlementMethod: true,
+        settledAt: true,
+        worker: { select: { id: true, name: true } },
+        sale: {
+          select: {
+            id: true,
+            farm: { select: { id: true, name: true, ownershipType: true } },
+            commodity: { select: { id: true, name: true, unit: true } },
+          },
+        },
+      },
+    });
+
+    const byId = new Map(settlements.map((settlement) => [settlement.id, settlement]));
+
+    return rows.map((row) => ({
+      ...row,
+      settlement:
+        row.referenceType === 'SETTLEMENT' && row.referenceId
+          ? byId.get(row.referenceId) ?? null
+          : null,
     }));
   }
 
@@ -234,8 +282,9 @@ export class FinancialExplorerService {
       total,
       totalPages: Math.ceil(total / pageSize),
       totalAmount: Math.abs(Number(totalAmount._sum.amount ?? 0)),
-      data: rows.map((row) => ({
+      data: (await this.withSettlements(rows)).map((row) => ({
         ...row,
+        ...settlementFacts(row),
         amount: Number(row.amount),
         role: roles.get(row.id) ?? 'OWN',
       })),
@@ -342,7 +391,8 @@ export class FinancialExplorerService {
       include: {
         worker: { select: { id: true, name: true } },
         sale: {
-          include: {
+          select: {
+            id: true,
             farm: { select: { id: true, name: true, ownershipType: true } },
             commodity: { select: { id: true, name: true, unit: true } },
           },
@@ -365,7 +415,20 @@ export class FinancialExplorerService {
       }),
     ]);
 
-    return { ...settlement, money, credit };
+    return {
+      ...settlement,
+      workerShareAmount: workerShareOf(settlement),
+      cashTransaction:
+        Number(settlement.netAmount) > 0
+          ? { amount: Number(settlement.netAmount) }
+          : null,
+      creditPayment:
+        Number(settlement.deductionAmount) > 0
+          ? { amount: Number(settlement.deductionAmount) }
+          : null,
+      money,
+      credit,
+    };
   }
 
   /** Every row that shares the event behind `id`, for traceability. */
@@ -460,6 +523,63 @@ export class FinancialExplorerService {
       rows,
     };
   }
+}
+
+/**
+ * The part of a settlement that only lives in the settlement row: the worker
+ * share as stored, and the two rows that actually moved money (net cash and
+ * the kasbon PAYMENT). Null when the money row pays no settlement.
+ */
+/**
+ * Worker share as the settlement step computed it: the worker's own weight ×
+ * price × 1/2. The settlement row stores only the result (`grossShare`), so
+ * that stored figure is what is shown, never a recomputation from money rows.
+ */
+export function workerShareOf(settlement: { grossShare: unknown }): number {
+  return Number(settlement.grossShare);
+}
+
+/**
+ * The part of a settlement that only lives in the settlement row: the worker
+ * share and the two rows that actually moved money (net cash and the kasbon
+ * PAYMENT). Null when the money row pays no settlement.
+ */
+function settlementFacts(row: {
+  referenceType?: string | null;
+  referenceId?: number | null;
+  settlement?: {
+    id: number;
+    grossShare: unknown;
+    kasbonAmount: unknown;
+    deductionAmount: unknown;
+    netAmount: unknown;
+    status: string;
+    settlementMethod: string | null;
+    settledAt: Date | null;
+    worker: { id: number; name: string };
+    sale: {
+      id: number;
+      pricePerKg?: unknown;
+      totalWeightKg?: unknown;
+      farm: { id: number; name: string; ownershipType: string | null };
+      commodity: { id: number; name: string; unit: string };
+    };
+  } | null;
+} | null) {
+  const settlement = row?.settlement ?? null;
+  if (!settlement) return { settlement: null };
+
+  const deduction = Number(settlement.deductionAmount);
+  const net = Number(settlement.netAmount);
+
+  return {
+    settlement: {
+      ...settlement,
+      workerShareAmount: workerShareOf(settlement),
+      cashTransaction: net > 0 ? { amount: net } : null,
+      creditPayment: deduction > 0 ? { amount: deduction } : null,
+    },
+  };
 }
 
 function pick(row: {
