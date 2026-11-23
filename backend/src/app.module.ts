@@ -13,6 +13,7 @@ import { SettlementsModule } from './settlements/settlements.module';
 import { OwnerSettlementsModule } from './owner-settlements/owner-settlements.module';
 import { MoneyTransactionsModule } from './money-transactions/money-transactions.module';
 import { ReportsModule } from './reports/reports.module';
+import { FinancialExplorerModule } from './financial-explorer/financial-explorer.module';
 import { AiModule } from './ai/ai.module';
 import { LlmModule } from './llm/llm.module';
 import { WorkersModule } from './workers/workers.module';
@@ -36,6 +37,7 @@ import { SettingsModule } from './settings/settings.module';
     OwnerSettlementsModule,
     MoneyTransactionsModule,
     ReportsModule,
+    FinancialExplorerModule,
     AiModule,
     LlmModule,
     WorkersModule,
