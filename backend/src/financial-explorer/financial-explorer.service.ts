@@ -9,8 +9,12 @@ import {
   summarize,
 } from './financial-explorer.calculator';
 import { flowRoleFor } from './money-flow-role';
+import { CsvRow, csvHeaderLine, csvLineFor } from './financial-explorer.csv';
 
 import { FinancialExplorerQueryDto } from './dto/financial-explorer-query.dto';
+
+/** Rows read per database round trip while streaming the CSV export. */
+export const CSV_BATCH_SIZE = 500;
 
 export type ExplorerFilters = Pick<
   FinancialExplorerQueryDto,
@@ -289,6 +293,71 @@ export class FinancialExplorerService {
         role: roles.get(row.id) ?? 'OWN',
       })),
     };
+  }
+
+  /**
+   * Every filtered row as CSV, read in batches so a large export never lands
+   * in one array and never depends on the pagination of the list endpoint.
+   * Only existing figures are formatted; nothing is recalculated.
+   */
+  async *streamTransactionsCsv(
+    query: FinancialExplorerQueryDto,
+  ): AsyncGenerator<string> {
+    const { start, end } = this.range(query.startDate, query.endDate);
+    const where = {
+      transactionDate: { gte: start, lte: end },
+      ...this.where(query),
+    };
+
+    yield `\uFEFF${csvHeaderLine()}`;
+
+    let cursor: number | undefined;
+    for (;;) {
+      const rows = await this.prisma.moneyTransaction.findMany({
+        where,
+        select: this.rowSelect,
+        orderBy: [{ transactionDate: 'desc' }, { id: 'desc' }],
+        take: CSV_BATCH_SIZE,
+        ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),
+      });
+
+      if (rows.length === 0) return;
+
+      const withSettlements = await this.withSettlements(rows);
+      const ownerNames = await this.ownerNames(withSettlements);
+
+      for (const row of withSettlements) {
+        yield csvLineFor(
+          row as unknown as CsvRow,
+          row.referenceType === 'OWNER_SETTLEMENT' && row.referenceId !== null
+            ? ownerNames.get(row.referenceId) ?? null
+            : null,
+        );
+      }
+
+      if (rows.length < CSV_BATCH_SIZE) return;
+      cursor = rows[rows.length - 1].id;
+    }
+  }
+
+  /** Owner name for OWNER_SETTLEMENT rows, read once per batch. */
+  private async ownerNames(
+    rows: { referenceType: string | null; referenceId: number | null }[],
+  ) {
+    const ids = rows
+      .filter(
+        (row) => row.referenceType === 'OWNER_SETTLEMENT' && row.referenceId,
+      )
+      .map((row) => row.referenceId as number);
+
+    if (ids.length === 0) return new Map<number, string>();
+
+    const owners = await this.prisma.ownerSettlement.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, owner: { select: { name: true } } },
+    });
+
+    return new Map(owners.map((owner) => [owner.id, owner.owner.name]));
   }
 
   /**

@@ -1,4 +1,5 @@
-import { Controller, Get, Param, ParseIntPipe, Query } from '@nestjs/common';
+import { Controller, Get, Param, ParseIntPipe, Query, Res } from '@nestjs/common';
+import type { Response } from 'express';
 
 import { FinancialExplorerService } from './financial-explorer.service';
 
@@ -42,6 +43,31 @@ export class FinancialExplorerController {
   @Get('transactions')
   transactions(@Query() query: FinancialExplorerQueryDto) {
     return this.service.getTransactions(query);
+  }
+
+  @Get('transactions/export')
+  async exportTransactions(
+    @Query() query: FinancialExplorerQueryDto,
+    @Res() response: Response,
+  ) {
+    const startDate = query.startDate.slice(0, 10);
+    const endDate = query.endDate.slice(0, 10);
+
+    response.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    response.setHeader(
+      'Content-Disposition',
+      `attachment; filename="financial-explorer-${startDate}_${endDate}.csv"`,
+    );
+    response.setHeader('Cache-Control', 'no-store');
+
+    try {
+      for await (const chunk of this.service.streamTransactionsCsv(query)) {
+        response.write(chunk);
+      }
+      response.end();
+    } catch (error) {
+      response.destroy(error instanceof Error ? error : undefined);
+    }
   }
 
   @Get('transactions/:id')

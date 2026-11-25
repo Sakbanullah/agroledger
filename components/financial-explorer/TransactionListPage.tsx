@@ -1,11 +1,12 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
   ExplorerTransaction,
+  exportExplorerTransactionsCsv,
   getExplorerTransactions,
 } from "@/lib/api";
 
@@ -44,6 +45,11 @@ export default function TransactionListPage() {
   }>({ data: [], total: 0, totalPages: 0, totalAmount: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [exportFeedback, setExportFeedback] = useState<{
+    tone: "ok" | "error";
+    text: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +90,44 @@ export default function TransactionListPage() {
 
   const updateFilter = (apply: () => void) => {
     setPage(1);
+    setExportFeedback(null);
     apply();
+  };
+
+  const exportCsv = async () => {
+    setExporting(true);
+    setExportFeedback(null);
+
+    try {
+      const { blob, filename } = await exportExplorerTransactionsCsv({
+        startDate,
+        endDate,
+        type: type || undefined,
+        category: category || undefined,
+        search: search || undefined,
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      link.remove();
+      // Revoke after the browser has started the download.
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+
+      setExportFeedback({
+        tone: "ok",
+        text: `CSV berhasil diunduh: ${filename}`,
+      });
+    } catch (err) {
+      setExportFeedback({
+        tone: "error",
+        text: err instanceof Error ? err.message : "Gagal mengekspor transaksi",
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -155,8 +198,29 @@ export default function TransactionListPage() {
                   </option>
                 ))}
               </select>
+
+              <button
+                type="button"
+                onClick={exportCsv}
+                disabled={exporting || loading}
+                className="flex h-9 items-center gap-1.5 rounded-[9px] border border-border px-3 text-[11px] font-medium text-text-secondary transition hover:bg-surface-muted disabled:opacity-40"
+              >
+                <Download size={13} strokeWidth={1.8} />
+                {exporting ? "Mengekspor..." : "Export CSV"}
+              </button>
             </div>
           </div>
+
+          {exportFeedback && (
+            <div
+              role="status"
+              className={`border-b border-border px-4 py-2.5 text-[10px] sm:px-5 ${
+                exportFeedback.tone === "ok" ? "text-text-secondary" : "text-danger"
+              }`}
+            >
+              {exportFeedback.text}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-4 border-b border-border bg-surface-muted px-4 py-2.5 text-[10px] text-text-secondary sm:px-5">
             <span>

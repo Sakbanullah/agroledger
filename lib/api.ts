@@ -181,7 +181,7 @@ export type ExplorerParams = {
   period?: "daily" | "weekly" | "monthly";
 };
 
-async function explorerGet<T>(path: string, params: ExplorerParams): Promise<T> {
+function explorerSearch(params: ExplorerParams) {
   const search = new URLSearchParams();
 
   for (const [key, value] of Object.entries(params)) {
@@ -189,6 +189,12 @@ async function explorerGet<T>(path: string, params: ExplorerParams): Promise<T> 
       search.set(key, String(value));
     }
   }
+
+  return search;
+}
+
+async function explorerGet<T>(path: string, params: ExplorerParams): Promise<T> {
+  const search = explorerSearch(params);
 
   const response = await fetch(
     `${API_URL}/financial-explorer${path}?${search.toString()}`,
@@ -306,6 +312,29 @@ export function getExplorerTransactions(params: ExplorerParams) {
     totalAmount: number;
     data: ExplorerTransaction[];
   }>("/transactions", params);
+}
+
+/**
+ * Downloads every row matching the filters as CSV. The backend streams it, so
+ * the browser never holds more than the response body.
+ */
+export async function exportExplorerTransactionsCsv(params: ExplorerParams) {
+  const search = explorerSearch(params);
+
+  const response = await fetch(
+    `${API_URL}/financial-explorer/transactions/export?${search.toString()}`,
+    { cache: "no-store" },
+  );
+
+  if (!response.ok) {
+    throw new Error("Gagal mengekspor transaksi");
+  }
+
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const filename =
+    /filename="([^"]+)"/.exec(disposition)?.[1] ?? "financial-explorer.csv";
+
+  return { blob: await response.blob(), filename };
 }
 
 export function getExplorerTransaction(id: number) {
