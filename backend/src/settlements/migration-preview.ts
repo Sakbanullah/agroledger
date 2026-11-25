@@ -6,7 +6,10 @@
  * a read-only transaction, issues SELECTs only, and never writes a row.
  *
  * Rows are read in pages bounded by id, so the whole table does not have to be
- * loaded to answer the question.
+ * loaded to answer the question. A paginated transaction holds its snapshot,
+ * exclusive to the connection the transaction runs on, until it commits, so on
+ * a large table the run is resumed from the last id of the previous run
+ * instead of being made long enough to time out.
  */
 import type { Prisma } from '../generated/prisma/client';
 import {
@@ -18,6 +21,9 @@ import {
 } from './migration-classifier';
 
 export const PREVIEW_PAGE_SIZE = 500;
+
+/** Largest id on the last page of the previous run, or 0 to start from the first. */
+export const PREVIEW_FIRST_ID = 0;
 
 /** The narrow slice of Prisma the preview needs. */
 export interface MigrationPreviewReader {
@@ -90,6 +96,11 @@ export interface PreviewGroup {
   count: number;
   netAmount: number;
   deductionAmount: number;
+  /**
+   * Rows whose DECIMAL value could not be read. Their figures are in the count
+   * but not in the sums, and the group says so instead of returning NaN.
+   */
+  unreadableAmounts: number;
   settlementIds: number[];
   truncated: boolean;
 }
@@ -105,19 +116,37 @@ export interface MigrationPreview {
   groups: PreviewGroups;
 }
 
-const emptyGroups = (): PreviewGroups => ({
-  PAID_OUT: { count: 0, netAmount: 0, deductionAmount: 0, settlementIds: [], truncated: false },
-  SETTLED_BY_OFFSET: { count: 0, netAmount: 0, deductionAmount: 0, settlementIds: [], truncated: false },
-  NO_BALANCE: { count: 0, netAmount: 0, deductionAmount: 0, settlementIds: [], truncated: false },
-  PENDING: { count: 0, netAmount: 0, deductionAmount: 0, settlementIds: [], truncated: false },
-  BACKFILL_EXCLUDED: { count: 0, netAmount: 0, deductionAmount: 0, settlementIds: [], truncated: false },
+const emptyGroup = (): PreviewGroup => ({
+  count: 0,
+  netAmount: 0,
+  deductionAmount: 0,
+  unreadableAmounts: 0,
+  settlementIds: [],
+  truncated: false,
 });
 
-const amount = (value: Prisma.Decimal | number | string): number => {
+const emptyGroups = (): PreviewGroups => ({
+  PAID_OUT: emptyGroup(),
+  SETTLED_BY_OFFSET: emptyGroup(),
+  NO_BALANCE: emptyGroup(),
+  PENDING: emptyGroup(),
+  BACKFILL_EXCLUDED: emptyGroup(),
+});
+
+/**
+ * A DECIMAL column as a number, or null when it cannot be read. The backfill
+ * compares amounts exactly, so a row with an unreadable figure proves nothing
+ * and must not be summed as if it were zero.
+ */
+const amount = (value: Prisma.Decimal | number | string): number | null => {
   const parsed = Number(value);
 
-  return Number.isFinite(parsed) ? parsed : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : null;
 };
+
+/** A row with an unreadable figure is left out of the proven groups. */
+const unreadable = (row: { grossShare: Prisma.Decimal | number | string; deductionAmount: Prisma.Decimal | number | string; netAmount: Prisma.Decimal | number | string }): boolean =>
+  amount(row.grossShare) === null || amount(row.deductionAmount) === null || amount(row.netAmount) === null;
 
 const creditReference = (settlementId: number) => `SETTLEMENT-${settlementId}`;
 
@@ -128,12 +157,13 @@ const creditReference = (settlementId: number) => `SETTLEMENT-${settlementId}`;
  */
 export async function previewSettlementBackfill(
   reader: MigrationPreviewReader,
+  firstId = PREVIEW_FIRST_ID,
 ): Promise<MigrationPreview> {
   return reader.$transaction(
     async (tx) => {
       const groups = emptyGroups();
       let total = 0;
-      let afterId = 0;
+      let afterId = firstId;
 
       for (;;) {
         const page = await tx.settlement.findMany({
@@ -173,39 +203,46 @@ export async function previewSettlementBackfill(
             id: row.id,
             settlementId: row.referenceId as number,
             type: row.type as HistoricalMoneyRow['type'],
-            amount: amount(row.amount),
+            amount: amount(row.amount) as number,
           }));
 
         const creditRows: HistoricalCreditRow[] = credit.map((row) => ({
           id: row.id,
           settlementId: Number(row.reference.slice('SETTLEMENT-'.length)),
           type: row.type as HistoricalCreditRow['type'],
-          amount: amount(row.amount),
+          amount: amount(row.amount) as number,
         }));
 
         for (const row of page) {
-          const settlement: HistoricalSettlement = {
-            id: row.id,
-            status: row.status,
-            grossShare: amount(row.grossShare),
-            deductionAmount: amount(row.deductionAmount),
-            netAmount: amount(row.netAmount),
-          };
+          const unreadableRow = unreadable(row);
 
-          const classification = classifyHistoricalSettlement(
-            settlement,
-            moneyRows,
-            creditRows,
-          );
+          const classification = unreadableRow
+            ? ({ status: 'PENDING', reconciliationStatus: 'REQUIRED' } as const)
+            : classifyHistoricalSettlement(
+                {
+                  id: row.id,
+                  status: row.status,
+                  grossShare: amount(row.grossShare) as number,
+                  deductionAmount: amount(row.deductionAmount) as number,
+                  netAmount: amount(row.netAmount) as number,
+                } satisfies HistoricalSettlement,
+                moneyRows,
+                creditRows,
+              );
 
           const group = groups[classification.status];
 
           group.count += 1;
-          group.netAmount += settlement.netAmount;
-          group.deductionAmount += settlement.deductionAmount;
+
+          if (unreadableRow) {
+            group.unreadableAmounts += 1;
+          } else {
+            group.netAmount += amount(row.netAmount) as number;
+            group.deductionAmount += amount(row.deductionAmount) as number;
+          }
 
           if (group.settlementIds.length < PREVIEW_SAMPLE_LIMIT) {
-            group.settlementIds.push(settlement.id);
+            group.settlementIds.push(row.id);
           } else {
             group.truncated = true;
           }
@@ -220,8 +257,9 @@ export async function previewSettlementBackfill(
 
       return { readOnly: true, total, groups };
     },
-    // One snapshot for every page: a concurrent write cannot make the preview
-    // see a settlement on one page and its money rows on the next.
+    // One snapshot for every page, but only within this run: a resumed run is
+    // a new transaction and reads a fresh snapshot. MySQL is not told the
+    // transaction is read-only, so only the SELECTs above are issued here.
     { isolationLevel: 'RepeatableRead' },
   );
 }

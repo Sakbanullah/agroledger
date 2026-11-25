@@ -75,6 +75,9 @@ export function classifyHistoricalSettlement(
     }
   }
 
+  // Cash + kasbon: the same NOT EXISTS on any credit row the cash-only branch
+  // applies, so a stray DEBT or a second PAYMENT of another amount is not
+  // silently accepted as the proven shape.
   if (settlement.netAmount > 0 && settlement.deductionAmount > 0) {
     const exactPayments = payments.filter(
       (row) => row.amount === settlement.deductionAmount,
@@ -84,7 +87,8 @@ export function classifyHistoricalSettlement(
       onlyOut &&
       rows[0].amount === settlement.netAmount &&
       payments.length === 1 &&
-      exactPayments.length === 1
+      exactPayments.length === 1 &&
+      credit.every((c) => c.settlementId !== settlement.id || c.type === 'PAYMENT')
     ) {
       return {
         status: 'PAID_OUT',
@@ -107,7 +111,8 @@ export function classifyHistoricalSettlement(
       rows.length === 0 &&
       settlement.deductionAmount > 0 &&
       payments.length === 1 &&
-      exactPayments.length === 1
+      exactPayments.length === 1 &&
+      credit.every((c) => c.settlementId !== settlement.id || c.type === 'PAYMENT')
     ) {
       return {
         status: 'SETTLED_BY_OFFSET',

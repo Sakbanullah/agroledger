@@ -52,6 +52,13 @@ yarn-error.log*
 /seed-final-test.js
 /router-test/
 
+# test sources and temporary artifacts, kept locally only
+/tempoary/
+
+# dependencies
+/node_modules/
+**/node_modules/
+
 # local AI/agent tooling state, sessions & logs (bukan source project)
 /.opencode/
 /.claude/
