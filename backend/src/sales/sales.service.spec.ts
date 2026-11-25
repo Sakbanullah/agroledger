@@ -257,7 +257,8 @@ describe('SalesService (Phase 2A-2)', () => {
 
       await service.confirmSale(22, {});
 
-      expect(prisma.ownerSettlement).toBeUndefined();
+      // The delegate exists in the mock, so assert on the writes it took.
+      expect(prisma.ownerSettlement.create).not.toHaveBeenCalled();
     });
 
     it('commission fields remain NULL for RELATIVE Sawit after confirm', async () => {
@@ -336,6 +337,7 @@ describe('SalesService (Phase 2A-2)', () => {
         },
         commodity: { id: 1, name: 'Sawit' },
         ownerSettlements: [],
+        commissionRatePerKg: null,
       };
 
       prisma.sale.findUnique
@@ -348,17 +350,18 @@ describe('SalesService (Phase 2A-2)', () => {
           ownerSettlements: [{ id: 1, ownerShareAmount: 5600000 }],
         });
 
-      prisma.sale.update.mockResolvedValue({});
+      prisma.sale.updateMany.mockResolvedValue({ count: 1 });
       prisma.ownerSettlement.create.mockResolvedValue({});
 
       const _result = await service.setCommission(30, {});
 
-      expect(prisma.sale.update).toHaveBeenCalledWith({
-        where: { id: 30 },
+      expect(prisma.sale.updateMany).toHaveBeenCalledWith({
+        where: { id: 30, status: 'CONFIRMED' },
         data: {
           commissionRatePerKg: 200,
           commissionAmount: 400000,
           ownerShareAmount: 5600000,
+          status: 'COMPLETED',
         },
       });
 
@@ -389,23 +392,25 @@ describe('SalesService (Phase 2A-2)', () => {
         },
         commodity: { id: 1, name: 'Sawit' },
         ownerSettlements: [],
+        commissionRatePerKg: null,
       };
 
       prisma.sale.findUnique
         .mockResolvedValueOnce(confirmedSale)
         .mockResolvedValueOnce({ ...confirmedSale });
 
-      prisma.sale.update.mockResolvedValue({});
+      prisma.sale.updateMany.mockResolvedValue({ count: 1 });
       prisma.ownerSettlement.create.mockResolvedValue({});
 
       await service.setCommission(31, { commissionRatePerKg: 250 });
 
-      expect(prisma.sale.update).toHaveBeenCalledWith({
-        where: { id: 31 },
+      expect(prisma.sale.updateMany).toHaveBeenCalledWith({
+        where: { id: 31, status: 'CONFIRMED' },
         data: {
           commissionRatePerKg: 250,
           commissionAmount: 500000,
           ownerShareAmount: 5500000,
+          status: 'COMPLETED',
         },
       });
     });
@@ -423,23 +428,25 @@ describe('SalesService (Phase 2A-2)', () => {
         },
         commodity: { id: 1, name: 'Sawit' },
         ownerSettlements: [],
+        commissionRatePerKg: null,
       };
 
       prisma.sale.findUnique
         .mockResolvedValueOnce(confirmedSale)
         .mockResolvedValueOnce({ ...confirmedSale });
 
-      prisma.sale.update.mockResolvedValue({});
+      prisma.sale.updateMany.mockResolvedValue({ count: 1 });
       prisma.ownerSettlement.create.mockResolvedValue({});
 
       await service.setCommission(32, { commissionRatePerKg: 0 });
 
-      expect(prisma.sale.update).toHaveBeenCalledWith({
-        where: { id: 32 },
+      expect(prisma.sale.updateMany).toHaveBeenCalledWith({
+        where: { id: 32, status: 'CONFIRMED' },
         data: {
           commissionRatePerKg: 0,
           commissionAmount: 0,
           ownerShareAmount: 6000000,
+          status: 'COMPLETED',
         },
       });
     });

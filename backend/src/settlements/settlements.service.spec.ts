@@ -159,7 +159,15 @@ describe('SettlementsService (calculation vs payment)', () => {
       credit?: { type: string; amount: number }[];
       appliedReference?: { id: number }[];
     }) => {
-      prisma.$queryRaw.mockResolvedValue([{ saleId: 10 }]);
+      // Every lock query answers with a sale row; the worker's credit account
+      // lock is separately recognised by its personId column so the sweep can
+      // still ask for "no account" with an empty array.
+      prisma.$queryRaw.mockImplementation(
+        async (_template: unknown, ...values: number[]) =>
+          values.length > 0
+            ? [{ id: 1, personId: values[0], status: 'ACTIVE' }]
+            : [{ saleId: 10 }],
+      );
       prisma.sale.findUnique.mockResolvedValue({
         id: 10,
         status: 'COMPLETED',
@@ -169,6 +177,9 @@ describe('SettlementsService (calculation vs payment)', () => {
       prisma.settlement.findUnique.mockResolvedValue(
         settlementRow(overrides.settlement),
       );
+      // The completion state reads every settlement of the sale; the mocked
+      // delegate has to answer that read too.
+      prisma.settlement.findMany.mockResolvedValue([]);
       prisma.creditTransaction.findMany.mockImplementation(
         async (args: { where: { reference?: string } }) =>
           args?.where?.reference !== undefined
@@ -394,6 +405,10 @@ describe('SettlementsService (calculation vs payment)', () => {
     });
 
     it('refuses settleSale when any pending settlement awaits reconciliation', async () => {
+      prisma.$queryRaw.mockImplementation(
+        async (_template: unknown, ...values: number[]) =>
+          values.length > 0 ? [{ id: 1, personId: values[0], status: 'ACTIVE' }] : [{ saleId: 10 }],
+      );
       prisma.sale.findUnique.mockResolvedValue({
         id: 10,
         status: 'COMPLETED',
@@ -417,6 +432,16 @@ describe('SettlementsService (calculation vs payment)', () => {
   });
 
   describe('settleSale (pay every pending worker)', () => {
+    // Every lock query answers with a sale row; the worker's credit account
+    // lock is the only one carrying a personId, so it answers with the
+    // account that holds the kasbon being deducted.
+    beforeEach(() => {
+      prisma.$queryRaw.mockImplementation(
+        async (_template: unknown, ...values: number[]) =>
+          values.length > 0 ? [{ id: 1, personId: values[0], status: 'ACTIVE' }] : [{ saleId: 10 }],
+      );
+    });
+
     it('reports the computed payment state after paying', async () => {
       prisma.sale.findUnique.mockResolvedValue({
         id: 10,
@@ -440,9 +465,14 @@ describe('SettlementsService (calculation vs payment)', () => {
       prisma.moneyTransaction.create
         .mockResolvedValueOnce({ id: 900 })
         .mockResolvedValueOnce({ id: 901 });
-      prisma.creditTransaction.findMany.mockResolvedValue([
-        { type: 'DEBT', amount: 4000 },
-      ]);
+      // The debt lookup and the once-only deduction check share one delegate:
+      // answer the former with the debt and the latter with "not recorded".
+      prisma.creditTransaction.findMany.mockImplementation(
+        async (args: { where: { reference?: string } }) =>
+          args?.where?.reference !== undefined
+            ? []
+            : [{ type: 'DEBT', amount: 4000 }],
+      );
       prisma.creditTransaction.create
         .mockResolvedValueOnce({ id: 800 })
         .mockResolvedValueOnce({ id: 801 });
@@ -758,7 +788,11 @@ describe('SettlementsService (calculation vs payment)', () => {
 
     it('BD-18: an UNSETTLED settlement is payable through the normal endpoint, once', async () => {
       // After reconciliation the row is PENDING and no longer REQUIRED.
-      prisma.$queryRaw.mockResolvedValue([{ saleId: 10 }]);
+      // The credit account lock is the query carrying a personId.
+      prisma.$queryRaw.mockImplementation(
+        async (_template: unknown, ...values: number[]) =>
+          values.length > 0 ? [{ id: 1, personId: values[0], status: 'ACTIVE' }] : [{ saleId: 10 }],
+      );
       prisma.sale.findUnique.mockResolvedValue({
         id: 10,
         status: 'COMPLETED',
@@ -767,9 +801,13 @@ describe('SettlementsService (calculation vs payment)', () => {
       prisma.settlement.findUnique.mockResolvedValue(
         settlementRow({ reconciliationStatus: 'RESOLVED' }),
       );
-      prisma.creditTransaction.findMany.mockResolvedValue([
-        { type: 'DEBT', amount: 4000 },
-      ]);
+      prisma.settlement.findMany.mockResolvedValue([]);
+      prisma.creditTransaction.findMany.mockImplementation(
+        async (args: { where: { reference?: string } }) =>
+          args?.where?.reference !== undefined
+            ? []
+            : [{ type: 'DEBT', amount: 4000 }],
+      );
       prisma.moneyTransaction.create.mockResolvedValue({ id: 900 });
       prisma.creditTransaction.create.mockResolvedValue({ id: 800 });
       prisma.settlement.updateMany.mockResolvedValue({ count: 1 });

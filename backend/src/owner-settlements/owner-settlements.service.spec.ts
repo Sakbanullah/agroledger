@@ -4,7 +4,10 @@ import { PrismaService } from '../prisma/prisma.service';
 
 describe('OwnerSettlementsService (Phase 2B-2)', () => {
   let service: OwnerSettlementsService;
-  let prisma: Record<string, unknown>;
+  // `any` on purpose: the mock doubles Prisma's rich delegate types, which a
+  // Record<string, unknown> cannot express.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let prisma: any;
 
   beforeEach(() => {
     prisma = {
